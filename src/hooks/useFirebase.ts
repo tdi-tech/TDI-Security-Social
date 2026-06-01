@@ -6,7 +6,8 @@ import {
 } from "firebase/auth";
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
 
-export const useFirebase = ({ showToast, onNavigate, currentView, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
+export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
+
     const [user, setUser] = useState<any>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     
@@ -70,7 +71,7 @@ export const useFirebase = ({ showToast, onNavigate, currentView, setLoginModalO
     // ==== 3. Temporizador de Inactividad ====
     useEffect(() => {
         if (!isAdmin) return;
-        let timeoutId: NodeJS.Timeout;
+        let timeoutId: ReturnType<typeof setTimeout>;
         const IDLE_TIME = 10 * 60 * 1000;
         const resetTimer = () => {
             if (timeoutId) clearTimeout(timeoutId);
