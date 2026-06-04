@@ -11,7 +11,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const [user, setUser] = useState<any>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     
-    // TRUCO DE UX: Inicializamos el estado usando un indicio en caché para evitar el parpadeo de "Conectando..."
     const [cloudStatus, setCloudStatus] = useState(() => {
         return localStorage.getItem('auth_hint') === 'admin' 
             ? 'Conectando...' 
@@ -19,9 +18,12 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     });
     
     const [incidents, setIncidents] = useState<any[]>([]);
+    const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
     const [checklistState, setChecklistState] = useState<any>({});
+    
+    // NUEVO ESTADO PARA COMENTARIOS
+    const [comments, setComments] = useState<any[]>([]);
 
-    // ==== 1. Inicialización y Autenticación Inteligente ====
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
@@ -29,7 +31,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 const isAdm = !currentUser.isAnonymous;
                 setIsAdmin(isAdm);
                 
-                // Guardamos el indicio en caché según el rol obtenido
                 localStorage.setItem('auth_hint', isAdm ? 'admin' : 'lector');
                 setCloudStatus(isAdm ? 'Conectado a Firebase (Administrador)' : 'Desconectado de Firebase (Lector)');
             } else {
@@ -53,11 +54,10 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         return () => unsubscribe();
     }, []);
 
-    // ==== 2. Cerrar Sesión Manual con Limpieza de Caché y Recarga ====
     const logoutAdmin = async () => {
-        localStorage.setItem('auth_hint', 'lector'); // Cambiamos el indicio antes de refrescar
+        localStorage.setItem('auth_hint', 'lector');
         await signOut(auth);
-        window.location.reload(); // Recarga automática limpia de toda la plataforma
+        window.location.reload();
     };
 
     const forceLogout = useCallback(async () => {
@@ -68,7 +68,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         window.location.reload();
     }, [isAdmin, showToast]);
 
-    // ==== 3. Temporizador de Inactividad ====
     useEffect(() => {
         if (!isAdmin) return;
         let timeoutId: ReturnType<typeof setTimeout>;
@@ -86,10 +85,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         };
     }, [isAdmin, forceLogout]);
 
-    // ==== 4. Suscripciones Públicas en Tiempo Real (SIN CANDADOS) ====
     useEffect(() => {
-        // Al quitar el "if (!user) return;" y dejar el array vacío [], Firestore
-        // se conecta inmediatamente al cargar la app y funciona de forma pública (Lectores).
         const incidentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'incidents');
         const unsubIncidents = onSnapshot(incidentsRef, (snapshot) => {
             const data: any[] = [];
@@ -100,6 +96,24 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             console.error("Error en Firestore:", error);
             setCloudStatus('Desconectado de Firebase (Lector)');
         });
+
+        const rrssRef = collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents');
+        const unsubRrss = onSnapshot(rrssRef, (snapshot) => {
+            const data: any[] = [];
+            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+            data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+            setRrssIncidents(data);
+        }, (error) => console.error("Error en Firestore RRSS:", error));
+
+        // NUEVA LECTURA DE COMENTARIOS EN TIEMPO REAL
+        const commentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'comments');
+        const unsubComments = onSnapshot(commentsRef, (snapshot) => {
+            const data: any[] = [];
+            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+            // Ordenamos del más reciente al más antiguo usando el timestamp de creación
+            data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setComments(data);
+        }, (error) => console.error("Error en Firestore Comments:", error));
 
         const checklistRef = collection(db, 'artifacts', appId, 'public', 'data', 'appState');
         const unsubChecklist = onSnapshot(checklistRef, (snapshot) => {
@@ -115,11 +129,12 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
         return () => {
             unsubIncidents();
+            unsubRrss();
+            unsubComments(); // LIMPIEZA DEL LISTENER DE COMENTARIOS
             unsubChecklist();
         };
-    }, []); // Corre una sola vez al montar la app
+    }, []);
 
-    // ==== 5. Controladores del Panel de Control ====
     const loginWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
         provider.setCustomParameters({ hd: 'tierradeideas.mx' }); 
@@ -175,8 +190,60 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         });
     };
 
+    const updateRrssIncident = async (id: string, updatedData: any) => {
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id);
+            await setDoc(docRef, updatedData, { merge: true });
+            showToast('Incidente RRSS editado correctamente.');
+        } catch (err) {
+            showToast('Error al editar.', true);
+        }
+    };
+
+    const deleteRrssIncident = (id: string) => {
+        setConfirmModal({
+            isOpen: true, title: 'Eliminar Incidente RRSS', msg: 'Esta acción eliminará el registro de forma permanente. ¿Seguro?',
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id));
+                    showToast('Registro eliminado exitosamente');
+                } catch(err) { showToast('Error al eliminar', true); }
+            }
+        });
+    };
+
+    // NUEVAS FUNCIONES PARA COMENTARIOS
+    const updateComment = async (id: string, updatedData: any) => {
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'comments', id);
+            await setDoc(docRef, updatedData, { merge: true });
+            showToast('Comentario editado correctamente.');
+        } catch (err) {
+            showToast('Error al editar el comentario.', true);
+        }
+    };
+
+    const deleteComment = (id: string) => {
+        setConfirmModal({
+            isOpen: true, 
+            title: 'Eliminar Reporte', 
+            msg: 'Esta acción eliminará el reporte de forma permanente. ¿Estás seguro?',
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id));
+                    showToast('Reporte eliminado exitosamente.');
+                } catch (err) {
+                    showToast('Error al eliminar el reporte.', true);
+                }
+            }
+        });
+    };
+
     return { 
-        user, isAdmin, cloudStatus, incidents, checklistState, setChecklistState, 
-        loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident 
+        user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState, 
+        loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
+        updateRrssIncident, deleteRrssIncident,
+        // EXPORTAMOS LAS NUEVAS FUNCIONES Y VARIABLES
+        comments, updateComment, deleteComment
     };
 };

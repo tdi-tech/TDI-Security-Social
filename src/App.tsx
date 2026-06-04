@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Menu, CheckCircle2, XCircle, Sun, Moon, Plus, LogOut } from 'lucide-react';
+import { Lock, Menu, CheckCircle2, XCircle, Sun, Moon, Plus, LogOut, Hammer } from 'lucide-react';
 
 // Hooks
 import { useTheme } from './hooks/useTheme';
@@ -7,17 +7,37 @@ import { useFirebase } from './hooks/useFirebase';
 
 // Componentes
 import { Sidebar } from './components/Sidebar';
-import { LoginModal, DetailModal, ConfirmModal, EditIncidentModal } from './components/Modals';
+import { LoginModal, ConfirmModal } from './components/Modals';
 
 // Vistas Estáticas
-import { StaticProtocoloView, RolesView, GlosarioView } from './views/StaticViews';
+import { StaticProtocoloView, RolesView, GlosarioView, ProtocoloRRSSView } from './views/StaticViews';
 import { DashboardView } from './views/DashboardView';
-import { HistorialView, ChecklistView } from './views/DynamicViews';
-import { NewIncidentView } from './views/NewIncidentView';
+
+// Vistas de Hackeos
+import { HistorialView, ChecklistView, NewIncidentView, DetailModal, EditIncidentModal } from './views/HackViews';
 
 // Vistas Modularizadas
 import { AyudaView } from './views/AyudaView';
 import { ConfigView } from './views/ConfigView';
+
+// Vistas RRSS
+import { NewRRSSIncidentView, HistorialRRSSView } from './views/RRSSViews';
+
+// Vistas de Comentarios
+import { NewCommentView, HistorialCommentView } from './views/CommentViews';
+
+// Componente Placeholder (En construcción)
+const PlaceholderView = ({ title }: { title: string }) => (
+    <div className="fade-in h-full flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-20 h-20 bg-[var(--primary)]/10 rounded-full flex items-center justify-center mb-6">
+            <Hammer className="w-10 h-10 text-[var(--primary)]" />
+        </div>
+        <h2 className="text-3xl font-bold theme-text-main mb-3">{title}</h2>
+        <p className="theme-text-muted max-w-md">
+            Esta sección está siendo desarrollada. Pronto podrás gestionar y administrar este apartado directamente desde aquí.
+        </p>
+    </div>
+);
 
 export default function App() {
     const { isDarkMode, toggleTheme } = useTheme();
@@ -39,16 +59,16 @@ export default function App() {
     };
 
     const {
-        user, isAdmin, cloudStatus, incidents, checklistState, setChecklistState,
-        loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident
+        user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState,
+        loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
+        updateRrssIncident, deleteRrssIncident,
+        comments, updateComment, deleteComment
     } = useFirebase({
-        showToast,
-        onNavigate: (view: string) => { setCurrentView(view); setSidebarOpen(false); },
-        currentView, setLoginModalOpen, setDetailModalOpen, setConfirmModal
+        showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal
     });
 
     const navigate = (view: string) => {
-        if ((view === 'nuevo' || view === 'checklist') && !isAdmin) {
+        if ((view === 'nuevo' || view === 'checklist' || view === 'nuevo-rss' || view === 'nuevo-comentario') && !isAdmin) {
             showToast('Debes ser Admin para acceder a esta sección.', true);
             setLoginModalOpen(true);
             return;
@@ -65,8 +85,119 @@ export default function App() {
         return () => document.removeEventListener('click', handleClickOutside);
     }, [profileMenuOpen]);
 
+    // ========================================================
+    // REESTRUCTURACIÓN DE MIGA DE PAN (BREADCRUMBS) PREMIUM
+    // ========================================================
+    const renderHeaderTitle = () => {
+        const baseClass = "text-xl font-bold flex items-center gap-2.5 tracking-tight select-none";
+        const parentClass = "theme-text-muted opacity-80 font-semibold";
+        const separatorClass = "text-gray-600 font-light text-lg";
+        const childClass = "theme-text-main font-bold";
+
+        switch (currentView) {
+            case 'dashboard':
+                return <h1 className="text-xl font-bold theme-text-main tracking-tight">Dashboard</h1>;
+            
+            // Grupo Hackeos
+            case 'protocolo':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Hackeos</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Protocolo</span>
+                    </div>
+                );
+            case 'nuevo':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Hackeos</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Crear incidente</span>
+                    </div>
+                );
+            case 'checklist':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Hackeos</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Checklist Rápido</span>
+                    </div>
+                );
+            case 'historial':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Hackeos</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Historial</span>
+                    </div>
+                );
+            case 'glosario':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Hackeos</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Glosario</span>
+                    </div>
+                );
+
+            // Grupo Incidencias RRSS
+            case 'protocolo-rss':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Incidencias RRSS</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Protocolo</span>
+                    </div>
+                );
+            case 'nuevo-rss':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Incidencias RRSS</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Crear incidente</span>
+                    </div>
+                );
+            case 'historial-rss':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Incidencias RRSS</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Historial</span>
+                    </div>
+                );
+
+            // Grupo Comentarios
+            case 'nuevo-comentario':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Comentarios</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Capturar comentarios</span>
+                    </div>
+                );
+            case 'historial-comentario':
+                return (
+                    <div className={baseClass}>
+                        <span className={parentClass}>Comentarios</span>
+                        <span className={separatorClass}>/</span>
+                        <span className={childClass}>Historial</span>
+                    </div>
+                );
+
+            // Vistas Sueltas
+            case 'roles':
+                return <h1 className="text-xl font-bold theme-text-main tracking-tight">Roles</h1>;
+            case 'config':
+                return <h1 className="text-xl font-bold theme-text-main tracking-tight">Configuración</h1>;
+            case 'ayuda':
+                return <h1 className="text-xl font-bold theme-text-main tracking-tight">Ayuda</h1>;
+
+            default:
+                return <h1 className="text-xl font-bold theme-text-main tracking-tight capitalize">{currentView.replace(/-/g, ' ')}</h1>;
+        }
+    };
+
     return (
-        // Añadimos print:h-auto y print:block para romper el bloqueo de altura en PDF
         <div className={`h-screen print:h-auto print:block flex relative font-sans transition-colors duration-300 ${isAdmin ? 'is-admin' : ''}`}>
 
             <div className="fixed top-5 right-5 z-[70] flex flex-col gap-2 no-print">
@@ -84,13 +215,14 @@ export default function App() {
                 isAdmin={isAdmin} cloudStatus={cloudStatus}
             />
 
-            {/* Añadimos print:overflow-visible para que el navegador imprima todo el contenido */}
             <main className="flex-1 print:block flex flex-col h-full print:h-auto relative overflow-x-hidden print:overflow-visible w-full bg-[var(--surface)]">
 
                 <header className="h-16 border-b theme-border theme-bg-container flex items-center justify-between px-4 sm:px-6 no-print shadow-sm z-10">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 theme-text-muted hover:theme-text-main rounded-lg"><Menu className="w-6 h-6"/></button>
-                        <h2 className="text-xl font-bold theme-text-main capitalize">{currentView.replace('-', ' ')}</h2>
+                        <div className="flex items-center">
+                            {renderHeaderTitle()}
+                        </div>
                     </div>
                     <div className="flex items-center gap-3 sm:gap-4">
                         <button onClick={toggleTheme} className="p-2 theme-text-muted hover:theme-text-main rounded-lg transition-colors" title="Cambiar Tema">
@@ -150,36 +282,38 @@ export default function App() {
                     </div>
                 </header>
 
-                <div id="print-header" className="hidden text-black font-bold text-2xl">Reporte: TDI Secure Social</div>
+                <div id="print-header" className="hidden text-black font-bold text-2xl">Reporte: Innova Social</div>
 
-                {/* Añadimos print:overflow-visible aquí también */}
                 <div id="main-content" className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-8 print:p-0 w-full">
-                    {currentView === 'dashboard' && <DashboardView incidents={incidents} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} />}
+                    {/* AQUÍ CORREGIMOS EL PASE DE DATOS: Pasamos rrssIncidents, comments e isAdmin para sincronizar tu inicio de sesión */}
+                    {currentView === 'dashboard' && <DashboardView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} isAdmin={isAdmin} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} />}
+                    
                     {currentView === 'protocolo' && <StaticProtocoloView />}
                     {currentView === 'nuevo' && <NewIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} />}
                     {currentView === 'historial' && <HistorialView incidents={incidents} showToast={showToast} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} isAdmin={isAdmin} />}
                     {currentView === 'checklist' && <ChecklistView checklistState={checklistState} setChecklistState={setChecklistState} isAdmin={isAdmin} showToast={showToast} setConfirmModal={setConfirmModal} />}
+                    
+                    {/* VISTAS GENERALES */}
                     {currentView === 'roles' && <RolesView />}
                     {currentView === 'glosario' && <GlosarioView />}
                     {currentView === 'ayuda' && <AyudaView isAdmin={isAdmin} />}
                     {currentView === 'config' && <ConfigView isDarkMode={isDarkMode} toggleTheme={toggleTheme} incidents={incidents} checklistState={checklistState} showToast={showToast} isAdmin={isAdmin} />}
+                    
+                    {/* VISTAS DE RRSS */}
+                    {currentView === 'protocolo-rss' && <ProtocoloRRSSView />}
+                    {currentView === 'nuevo-rss' && <NewRRSSIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} />}
+                    {currentView === 'historial-rss' && <HistorialRRSSView rrssIncidents={rrssIncidents} showToast={showToast} isAdmin={isAdmin} updateRrssIncident={updateRrssIncident} deleteRrssIncident={deleteRrssIncident} />}
+
+                    {/* NUEVAS VISTAS DE COMENTARIOS CONECTADAS */}
+                    {currentView === 'nuevo-comentario' && <NewCommentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} />}
+                    {currentView === 'historial-comentario' && <HistorialCommentView comments={comments} showToast={showToast} isAdmin={isAdmin} updateComment={updateComment} deleteComment={deleteComment} />}
                 </div>
             </main>
-
-            {currentView !== 'nuevo' && (
-                <button 
-                    onClick={() => navigate('nuevo')} 
-                    className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[var(--error)] text-white shadow-lg shadow-red-500/20 flex items-center justify-center hover:scale-105 transition-transform z-40 hover:brightness-110 no-print"
-                    title="Reportar Nuevo Incidente"
-                >
-                    <Plus className="w-6 h-6" />
-                </button>
-            )}
 
             <DetailModal 
                 isOpen={detailModalOpen} 
                 onClose={() => setDetailModalOpen(false)} 
-                incident={incidents.find(i => i.id === selectedIncidentId)} 
+                incident={incidents.find((i: any) => i.id === selectedIncidentId)} 
                 isAdmin={isAdmin} 
                 onToggleStatus={toggleIncidentStatus} 
                 onEdit={() => { setDetailModalOpen(false); setEditModalOpen(true); }} 
@@ -189,7 +323,7 @@ export default function App() {
             <EditIncidentModal 
                 isOpen={editModalOpen} 
                 onClose={() => setEditModalOpen(false)} 
-                incident={incidents.find(i => i.id === selectedIncidentId)} 
+                incident={incidents.find((i: any) => i.id === selectedIncidentId)} 
                 onUpdate={updateIncident} 
             />
 
