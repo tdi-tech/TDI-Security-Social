@@ -93,7 +93,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     </div>
                     <div>
                         <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas</h1>
-                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Social v3.0</p>
+                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.1</p>
                     </div>
                 </div>
                 

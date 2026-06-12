@@ -6,32 +6,19 @@ import {
 import { collection, addDoc } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
 
-// ==========================================
-// ESTILOS COMPARTIDOS
-// ==========================================
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
-
-// CSS Inyectado para forzar la visualización de viñetas en el editor
-const editorStyles = `
-  .wysiwyg-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.5rem 0; }
-  .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.5rem 0; }
-`;
+const editorStyles = `.wysiwyg-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.5rem 0; } .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.5rem 0; }`;
 
 const getMonthName = (monthNum: string) => {
     const months: any = { '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre' };
     return months[monthNum] || 'Desconocido';
 };
 
-// ==========================================
-// COMPONENTE: BARRA DE HERRAMIENTAS WYSIWYG
-// ==========================================
 const EditorToolbar = ({ onCommand }: { onCommand: (cmd: string, val?: string) => void }) => {
     const optionStyles = "bg-white text-black dark:bg-gray-800 dark:text-white";
     return (
         <div className="flex flex-wrap items-center gap-2 p-2 border-b theme-border bg-black/20 text-gray-400 select-none">
-            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('undo')} className="p-1.5 hover:bg-white/10 rounded hover:text-white transition-colors" title="Deshacer (Ctrl+Z)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-            </button>
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('undo')} className="p-1.5 hover:bg-white/10 rounded hover:text-white transition-colors" title="Deshacer (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
             <div className="w-px h-4 bg-gray-700 mx-1"></div>
             <select onChange={(e) => onCommand('fontSize', e.target.value)} className="bg-transparent border border-gray-600 rounded text-xs p-1 outline-none hover:border-gray-400 theme-text-main cursor-pointer" title="Tamaño de texto" defaultValue="3">
                 <option className={optionStyles} value="1">Muy Pequeño</option><option className={optionStyles} value="2">Pequeño</option><option className={optionStyles} value="3">Normal</option><option className={optionStyles} value="4">Mediano</option><option className={optionStyles} value="5">Grande</option><option className={optionStyles} value="6">Muy Grande</option><option className={optionStyles} value="7">Título</option>
@@ -42,18 +29,13 @@ const EditorToolbar = ({ onCommand }: { onCommand: (cmd: string, val?: string) =
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('italic')} className="px-2 py-1 italic font-serif text-sm hover:bg-white/10 rounded hover:text-white transition-colors" title="Cursiva">I</button>
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('underline')} className="px-2 py-1 underline text-sm hover:bg-white/10 rounded hover:text-white transition-colors" title="Subrayado">U</button>
             <div className="w-px h-4 bg-gray-700 mx-1"></div>
-            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('insertUnorderedList')} className="p-1.5 hover:bg-white/10 rounded hover:text-white transition-colors" title="Lista con viñetas">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            </button>
+            <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('insertUnorderedList')} className="p-1.5 hover:bg-white/10 rounded hover:text-white transition-colors" title="Lista con viñetas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></button>
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onCommand('removeFormat')} className="px-2 py-1 text-xs font-bold hover:bg-white/10 rounded hover:text-white transition-colors" title="Limpiar Formato">Tx</button>
         </div>
     );
 };
 
-// ==========================================
-// VISTA 1: CREAR INCIDENTE RRSS
-// ==========================================
-export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user }: any) => {
+export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAction }: any) => {
     const [formData, setFormData] = useState({
         totalIncidencias: 1, fecha: new Date().toISOString().split('T')[0], usuario: '', medio: 'Facebook Comentario',
         campus: 'Atizapán', riesgo: 'Bajo', descripcion: '', area: 'Operaciones', comentarios: '', enlacePublicacion: '', enlaceDrive: '', reporteTexto: ''
@@ -78,9 +60,13 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user }: any)
         setIsSubmitting(true);
         try {
             const finalReporte = editorRef.current ? editorRef.current.innerHTML : formData.reporteTexto;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents'), {
+            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents'), {
                 ...formData, reporteTexto: finalReporte, autor: user?.displayName || 'Administrador', timestamp: new Date().toISOString()
             });
+            
+            // INYECCIÓN DE LA NOTIFICACIÓN AL CREAR
+            if (logAction) await logAction('Creó un nuevo reporte de reputación', 'Incidencia RRSS', 'create', docRef.id);
+
             showToast('Incidente RRSS guardado exitosamente.'); navigate('historial-rss');
         } catch (error) { showToast('Error al guardar el incidente.', true); }
         setIsSubmitting(false);
@@ -130,10 +116,8 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user }: any)
     );
 };
 
-// ==========================================
-// VISTA 2: HISTORIAL CON BÚSQUEDA Y ACORDEONES ANIDADOS
-// ==========================================
 export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrssIncident, deleteRrssIncident }: any) => {
+    // ... Código del Historial RRSS intacto (acordeones y búsqueda funcionan igual)
     const [selectedIncident, setSelectedIncident] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -159,7 +143,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
             const matchYear = filterYear === 'Todos' || year === filterYear;
             const term = searchTerm.toLowerCase();
             
-            // CANDADO DE SEGURIDAD APLICADO AL BUSCADOR
             const matchSearch = term === '' || 
                 (isAdmin && inc.autor && inc.autor.toLowerCase().includes(term)) ||
                 (inc.medio && inc.medio.toLowerCase().includes(term)) ||
@@ -211,7 +194,7 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
 
     const handleDownloadDocx = (inc: any) => {
         if (!inc) return;
-        const docContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Reporte de Incidencia RRSS</title><style>body { font-family: 'Arial', sans-serif; color: #222222; line-height: 1.5; } h2 { color: #f97316; border-b: 2px solid #f97316; padding-bottom: 5px; font-size: 18pt; } .table-info { width: 100%; border-collapse: collapse; margin-top: 15px; } .table-info td { padding: 8px; border: 1px solid #dddddd; font-size: 10.5pt; } .label { font-weight: bold; background-color: #f3f4f6; width: 30%; } .section-header { font-size: 12pt; font-weight: bold; color: #f97316; margin-top: 20px; margin-bottom: 5px; } .box { border: 1px solid #e5e7eb; padding: 10px; background: #fafafa; border-radius: 4px; font-size: 11pt; } ul { padding-left: 20px; list-style-type: disc; } ol { padding-left: 20px; list-style-type: decimal; }</style></head><body><h2>INNOVA SOCIAL - INFORME DE INCIDENCIA RRSS</h2><table class="table-info"><tr><td class="label">Fecha Recepción</td><td>${inc.fecha}</td></tr><tr><td class="label">Medio / Canal</td><td>${inc.medio}</td></tr><tr><td class="label">Usuario Afectado</td><td>${inc.usuario}</td></tr><tr><td class="label">Campus</td><td>${inc.campus}</td></tr><tr><td class="label">Área Responsable</td><td>${inc.area || 'N/A'}</td></tr><tr><td class="label">Nivel de Riesgo</td><td>${inc.riesgo}</td></tr><tr><td class="label">Volumen Incidencias</td><td>${inc.totalIncidencias}</td></tr><tr><td class="label">Registrado por</td><td>${inc.autor || 'Admin'}</td></tr></table><div class="section-header">Descripción del Evento:</div><div class="box">${inc.descripcion || ''}</div><div class="section-header">Comentarios Adicionales:</div><div class="box">${inc.comentarios || 'Sin comentarios adicionales.'}</div><div class="section-header">Bitácora / Reporte Estructurado:</div><div class="box">${inc.reporteTexto || 'Sin bitácora detallada de texto enriquecido.'}</div></body></html>`;
+        const docContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Reporte de Incidencia RRSS</title><style>body { font-family: 'Arial', sans-serif; color: #222222; line-height: 1.5; } h2 { color: #f97316; border-b: 2px solid #f97316; padding-bottom: 5px; font-size: 18pt; } .table-info { width: 100%; border-collapse: collapse; margin-top: 15px; } .table-info td { padding: 8px; border: 1px solid #dddddd; font-size: 10.5pt; } .label { font-weight: bold; background-color: #f3f4f6; width: 30%; } .section-header { font-size: 12pt; font-weight: bold; color: #f97316; margin-top: 20px; margin-bottom: 5px; } .box { border: 1px solid #e5e7eb; padding: 10px; background: #fafafa; border-radius: 4px; font-size: 11pt; } ul { padding-left: 20px; list-style-type: disc; } ol { padding-left: 20px; list-style-type: decimal; }</style></head><body><h2>INNOVA MANAGEMENT - INFORME DE INCIDENCIA RRSS</h2><table class="table-info"><tr><td class="label">Fecha Recepción</td><td>${inc.fecha}</td></tr><tr><td class="label">Medio / Canal</td><td>${inc.medio}</td></tr><tr><td class="label">Usuario Afectado</td><td>${inc.usuario}</td></tr><tr><td class="label">Campus</td><td>${inc.campus}</td></tr><tr><td class="label">Área Responsable</td><td>${inc.area || 'N/A'}</td></tr><tr><td class="label">Nivel de Riesgo</td><td>${inc.riesgo}</td></tr><tr><td class="label">Volumen Incidencias</td><td>${inc.totalIncidencias}</td></tr><tr><td class="label">Registrado por</td><td>${inc.autor || 'Admin'}</td></tr></table><div class="section-header">Descripción del Evento:</div><div class="box">${inc.descripcion || ''}</div><div class="section-header">Comentarios Adicionales:</div><div class="box">${inc.comentarios || 'Sin comentarios adicionales.'}</div><div class="section-header">Bitácora / Reporte Estructurado:</div><div class="box">${inc.reporteTexto || 'Sin bitácora detallada de texto enriquecido.'}</div></body></html>`;
         const blob = new Blob([docContent], { type: 'application/msword' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Reporte_RRSS_${inc.usuario || 'Incidente'}_${inc.fecha}.docx`; link.click();
         showToast('Documento Word (.docx) descargado con éxito.');
@@ -267,39 +250,17 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                     <div className="p-4 theme-bg-container border theme-border rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
                         <div className="relative w-full md:w-2/3 flex items-center">
                             <Search className="absolute left-3 text-gray-400 w-4 h-4 pointer-events-none" />
-                            <input 
-                                type="text" 
-                                placeholder="Buscar por usuario, campus, medio, descripción..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`${inputStyles} pl-10 pr-10`}
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 p-1 rounded-md text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-white transition-colors" title="Limpiar búsqueda">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
+                            <input type="text" placeholder="Buscar por usuario, campus, medio, descripción..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputStyles} pl-10 pr-10`} />
+                            {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 p-1 rounded-md text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-white transition-colors" title="Limpiar búsqueda"><X className="w-4 h-4" /></button>}
                         </div>
                         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-4">
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label>
-                                <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-1.5 px-3 min-w-[100px]`}>
-                                    <option value="Todos">Todos</option>
-                                    {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
-                                </select>
-                            </div>
-                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap">
-                                <span className="text-xs font-bold theme-text-main">{filteredIncidents.length}</span>
-                                <span className="text-[10px] theme-text-muted font-medium ml-1">de {safeIncidents.length}</span>
-                            </div>
+                            <div className="flex items-center gap-2"><label className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label><select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-1.5 px-3 min-w-[100px]`}><option value="Todos">Todos</option>{availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}</select></div>
+                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap"><span className="text-xs font-bold theme-text-main">{filteredIncidents.length}</span><span className="text-[10px] theme-text-muted font-medium ml-1">de {safeIncidents.length}</span></div>
                         </div>
                     </div>
 
                     {filteredIncidents.length === 0 ? (
-                        <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border">
-                            <Smartphone className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" />
-                            <p className="theme-text-muted">No se encontraron registros con los criterios actuales.</p>
-                        </div>
+                        <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border"><Smartphone className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No se encontraron registros con los criterios actuales.</p></div>
                     ) : (
                         <div className="space-y-4">
                             {Object.keys(groupedData).sort((a, b) => b.localeCompare(a)).map(year => {
@@ -308,18 +269,8 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
 
                                 return (
                                     <div key={year} className="theme-bg-container border theme-border rounded-xl overflow-hidden shadow-sm">
-                                        <button 
-                                            onClick={() => toggleSection(year)}
-                                            className="w-full flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                {isYearExpanded ? <ChevronDown className="w-5 h-5 theme-text-muted" /> : <ChevronRight className="w-5 h-5 theme-text-muted" />}
-                                                <h3 className="text-lg font-bold theme-text-main">{year}</h3>
-                                                <span className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 px-2 py-0.5 rounded-full text-xs font-bold">
-                                                    {totalInYear}
-                                                </span>
-                                            </div>
-                                            {/* ACENTO DE COLOR NARANJA PARA RRSS */}
+                                        <button onClick={() => toggleSection(year)} className="w-full flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                                            <div className="flex items-center gap-3">{isYearExpanded ? <ChevronDown className="w-5 h-5 theme-text-muted" /> : <ChevronRight className="w-5 h-5 theme-text-muted" />}<h3 className="text-lg font-bold theme-text-main">{year}</h3><span className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400 px-2 py-0.5 rounded-full text-xs font-bold">{totalInYear}</span></div>
                                             <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                                         </button>
 
@@ -329,60 +280,34 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                                                     const monthKey = `${year}-${month}`;
                                                     const isMonthExpanded = !!expandedSections[monthKey];
                                                     const monthItems = groupedData[year][month];
-                                                    
                                                     const currentMonthPage = pagePerMonth[monthKey] || 1;
                                                     const totalMonthPages = Math.ceil(monthItems.length / itemsPerPage);
                                                     const paginatedMonthItems = monthItems.slice((currentMonthPage - 1) * itemsPerPage, currentMonthPage * itemsPerPage);
 
                                                     return (
                                                         <div key={monthKey} className="border theme-border rounded-lg overflow-hidden bg-[var(--surface)]">
-                                                            <button 
-                                                                onClick={() => toggleSection(monthKey)}
-                                                                className="w-full flex items-center gap-2 p-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                                                            >
-                                                                {isMonthExpanded ? <ChevronDown className="w-4 h-4 theme-text-muted" /> : <ChevronRight className="w-4 h-4 theme-text-muted" />}
-                                                                <h4 className="text-sm font-bold theme-text-main uppercase tracking-wider">{getMonthName(month)}</h4>
-                                                                <span className="text-xs theme-text-muted">({monthItems.length})</span>
-                                                            </button>
-
+                                                            <button onClick={() => toggleSection(monthKey)} className="w-full flex items-center gap-2 p-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">{isMonthExpanded ? <ChevronDown className="w-4 h-4 theme-text-muted" /> : <ChevronRight className="w-4 h-4 theme-text-muted" />}<h4 className="text-sm font-bold theme-text-main uppercase tracking-wider">{getMonthName(month)}</h4><span className="text-xs theme-text-muted">({monthItems.length})</span></button>
                                                             {isMonthExpanded && (
                                                                 <div className="border-t theme-border bg-[var(--surface)]">
                                                                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                                         {paginatedMonthItems.map((inc: any) => (
                                                                             <div key={inc.id} onClick={() => openDetail(inc)} className="p-5 theme-bg-container rounded-xl border theme-border shadow-sm hover:border-orange-500 transition-colors cursor-pointer group flex flex-col h-full border-l-4 border-l-orange-500">
                                                                                 <div className="flex items-start gap-3 mb-3">
-                                                                                    <div className="w-10 h-10 rounded-lg theme-bg-low flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500 transition-colors [&>svg]:group-hover:text-white">
-                                                                                        {getMediaIcon(inc.medio)}
-                                                                                    </div>
+                                                                                    <div className="w-10 h-10 rounded-lg theme-bg-low flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500 transition-colors [&>svg]:group-hover:text-white">{getMediaIcon(inc.medio)}</div>
                                                                                     <div className="flex-1 min-w-0">
                                                                                         <h3 className="font-bold theme-text-main truncate text-base">{inc.medio}</h3>
-                                                                                        <p className="text-xs font-semibold theme-text-muted mt-0.5 truncate flex items-center gap-1">
-                                                                                            {inc.fecha} 
-                                                                                            {isAdmin && (
-                                                                                                <><span className="mx-1">|</span> Por: <span className="text-orange-500 truncate">{inc.autor || 'Administrador'}</span></>
-                                                                                            )}
-                                                                                        </p>
+                                                                                        <p className="text-xs font-semibold theme-text-muted mt-0.5 truncate flex items-center gap-1">{inc.fecha} {isAdmin && <><span className="mx-1">|</span> Por: <span className="text-orange-500 truncate">{inc.autor || 'Administrador'}</span></>}</p>
                                                                                     </div>
                                                                                 </div>
-                                                                                <div className="text-sm theme-text-main line-clamp-2 min-h-[40px] opacity-90">
-                                                                                    <span className="font-bold mr-1">{inc.usuario}:</span> {inc.descripcion}
-                                                                                </div>
-                                                                                <div className="text-[11px] theme-text-muted mt-2 px-1">
-                                                                                    <span className="font-semibold theme-text-main">Área responsable:</span> {inc.area || 'Operaciones'}
-                                                                                </div>
+                                                                                <div className="text-sm theme-text-main line-clamp-2 min-h-[40px] opacity-90"><span className="font-bold mr-1">{inc.usuario}:</span> {inc.descripcion}</div>
+                                                                                <div className="text-[11px] theme-text-muted mt-2 px-1"><span className="font-semibold theme-text-main">Área responsable:</span> {inc.area || 'Operaciones'}</div>
                                                                                 <div className="mt-4 flex items-center justify-between pt-3 border-t theme-border">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <span className={`px-2.5 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider ${getRiskColor(inc.riesgo)}`}>{inc.riesgo}</span>
-                                                                                        <span className="px-2.5 py-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">Incidencias: {inc.totalIncidencias}</span>
-                                                                                    </div>
-                                                                                    <button onClick={(e) => { e.stopPropagation(); handleDownloadDocx(inc); }} className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors no-print" title="Descargar reporte (.docx)">
-                                                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg>
-                                                                                    </button>
+                                                                                    <div className="flex items-center gap-2"><span className={`px-2.5 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider ${getRiskColor(inc.riesgo)}`}>{inc.riesgo}</span><span className="px-2.5 py-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">Incidencias: {inc.totalIncidencias}</span></div>
+                                                                                    <button onClick={(e) => { e.stopPropagation(); handleDownloadDocx(inc); }} className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors no-print" title="Descargar reporte (.docx)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg></button>
                                                                                 </div>
                                                                             </div>
                                                                         ))}
                                                                     </div>
-
                                                                     {totalMonthPages > 1 && (
                                                                         <div className="p-4 flex items-center justify-between border-t theme-border bg-black/5 dark:bg-white/5">
                                                                             <p className="text-xs theme-text-muted">Mostrando <span className="font-bold theme-text-main">{((currentMonthPage - 1) * itemsPerPage) + 1}</span> a <span className="font-bold theme-text-main">{Math.min(currentMonthPage * itemsPerPage, monthItems.length)}</span> de <span className="font-bold theme-text-main">{monthItems.length}</span> reportes</p>
@@ -408,7 +333,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                 </div>
             </div>
 
-            {/* Modal de Detalle */}
             {isDetailOpen && selectedIncident && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in print:static print:block print:p-0 print:bg-transparent">
                     <div className="theme-bg-container rounded-2xl w-full max-w-2xl shadow-2xl border theme-border overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-full">
@@ -438,16 +362,10 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                                 <div><p className="text-xs theme-text-muted font-medium mb-1">Nivel de Riesgo</p><span className={`inline-block px-3 py-1 rounded-md text-xs font-bold ${getRiskColor(selectedIncident.riesgo)}`}>{selectedIncident.riesgo}</span></div>
                                 <div className="col-span-2"><p className="text-xs theme-text-muted font-medium mb-1">Usuario RRSS</p><p className="font-bold theme-text-main bg-black/5 dark:bg-white/5 px-3 py-1.5 rounded-lg inline-block">{selectedIncident.usuario}</p></div>
                             </div>
-
                             <div className="space-y-6">
                                 <div><p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Descripción de la incidencia</p><div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main whitespace-pre-wrap text-sm leading-relaxed">{selectedIncident.descripcion}</div></div>
                                 {selectedIncident.comentarios && <div><p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Comentarios adicionales</p><div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main whitespace-pre-wrap text-sm">{selectedIncident.comentarios}</div></div>}
-                                {selectedIncident.reporteTexto && (
-                                    <div>
-                                        <p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Reporte Oficial (Bitácora Enriquecida)</p>
-                                        <div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main text-sm leading-relaxed wysiwyg-content" dangerouslySetInnerHTML={{ __html: selectedIncident.reporteTexto }}/>
-                                    </div>
-                                )}
+                                {selectedIncident.reporteTexto && <div><p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Reporte Oficial (Bitácora Enriquecida)</p><div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main text-sm leading-relaxed wysiwyg-content" dangerouslySetInnerHTML={{ __html: selectedIncident.reporteTexto }}/></div>}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {selectedIncident.enlacePublicacion && (<a href={selectedIncident.enlacePublicacion} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 theme-bg-low border theme-border rounded-xl hover:border-orange-500 transition-colors group no-print"><div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg group-hover:scale-110 transition-transform"><LinkIcon className="w-4 h-4"/></div><div className="overflow-hidden"><p className="text-xs font-bold theme-text-main">Ver Publicación</p><p className="text-[10px] theme-text-muted truncate">{selectedIncident.enlacePublicacion}</p></div></a>)}
                                     {selectedIncident.enlaceDrive && (<a href={selectedIncident.enlaceDrive} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 theme-bg-low border theme-border rounded-xl hover:border-orange-500 transition-colors group no-print"><div className="p-2 bg-green-500/10 text-green-600 rounded-lg group-hover:scale-110 transition-transform"><HardDrive className="w-4 h-4"/></div><div className="overflow-hidden"><p className="text-xs font-bold theme-text-main">Evidencia (Drive)</p><p className="text-[10px] theme-text-muted truncate">{selectedIncident.enlaceDrive}</p></div></a>)}
@@ -461,7 +379,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                 </div>
             )}
 
-            {/* Modal de Edición */}
             {isEditOpen && selectedIncident && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-3xl shadow-2xl border theme-border flex flex-col max-h-[90vh]">
@@ -486,18 +403,10 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                                     <div><label className="text-xs font-bold theme-text-muted">Total</label><input name="total" type="number" min="1" required defaultValue={selectedIncident.totalIncidencias} className={inputStyles} /></div>
                                     <div><label className="text-xs font-bold theme-text-muted">Fecha</label><input name="fecha" type="date" required defaultValue={selectedIncident.fecha} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
                                     <div><label className="text-xs font-bold theme-text-muted">Usuario</label><input name="usuario" type="text" required defaultValue={selectedIncident.usuario} className={inputStyles} /></div>
-                                    <div><label className="text-xs font-bold theme-text-muted">Medio</label>
-                                        <select name="medio" defaultValue={selectedIncident.medio} className={inputStyles}><option value="Facebook Comentario">Facebook Comentario</option><option value="TikTok">TikTok</option><option value="FB Grupos">FB Grupos</option><option value="LinkedIn">LinkedIn</option><option value="Facebook DM">Facebook DM</option><option value="Instagram DM">Instagram DM</option></select>
-                                    </div>
-                                    <div><label className="text-xs font-bold theme-text-muted">Campus</label>
-                                        <select name="campus" defaultValue={selectedIncident.campus} className={inputStyles}>{['Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(c => <option key={c}>{c}</option>)}</select>
-                                    </div>
-                                    <div><label className="text-xs font-bold theme-text-muted">Riesgo</label>
-                                        <select name="riesgo" defaultValue={selectedIncident.riesgo} className={inputStyles}><option value="Bajo">Bajo</option><option value="Medio">Medio</option><option value="Alto">Alto</option><option value="Critico">Crítico</option></select>
-                                    </div>
-                                    <div className="col-span-2"><label className="text-xs font-bold theme-text-muted">Área Responsable</label>
-                                        <select name="area" defaultValue={selectedIncident.area || 'Operaciones'} className={inputStyles}><option value="Operaciones">Operaciones</option><option value="Legal">Legal</option><option value="Comercial - Call Center">Comercial - Call Center</option></select>
-                                    </div>
+                                    <div><label className="text-xs font-bold theme-text-muted">Medio</label><select name="medio" defaultValue={selectedIncident.medio} className={inputStyles}><option value="Facebook Comentario">Facebook Comentario</option><option value="TikTok">TikTok</option><option value="FB Grupos">FB Grupos</option><option value="LinkedIn">LinkedIn</option><option value="Facebook DM">Facebook DM</option><option value="Instagram DM">Instagram DM</option></select></div>
+                                    <div><label className="text-xs font-bold theme-text-muted">Campus</label><select name="campus" defaultValue={selectedIncident.campus} className={inputStyles}>{['Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(c => <option key={c}>{c}</option>)}</select></div>
+                                    <div><label className="text-xs font-bold theme-text-muted">Riesgo</label><select name="riesgo" defaultValue={selectedIncident.riesgo} className={inputStyles}><option value="Bajo">Bajo</option><option value="Medio">Medio</option><option value="Alto">Alto</option><option value="Critico">Crítico</option></select></div>
+                                    <div className="col-span-2"><label className="text-xs font-bold theme-text-muted">Área Responsable</label><select name="area" defaultValue={selectedIncident.area || 'Operaciones'} className={inputStyles}><option value="Operaciones">Operaciones</option><option value="Legal">Legal</option><option value="Comercial - Call Center">Comercial - Call Center</option></select></div>
                                 </div>
                                 <div><label className="text-xs font-bold theme-text-muted">Descripción</label><textarea name="descripcion" rows={3} required defaultValue={selectedIncident.descripcion} className={inputStyles}></textarea></div>
                                 <div><label className="text-xs font-bold theme-text-muted">Comentarios</label><textarea name="comentarios" rows={2} defaultValue={selectedIncident.comentarios} className={inputStyles}></textarea></div>

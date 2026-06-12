@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layout, Zap } from 'lucide-react';
+import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layout, Zap, Sparkles } from 'lucide-react';
 
 // ==========================================
 // DATOS DEL CHANGELOG (HISTORIAL DE VERSIONES)
@@ -9,7 +9,7 @@ const changelogData = [
         version: 'v3.1.0',
         date: 'Junio 2026',
         tag: 'Última Versión',
-        title: 'Dashboard Dinámico & Seguridad de Datos',
+        title: 'Dashboard Dinámico, Seguridad & SaaS Plus',
         changes: [
             { type: 'feature', text: 'Dashboard rediseñado con navegación por pestañas (Seguridad, RRSS, Comentarios).' },
             { type: 'feature', text: 'Gráficas SVG nativas y animadas en tiempo real (Donut Chart, Barras Horizontales y Progress Bars).' },
@@ -17,7 +17,11 @@ const changelogData = [
             { type: 'ui', text: 'Historiales avanzados con acordeones anidados colapsables por Año y Mes.' },
             { type: 'feature', text: 'Paginación modular independiente (30 tarjetas por mes) para optimizar el rendimiento.' },
             { type: 'ui', text: 'Super Badges de alto contraste visual para clasificar el Sentiment (Negativo/Neutral) desde la vista general.' },
-            { type: 'feature', text: 'Modales de "Vista Rápida" (Preview) inyectados directamente en el Dashboard.' }
+            { type: 'feature', text: 'Modales de "Vista Rápida" (Preview) inyectados directamente en el Dashboard.' },
+            { type: 'divider' },
+            { type: 'title', text: 'Funcionalidades Plus (SaaS)' },
+            { type: 'feature', text: 'Centro de Notificaciones en tiempo real: Campana interactiva con insignias numéricas, panel filtrable por leídas/no leídas y enlaces de auditoría directos al incidente.' },
+            { type: 'security', text: 'Gestión de Usuarios RBAC: Panel de control dedicado para Administradores, pre-registro manual de cuentas, bloqueo de accesos y asignación de roles (Administrador IT, Administrador CM y Editor CM).' }
         ]
     },
     {
@@ -135,11 +139,23 @@ export const ChangelogView = () => {
                             {/* Contenido (Lista de Cambios) */}
                             {isExpanded && (
                                 <div className="p-6 border-t theme-border bg-[var(--background)]">
-                                    <ul className="space-y-4">
+                                    <ul className="space-y-2">
                                         {item.changes.map((change, idx) => {
+                                            if (change.type === 'divider') {
+                                                return <div key={idx} className="h-px w-full bg-gray-200 dark:bg-gray-700 my-4"></div>;
+                                            }
+                                            if (change.type === 'title') {
+                                                return (
+                                                    <h4 key={idx} className="text-sm font-black text-[var(--primary)] uppercase tracking-wider mt-4 mb-2 flex items-center gap-2">
+                                                        <Sparkles className="w-4 h-4" />
+                                                        {change.text}
+                                                    </h4>
+                                                );
+                                            }
+
                                             const style = getChangeStyle(change.type);
                                             return (
-                                                <li key={idx} className="flex items-start gap-4 fade-in">
+                                                <li key={idx} className="flex items-start gap-4 fade-in py-1">
                                                     <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 shadow-sm ${style.bg}`}>
                                                         {style.icon}
                                                     </div>
@@ -160,7 +176,7 @@ export const ChangelogView = () => {
             {/* Footer del Changelog */}
             <div className="text-center pt-8 pb-4">
                 <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">
-                    Innova Social &copy; {new Date().getFullYear()}
+                    Innova Management &copy; {new Date().getFullYear()}
                 </p>
             </div>
         </div>

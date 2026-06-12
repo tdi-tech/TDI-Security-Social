@@ -1,80 +1,97 @@
 import React from 'react';
-import { Sun, Moon, Download, RefreshCw } from 'lucide-react';
+import { Settings, Moon, Sun, Database, Download, ShieldAlert } from 'lucide-react';
 
-export const ConfigView = ({ isDarkMode, toggleTheme, incidents, checklistState, showToast, isAdmin }: any) => {
-    
-    const handleBackup = () => {
-        const data = { 
-            fechaExportacion: new Date().toISOString(),
-            totalIncidentes: incidents.length,
-            incidentes: incidents, 
-            estadoChecklist: checklistState 
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Backup_TDI_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        showToast('Copia de seguridad exportada correctamente');
-    };
+export const ConfigView = ({ isDarkMode, toggleTheme, incidents, checklistState, showToast, isAdmin, userRole }: any) => {
 
-    const handleClearCache = () => {
-        localStorage.clear();
-        window.location.reload();
+    // Función de exportación de respaldo (Backup) en formato JSON
+    const handleExportDB = () => {
+        try {
+            const data = {
+                incidents,
+                checklistState,
+                exportDate: new Date().toISOString()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            // CAMBIO APLICADO: backup_innova_management
+            downloadAnchorNode.setAttribute("download", `backup_innova_management_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            showToast('Base de datos exportada correctamente');
+        } catch (error) {
+            showToast('Error al exportar los datos', true);
+        }
     };
 
     return (
-        <div className="fade-in max-w-3xl mx-auto pb-10">
-            <h2 className="text-2xl font-bold theme-text-main mb-6 border-b theme-border pb-4">Ajustes del Sistema</h2>
+        <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
+            
+            {/* ENCABEZADO */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold theme-text-main flex items-center gap-2">
+                        <Settings className="w-6 h-6 text-[var(--primary)]" />
+                        Configuración
+                    </h2>
+                    <p className="theme-text-muted text-sm mt-1">Ajustes del sistema, preferencias y respaldo de datos.</p>
+                </div>
+            </div>
 
-            <div className="space-y-8">
-                {/* 1. Preferencias de Interfaz (VISIBLE PARA TODOS) */}
-                <section>
-                    <h3 className="text-sm font-bold text-[var(--primary)] uppercase tracking-wider mb-4">1. Preferencias de Interfaz</h3>
-                    <div className="theme-bg-container theme-border border rounded-xl p-5 flex items-center justify-between shadow-sm">
+            <div className="space-y-6">
+                
+                {/* 1. PREFERENCIAS DE INTERFAZ */}
+                <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold theme-text-main mb-4 border-b theme-border pb-2">Preferencias de Interfaz</h3>
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h4 className="font-bold theme-text-main text-sm">Tema del Panel</h4>
-                            <p className="text-xs theme-text-muted mt-1">Cambia entre modo claro y oscuro.</p>
+                            <p className="font-medium theme-text-main">Tema Visual</p>
+                            <p className="text-xs theme-text-muted mt-0.5">Alternar entre modo claro y oscuro.</p>
                         </div>
-                        <button onClick={toggleTheme} className="px-4 py-2 theme-bg-low theme-border border rounded-lg font-medium text-sm flex items-center gap-2 theme-text-main hover:brightness-95 dark:hover:brightness-110 transition-all">
-                            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        <button 
+                            onClick={toggleTheme}
+                            className="flex items-center gap-2 px-4 py-2 theme-bg-low border theme-border rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors font-bold text-sm theme-text-main"
+                        >
+                            {isDarkMode ? <Sun className="w-4 h-4"/> : <Moon className="w-4 h-4"/>}
                             {isDarkMode ? 'Modo Claro' : 'Modo Oscuro'}
                         </button>
                     </div>
-                </section>
+                </div>
 
-                {/* 2. Gestión de Datos (SOLO ADMINISTRADORES) */}
-                {isAdmin && (
-                    <section className="animate-fade-in">
-                        <h3 className="text-sm font-bold text-[var(--primary)] uppercase tracking-wider mb-4">2. Gestión de Datos</h3>
-                        <div className="theme-bg-container theme-border border rounded-xl p-5 flex items-center justify-between shadow-sm">
+                {/* 2. EXPORTACIÓN DE BASE DE DATOS (RESTRINGIDO) */}
+                {userRole === 'ADMIN_IT' ? (
+                    <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm fade-in">
+                        <h3 className="text-lg font-bold theme-text-main mb-4 border-b theme-border pb-2 flex items-center gap-2">
+                            <Database className="w-5 h-5 text-[var(--primary)]" /> Respaldo de Base de Datos
+                        </h3>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div>
-                                <h4 className="font-bold theme-text-main text-sm">Copia de Seguridad (JSON)</h4>
-                                <p className="text-xs theme-text-muted mt-1">Descarga toda la base de datos de Firebase cruda.</p>
+                                <p className="font-medium theme-text-main">Exportar JSON de Seguridad</p>
+                                <p className="text-xs theme-text-muted mt-0.5">Descarga un respaldo completo de las colecciones de incidencias y checklist.</p>
                             </div>
-                            <button onClick={handleBackup} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2">
-                                <Download className="w-4 h-4" /> Exportar BD
+                            <button 
+                                onClick={handleExportDB}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white rounded-xl hover:brightness-110 transition-all font-bold text-sm shadow-sm"
+                            >
+                                <Download className="w-4 h-4"/> Exportar Datos
                             </button>
                         </div>
-                    </section>
+                    </div>
+                ) : (
+                    <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm opacity-70">
+                        <h3 className="text-lg font-bold theme-text-main mb-4 border-b theme-border pb-2 flex items-center gap-2">
+                            <Database className="w-5 h-5 text-gray-500" /> Respaldo de Base de Datos
+                        </h3>
+                        <div className="flex items-center gap-3 p-4 theme-bg-lowest rounded-xl border theme-border">
+                            <ShieldAlert className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                            <p className="text-sm theme-text-muted">
+                                No tienes los permisos suficientes para exportar la base de datos. Solo el <strong className="theme-text-main">Administrador IT</strong> puede realizar respaldos generales.
+                            </p>
+                        </div>
+                    </div>
                 )}
 
-                {/* 3. Zona Peligrosa (SOLO ADMINISTRADORES) */}
-                {isAdmin && (
-                    <section className="animate-fade-in">
-                        <h3 className="text-sm font-bold text-[var(--error)] uppercase tracking-wider mb-4">3. Zona Peligrosa</h3>
-                        <div className="border border-[var(--error)]/30 bg-[var(--error)]/5 rounded-xl p-5 flex items-center justify-between shadow-sm">
-                            <div>
-                                <h4 className="font-bold text-[var(--error)] text-sm">Limpiar Caché y Refrescar</h4>
-                                <p className="text-xs theme-text-muted mt-1">Soluciona problemas de lentitud y fuerza la recarga web.</p>
-                            </div>
-                            <button onClick={handleClearCache} className="px-4 py-2 bg-[var(--error)] hover:brightness-110 text-white rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2">
-                                <RefreshCw className="w-4 h-4" /> Purgar Caché
-                            </button>
-                        </div>
-                    </section>
-                )}
             </div>
         </div>
     );

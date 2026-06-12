@@ -7,9 +7,6 @@ import {
 import { collection, addDoc } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
 
-// ==========================================
-// ESTILOS COMPARTIDOS
-// ==========================================
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
 const radioLabelStyles = "flex items-center gap-2 text-sm font-medium theme-text-main cursor-pointer";
 
@@ -25,10 +22,7 @@ const renderSentimentBadge = (sentiment: string) => {
     return null;
 };
 
-// ==========================================
-// VISTA 1: CREAR REPORTE DE COMENTARIO
-// ==========================================
-export const NewCommentView = ({ isAdmin, showToast, navigate, user }: any) => {
+export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }: any) => {
     const [formData, setFormData] = useState<any>({
         fechaInicio: '', fechaFin: '', contenido: 'Orgánico', evidencia: '',
         comentariosList: [{ usuario: '', comentario: '', redSocial: 'Facebook', campus: 'Sin especificar', sentiment: '', posteoTipo: 'url', posteoUrl: '', posteoTexto: '' }]
@@ -56,7 +50,13 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user }: any) => {
         if (!isAdmin) return showToast('Permisos insuficientes.', true);
         setIsSubmitting(true);
         try {
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), { ...formData, autor: user?.displayName || 'Administrador', timestamp: new Date().toISOString() });
+            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), { 
+                ...formData, autor: user?.displayName || 'Administrador', timestamp: new Date().toISOString() 
+            });
+
+            // INYECCIÓN DE LA NOTIFICACIÓN AL CREAR
+            if (logAction) await logAction('Creó un nuevo reporte de comentarios', 'Comentarios', 'create', docRef.id);
+
             showToast('Reporte guardado exitosamente.'); navigate('historial-comentario');
         } catch (error) { showToast('Error al guardar.', true); }
         setIsSubmitting(false);
@@ -119,10 +119,8 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user }: any) => {
     );
 };
 
-// ==========================================
-// VISTA 2: HISTORIAL CON BÚSQUEDA Y ACORDEONES ANIDADOS
-// ==========================================
 export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComment, deleteComment }: any) => {
+    // ... Código del Historial de Comentarios intacto
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -130,7 +128,6 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterYear, setFilterYear] = useState('Todos');
-    
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
@@ -152,7 +149,6 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
             const term = searchTerm.toLowerCase();
             const list = getNormalizedComments(com);
             
-            // CANDADO DE SEGURIDAD APLICADO AL BUSCADOR
             const matchSearch = term === '' || 
                 (isAdmin && com.autor && com.autor.toLowerCase().includes(term)) ||
                 (com.contenido && com.contenido.toLowerCase().includes(term)) ||
@@ -185,19 +181,11 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
             const newestYear = sortedYears[0];
             const sortedMonths = Object.keys(groupedData[newestYear]).sort((a, b) => b.localeCompare(a));
             const newestMonth = sortedMonths[0];
-            
-            setExpandedSections(prev => ({
-                ...prev,
-                [newestYear]: true,
-                [`${newestYear}-${newestMonth}`]: true
-            }));
+            setExpandedSections(prev => ({ ...prev, [newestYear]: true, [`${newestYear}-${newestMonth}`]: true }));
         }
     }, [groupedData]);
 
-    const toggleSection = (key: string) => {
-        setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
+    const toggleSection = (key: string) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
     const openDetail = (com: any) => { setSelectedComment(com); setIsDetailOpen(true); };
     const openEdit = () => { setEditData({ ...selectedComment, comentariosList: getNormalizedComments(selectedComment) }); setIsDetailOpen(false); setIsEditOpen(true); };
     const handleDelete = () => { setIsDetailOpen(false); deleteComment(selectedComment.id); };
@@ -219,53 +207,25 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
         <>
             <div className="space-y-6 fade-in pb-10">
                 <div className={(isDetailOpen || isEditOpen) ? 'print:hidden' : ''}>
-                    
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                        <div>
-                            <h2 className="text-2xl font-bold theme-text-main">Historial de Comentarios</h2>
-                            <p className="theme-text-muted text-sm mt-1">Registro organizado de incidencias y reputación.</p>
-                        </div>
-                        <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-all text-sm font-bold shadow-sm">
-                            <Download className="w-4 h-4"/> Exportar CSV
-                        </button>
+                        <div><h2 className="text-2xl font-bold theme-text-main">Historial de Comentarios</h2><p className="theme-text-muted text-sm mt-1">Registro organizado de incidencias y reputación.</p></div>
+                        <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-all text-sm font-bold shadow-sm"><Download className="w-4 h-4"/> Exportar CSV</button>
                     </div>
 
                     <div className="p-4 theme-bg-container border theme-border rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
                         <div className="relative w-full md:w-2/3 flex items-center">
                             <Search className="absolute left-3 text-gray-400 w-4 h-4 pointer-events-none" />
-                            <input 
-                                type="text" 
-                                placeholder="Buscar por usuario, campus, red, contenido..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`${inputStyles} pl-10 pr-10`}
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 p-1 rounded-md text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-white transition-colors" title="Limpiar búsqueda">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
+                            <input type="text" placeholder="Buscar por usuario, campus, red, contenido..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className={`${inputStyles} pl-10 pr-10`} />
+                            {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 p-1 rounded-md text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-white transition-colors" title="Limpiar búsqueda"><X className="w-4 h-4" /></button>}
                         </div>
                         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-4">
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label>
-                                <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-1.5 px-3 min-w-[100px]`}>
-                                    <option value="Todos">Todos</option>
-                                    {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
-                                </select>
-                            </div>
-                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap">
-                                <span className="text-xs font-bold theme-text-main">{filteredComments.length}</span>
-                                <span className="text-[10px] theme-text-muted font-medium ml-1">de {comments.length}</span>
-                            </div>
+                            <div className="flex items-center gap-2"><label className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label><select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-1.5 px-3 min-w-[100px]`}><option value="Todos">Todos</option>{availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}</select></div>
+                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap"><span className="text-xs font-bold theme-text-main">{filteredComments.length}</span><span className="text-[10px] theme-text-muted font-medium ml-1">de {comments.length}</span></div>
                         </div>
                     </div>
 
                     {filteredComments.length === 0 ? (
-                        <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border">
-                            <MessageSquare className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" />
-                            <p className="theme-text-muted">No se encontraron reportes con los criterios actuales.</p>
-                        </div>
+                        <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border"><MessageSquare className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No se encontraron reportes con los criterios actuales.</p></div>
                     ) : (
                         <div className="space-y-4">
                             {Object.keys(groupedData).sort((a, b) => b.localeCompare(a)).map(year => {
@@ -274,17 +234,8 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
 
                                 return (
                                     <div key={year} className="theme-bg-container border theme-border rounded-xl overflow-hidden shadow-sm">
-                                        <button 
-                                            onClick={() => toggleSection(year)}
-                                            className="w-full flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                {isYearExpanded ? <ChevronDown className="w-5 h-5 theme-text-muted" /> : <ChevronRight className="w-5 h-5 theme-text-muted" />}
-                                                <h3 className="text-lg font-bold theme-text-main">{year}</h3>
-                                                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-2 py-0.5 rounded-full text-xs font-bold">
-                                                    {totalInYear}
-                                                </span>
-                                            </div>
+                                        <button onClick={() => toggleSection(year)} className="w-full flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                                            <div className="flex items-center gap-3">{isYearExpanded ? <ChevronDown className="w-5 h-5 theme-text-muted" /> : <ChevronRight className="w-5 h-5 theme-text-muted" />}<h3 className="text-lg font-bold theme-text-main">{year}</h3><span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 px-2 py-0.5 rounded-full text-xs font-bold">{totalInYear}</span></div>
                                             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                                         </button>
 
@@ -294,22 +245,13 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                                                     const monthKey = `${year}-${month}`;
                                                     const isMonthExpanded = !!expandedSections[monthKey];
                                                     const monthItems = groupedData[year][month];
-                                                    
                                                     const currentMonthPage = pagePerMonth[monthKey] || 1;
                                                     const totalMonthPages = Math.ceil(monthItems.length / itemsPerPage);
                                                     const paginatedMonthItems = monthItems.slice((currentMonthPage - 1) * itemsPerPage, currentMonthPage * itemsPerPage);
 
                                                     return (
                                                         <div key={monthKey} className="border theme-border rounded-lg overflow-hidden bg-[var(--surface)]">
-                                                            <button 
-                                                                onClick={() => toggleSection(monthKey)}
-                                                                className="w-full flex items-center gap-2 p-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                                                            >
-                                                                {isMonthExpanded ? <ChevronDown className="w-4 h-4 theme-text-muted" /> : <ChevronRight className="w-4 h-4 theme-text-muted" />}
-                                                                <h4 className="text-sm font-bold theme-text-main uppercase tracking-wider">{getMonthName(month)}</h4>
-                                                                <span className="text-xs theme-text-muted">({monthItems.length})</span>
-                                                            </button>
-
+                                                            <button onClick={() => toggleSection(monthKey)} className="w-full flex items-center gap-2 p-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">{isMonthExpanded ? <ChevronDown className="w-4 h-4 theme-text-muted" /> : <ChevronRight className="w-4 h-4 theme-text-muted" />}<h4 className="text-sm font-bold theme-text-main uppercase tracking-wider">{getMonthName(month)}</h4><span className="text-xs theme-text-muted">({monthItems.length})</span></button>
                                                             {isMonthExpanded && (
                                                                 <div className="border-t theme-border bg-[var(--surface)]">
                                                                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -324,60 +266,29 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                                                                             return (
                                                                                 <div key={com.id} onClick={() => openDetail(com)} className={`p-4 theme-bg-container rounded-xl border shadow-sm transition-colors cursor-pointer group flex flex-col h-full border-l-4 ${hasNegative ? 'border-red-500/50 hover:border-red-500 border-l-red-500' : 'theme-border hover:border-blue-500 border-l-blue-500'}`}>
                                                                                     <div className="flex items-start gap-3 mb-3">
-                                                                                        <div className={`w-8 h-8 rounded-lg theme-bg-low flex items-center justify-center flex-shrink-0 transition-colors ${hasNegative ? 'group-hover:bg-red-500' : 'group-hover:bg-blue-500'}`}>
-                                                                                            <MessageSquare className="w-4 h-4 theme-text-muted group-hover:text-white transition-colors" />
-                                                                                        </div>
+                                                                                        <div className={`w-8 h-8 rounded-lg theme-bg-low flex items-center justify-center flex-shrink-0 transition-colors ${hasNegative ? 'group-hover:bg-red-500' : 'group-hover:bg-blue-500'}`}><MessageSquare className="w-4 h-4 theme-text-muted group-hover:text-white transition-colors" /></div>
                                                                                         <div className="flex-1 min-w-0">
                                                                                             <h3 className="font-bold theme-text-main truncate text-sm">Reporte del {com.fechaInicio}</h3>
-                                                                                            <p className="text-[10px] font-semibold theme-text-muted mt-0.5 truncate flex items-center gap-1">
-                                                                                                al {com.fechaFin}
-                                                                                                {isAdmin && (
-                                                                                                    <><span className="mx-1">|</span> Por: <span className="text-blue-500 truncate">{com.autor || 'Administrador'}</span></>
-                                                                                                )}
-                                                                                            </p>
+                                                                                            <p className="text-[10px] font-semibold theme-text-muted mt-0.5 truncate flex items-center gap-1">al {com.fechaFin}{isAdmin && <><span className="mx-1">|</span> Por: <span className="text-blue-500 truncate">{com.autor || 'Administrador'}</span></>}</p>
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="text-sm theme-text-main line-clamp-2 min-h-[40px] opacity-90 mb-1"><span className="font-bold mr-1">{firstComment.usuario}:</span>{firstComment.comentario}</div>
                                                                                     {hasMore && <p className="text-[10px] font-bold text-blue-500 mb-2">+ {list.length - 1} comentario(s) más</p>}
-                                                                                    <div className="mt-auto pt-3 border-t theme-border flex flex-wrap gap-2 items-center">
-                                                                                        <span className="px-2 py-1 text-[10px] font-bold rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{com.contenido}</span>
-                                                                                        {renderSentimentBadge(cardSentimentStatus)}
-                                                                                        {uniqueNetworks.map((net: any) => <span key={net} className="px-2 py-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">{net}</span>)}
-                                                                                    </div>
+                                                                                    <div className="mt-auto pt-3 border-t theme-border flex flex-wrap gap-2 items-center"><span className="px-2 py-1 text-[10px] font-bold rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{com.contenido}</span>{renderSentimentBadge(cardSentimentStatus)}{uniqueNetworks.map((net: any) => <span key={net} className="px-2 py-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">{net}</span>)}</div>
                                                                                 </div>
                                                                             );
                                                                         })}
                                                                     </div>
-
                                                                     {totalMonthPages > 1 && (
                                                                         <div className="p-4 flex items-center justify-between border-t theme-border bg-black/5 dark:bg-white/5">
-                                                                            <p className="text-xs theme-text-muted">
-                                                                                Mostrando <span className="font-bold theme-text-main">{((currentMonthPage - 1) * itemsPerPage) + 1}</span> a <span className="font-bold theme-text-main">{Math.min(currentMonthPage * itemsPerPage, monthItems.length)}</span> de <span className="font-bold theme-text-main">{monthItems.length}</span> reportes
-                                                                            </p>
+                                                                            <p className="text-xs theme-text-muted">Mostrando <span className="font-bold theme-text-main">{((currentMonthPage - 1) * itemsPerPage) + 1}</span> a <span className="font-bold theme-text-main">{Math.min(currentMonthPage * itemsPerPage, monthItems.length)}</span> de <span className="font-bold theme-text-main">{monthItems.length}</span> reportes</p>
                                                                             <div className="flex items-center gap-2">
-                                                                                <button 
-                                                                                    type="button"
-                                                                                    onClick={(e) => { e.stopPropagation(); setPagePerMonth(prev => ({...prev, [monthKey]: Math.max((prev[monthKey] || 1) - 1, 1)})) }}
-                                                                                    disabled={currentMonthPage === 1}
-                                                                                    className="p-1.5 rounded-lg theme-bg-low border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                                                >
-                                                                                    <ChevronLeft className="w-4 h-4" />
-                                                                                </button>
-                                                                                <span className="text-xs font-bold theme-text-main px-2">
-                                                                                    Página {currentMonthPage} de {totalMonthPages}
-                                                                                </span>
-                                                                                <button 
-                                                                                    type="button"
-                                                                                    onClick={(e) => { e.stopPropagation(); setPagePerMonth(prev => ({...prev, [monthKey]: Math.min((prev[monthKey] || 1) + 1, totalMonthPages)})) }}
-                                                                                    disabled={currentMonthPage === totalMonthPages}
-                                                                                    className="p-1.5 rounded-lg theme-bg-low border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                                                >
-                                                                                    <ChevronRight className="w-4 h-4" />
-                                                                                </button>
+                                                                                <button type="button" onClick={(e) => { e.stopPropagation(); setPagePerMonth(prev => ({...prev, [monthKey]: Math.max((prev[monthKey] || 1) - 1, 1)})) }} disabled={currentMonthPage === 1} className="p-1.5 rounded-lg theme-bg-low border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+                                                                                <span className="text-xs font-bold theme-text-main px-2">Página {currentMonthPage} de {totalMonthPages}</span>
+                                                                                <button type="button" onClick={(e) => { e.stopPropagation(); setPagePerMonth(prev => ({...prev, [monthKey]: Math.min((prev[monthKey] || 1) + 1, totalMonthPages)})) }} disabled={currentMonthPage === totalMonthPages} className="p-1.5 rounded-lg theme-bg-low border theme-border theme-text-main hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><ChevronRight className="w-4 h-4" /></button>
                                                                             </div>
                                                                         </div>
                                                                     )}
-
                                                                 </div>
                                                             )}
                                                         </div>
@@ -393,50 +304,29 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                 </div>
             </div>
 
-            {/* Modal de Detalle */}
             {isDetailOpen && selectedComment && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in print:static print:block print:p-0 print:bg-transparent">
                     <div className="theme-bg-container rounded-2xl w-full max-w-2xl shadow-2xl border theme-border overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-full">
                         <div className="p-5 border-b theme-border flex justify-between items-center bg-blue-500/5 no-print">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-500/20 rounded-lg"><MessageSquare className="w-5 h-5 text-blue-500" /></div>
-                                <div><h3 className="font-bold theme-text-main text-lg">Reporte de Comentarios</h3><p className="text-xs theme-text-muted font-medium">Periodo: {selectedComment.fechaInicio} al {selectedComment.fechaFin}</p></div>
-                            </div>
+                            <div className="flex items-center gap-3"><div className="p-2 bg-blue-500/20 rounded-lg"><MessageSquare className="w-5 h-5 text-blue-500" /></div><div><h3 className="font-bold theme-text-main text-lg">Reporte de Comentarios</h3><p className="text-xs theme-text-muted font-medium">Periodo: {selectedComment.fechaInicio} al {selectedComment.fechaFin}</p></div></div>
                             <div className="flex items-center gap-2">
                                 <button onClick={() => window.print()} className="p-2 theme-text-muted hover:theme-text-main hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><Printer className="w-5 h-5"/></button>
                                 {isAdmin && (
-                                    <>
-                                        <button onClick={openEdit} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"><Edit3 className="w-5 h-5"/></button>
-                                        <button onClick={handleDelete} className="p-2 text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-colors"><Trash2 className="w-5 h-5"/></button>
-                                    </>
+                                    <><button onClick={openEdit} className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"><Edit3 className="w-5 h-5"/></button><button onClick={handleDelete} className="p-2 text-[var(--error)] hover:bg-[var(--error)]/10 rounded-lg transition-colors"><Trash2 className="w-5 h-5"/></button></>
                                 )}
                                 <button onClick={() => setIsDetailOpen(false)} className="p-2 theme-text-muted hover:theme-text-main bg-black/5 dark:bg-white/5 rounded-lg"><X className="w-5 h-5"/></button>
                             </div>
                         </div>
 
                         <div className="p-6 overflow-y-auto custom-scrollbar print:overflow-visible flex-1">
-                            <div className="mb-6 flex items-center gap-2">
-                                <span className="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider">{selectedComment.contenido}</span>
-                                {selectedComment.evidencia && (
-                                    <a href={selectedComment.evidencia} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1 hover:brightness-110 no-print">
-                                        <LinkIcon className="w-3 h-3"/> Evidencias
-                                    </a>
-                                )}
-                            </div>
-
+                            <div className="mb-6 flex items-center gap-2"><span className="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider">{selectedComment.contenido}</span>{selectedComment.evidencia && (<a href={selectedComment.evidencia} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1 hover:brightness-110 no-print"><LinkIcon className="w-3 h-3"/> Evidencias</a>)}</div>
                             <div className="space-y-4">
-                                <p className="text-sm font-bold theme-text-muted uppercase tracking-wider flex items-center gap-2 border-b theme-border pb-2">
-                                    Desglose de Comentarios <span className="px-2 py-0.5 bg-blue-500 text-white rounded-full text-xs">{getNormalizedComments(selectedComment).length}</span>
-                                </p>
-                                
+                                <p className="text-sm font-bold theme-text-muted uppercase tracking-wider flex items-center gap-2 border-b theme-border pb-2">Desglose de Comentarios <span className="px-2 py-0.5 bg-blue-500 text-white rounded-full text-xs">{getNormalizedComments(selectedComment).length}</span></p>
                                 {getNormalizedComments(selectedComment).map((c: any, idx: number) => (
                                     <div key={idx} className={`p-4 theme-bg-low rounded-xl border space-y-3 print:border-gray-300 ${c.sentiment === 'Negativo' ? 'border-red-500/30 bg-red-500/5' : 'theme-border'}`}>
                                         <div className="flex flex-wrap items-center gap-3 border-b theme-border pb-2 border-dashed">
                                             <span className="font-bold text-sm text-blue-500 break-all">{c.usuario}</span>
-                                            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                                <span className="flex items-center gap-1"><Share2 className="w-3 h-3"/> {c.redSocial}</span><span>•</span><span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {c.campus}</span>
-                                                {c.sentiment && (<><span>•</span>{renderSentimentBadge(c.sentiment)}</>)}
-                                            </div>
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider"><span className="flex items-center gap-1"><Share2 className="w-3 h-3"/> {c.redSocial}</span><span>•</span><span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {c.campus}</span>{c.sentiment && (<><span>•</span>{renderSentimentBadge(c.sentiment)}</>)}</div>
                                         </div>
                                         <p className="text-sm theme-text-main whitespace-pre-wrap">{c.comentario}</p>
                                         <div className="pt-2">
@@ -446,15 +336,12 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-8 pt-4 border-t theme-border flex justify-between items-center">
-                                {isAdmin ? <p className="text-sm font-bold theme-text-muted italic flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500"></span>Reportado por: <span className="theme-text-main">{selectedComment.autor || 'Administrador'}</span></p> : <p className="text-sm font-bold theme-text-muted italic flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-gray-400"></span>Registro de sistema (Acceso público)</p>}
-                            </div>
+                            <div className="mt-8 pt-4 border-t theme-border flex justify-between items-center">{isAdmin ? <p className="text-sm font-bold theme-text-muted italic flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-500"></span>Reportado por: <span className="theme-text-main">{selectedComment.autor || 'Administrador'}</span></p> : <p className="text-sm font-bold theme-text-muted italic flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-gray-400"></span>Registro de sistema</p>}</div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal de Edición */}
             {isEditOpen && editData && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-3xl shadow-2xl border theme-border flex flex-col max-h-[90vh]">
