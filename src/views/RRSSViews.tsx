@@ -98,7 +98,7 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAct
                             <label className="text-xs font-medium theme-text-muted">Crear reporte (Texto Enriquecido)</label>
                             <div className="border theme-border rounded-xl overflow-hidden bg-[var(--surface)] focus-within:border-gray-400 focus-within:ring-1 focus-within:ring-gray-400 transition-all">
                                 <EditorToolbar onCommand={execCommand} />
-                                <div ref={editorRef} contentEditable onBlur={handleEditorBlur} className="w-full p-4 theme-bg-low theme-text-main outline-none min-h-[160px] overflow-y-auto max-h-[300px] text-sm leading-relaxed custom-scrollbar wysiwyg-content" placeholder="Escriba los detalles del reporte aquí... (Use la barra superior para dar formato)" style={{ whiteSpace: 'pre-wrap' }}></div>
+                                <div ref={editorRef} contentEditable onBlur={handleEditorBlur} className="w-full p-4 theme-bg-low theme-text-main outline-none min-h-[160px] overflow-y-auto max-h-[300px] text-sm leading-relaxed custom-scrollbar wysiwyg-content" data-placeholder="Escriba los detalles del reporte aquí... (Use la barra superior para dar formato)" style={{ whiteSpace: 'pre-wrap' }}></div>
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

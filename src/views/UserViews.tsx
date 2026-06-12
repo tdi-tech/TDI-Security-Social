@@ -118,7 +118,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                                 <div>
                                                     <p className="text-sm font-bold theme-text-main flex items-center gap-2">
                                                         {u.displayName}
-                                                        {isSuperUser && <ShieldAlert className="w-3 h-3 text-[var(--primary)]" title="Superuser Intocable" />}
+                                                        {isSuperUser && <span title="Superuser Intocable" className="flex"><ShieldAlert className="w-3 h-3 text-[var(--primary)]" /></span>}
                                                     </p>
                                                     <p className="text-xs theme-text-muted">{u.email}</p>
                                                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Menu, CheckCircle2, XCircle, Sun, Moon, Plus, LogOut, Hammer, Bell, Trash2, Eye, Users, ChevronRight, X } from 'lucide-react';
+import { Lock, Menu, CheckCircle2, XCircle, Sun, Moon, LogOut, Hammer, Bell, Trash2, Eye, Users, ChevronRight, X, Megaphone, MessageSquare } from 'lucide-react';
 
 // Hooks
 import { useTheme } from './hooks/useTheme';
