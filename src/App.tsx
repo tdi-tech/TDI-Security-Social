@@ -13,6 +13,9 @@ import { LoginModal, ConfirmModal } from './components/Modals';
 import { StaticProtocoloView, RolesView, GlosarioView, ProtocoloRRSSView } from './views/StaticViews';
 import { DashboardView } from './views/DashboardView';
 
+// Nueva Vista de Changelog
+import { ChangelogView } from './views/ChangelogView';
+
 // Vistas de Hackeos
 import { HistorialView, ChecklistView, NewIncidentView, DetailModal, EditIncidentModal } from './views/HackViews';
 
@@ -187,6 +190,8 @@ export default function App() {
             // Vistas Sueltas
             case 'roles':
                 return <h1 className="text-xl font-bold theme-text-main tracking-tight">Roles</h1>;
+            case 'changelog':
+                return <h1 className="text-xl font-bold theme-text-main tracking-tight">Changelog</h1>;
             case 'config':
                 return <h1 className="text-xl font-bold theme-text-main tracking-tight">Configuración</h1>;
             case 'ayuda':
@@ -285,7 +290,6 @@ export default function App() {
                 <div id="print-header" className="hidden text-black font-bold text-2xl">Reporte: Innova Social</div>
 
                 <div id="main-content" className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-8 print:p-0 w-full">
-                    {/* AQUÍ CORREGIMOS EL PASE DE DATOS: Pasamos rrssIncidents, comments e isAdmin para sincronizar tu inicio de sesión */}
                     {currentView === 'dashboard' && <DashboardView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} isAdmin={isAdmin} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} />}
                     
                     {currentView === 'protocolo' && <StaticProtocoloView />}
@@ -295,6 +299,7 @@ export default function App() {
                     
                     {/* VISTAS GENERALES */}
                     {currentView === 'roles' && <RolesView />}
+                    {currentView === 'changelog' && <ChangelogView />}
                     {currentView === 'glosario' && <GlosarioView />}
                     {currentView === 'ayuda' && <AyudaView isAdmin={isAdmin} />}
                     {currentView === 'config' && <ConfigView isDarkMode={isDarkMode} toggleTheme={toggleTheme} incidents={incidents} checklistState={checklistState} showToast={showToast} isAdmin={isAdmin} />}

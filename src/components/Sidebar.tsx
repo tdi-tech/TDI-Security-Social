@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
     LayoutDashboard, Leaf, ShieldAlert, FileText, ListChecks, Users, BookOpen, 
     AlertTriangle, Settings, HelpCircle, Smartphone, MessageSquareWarning, 
-    ChevronDown, ChevronRight, PlusCircle, History, Cloud, CloudOff
+    ChevronDown, ChevronRight, History, Cloud, CloudOff
 } from 'lucide-react';
 
 export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus }: any) => {
@@ -124,6 +124,8 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
                     <NavBtn id="roles" icon={Users} label="Roles" />
+                    {/* INYECTADO: Botón de navegación al Changelog */}
+                    <NavBtn id="changelog" icon={History} label="Changelog" />
                 </nav>
 
                 <div className="p-4 border-t theme-border space-y-2">
