@@ -332,7 +332,7 @@ export const HistorialView = ({ incidents, showToast, setSelectedIncidentId, set
                                 
                                 <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'year' ? 'border-red-500 bg-red-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
                                     <div className="flex items-center gap-3">
-                                        <input type="radio" name="exportType" checked={exportType === 'year'} onChange={() => { setExportType('year'); if(!exportYear && availableYears.length) setExportYear(availableYears[0]); }} className="w-4 h-4 text-red-500" />
+                                        <input type="radio" name="exportType" checked={exportType === 'year'} onChange={() => { setExportType('year'); if(!exportYear && availableYears.length) setExportYear(String(availableYears[0])); }} className="w-4 h-4 text-red-500" />
                                         <div><p className="text-sm font-bold theme-text-main">Filtrar por Año</p><p className="text-xs theme-text-muted">Descarga un año en específico.</p></div>
                                     </div>
                                     {exportType === 'year' && (
@@ -347,7 +347,7 @@ export const HistorialView = ({ incidents, showToast, setSelectedIncidentId, set
 
                                 <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'month' ? 'border-red-500 bg-red-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
                                     <div className="flex items-center gap-3">
-                                        <input type="radio" name="exportType" checked={exportType === 'month'} onChange={() => { setExportType('month'); if(!exportYear && availableYears.length) setExportYear(availableYears[0]); }} className="w-4 h-4 text-red-500" />
+                                        <input type="radio" name="exportType" checked={exportType === 'month'} onChange={() => { setExportType('month'); if(!exportYear && availableYears.length) setExportYear(String(availableYears[0])); }} className="w-4 h-4 text-red-500" />
                                         <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes</p><p className="text-xs theme-text-muted">Descarga un mes y año específico.</p></div>
                                     </div>
                                     {exportType === 'month' && (
