@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Eye, ShieldAlert, FileText, Megaphone, MessageSquare, HelpCircle, Lock, Users, Bell, Settings, Activity } from 'lucide-react';
+import { Leaf, Eye, ShieldAlert, FileText, Megaphone, MessageSquare, HelpCircle, Lock, Users, Bell, Settings, Activity, Database, Clock } from 'lucide-react';
 
 export const AyudaView = ({ isAdmin }: any) => {
     const currentYear = new Date().getFullYear();
@@ -36,7 +36,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Lector (Público)</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Diseñado para consulta abierta del personal. Permite revisar el glosario, leer los protocolos y auditar el historial general. La identidad de los autores permanece oculta.
+                                    Diseñado para consulta abierta del personal. Permite revisar el glosario, leer los protocolos y auditar el historial general. La identidad de los autores permanece oculta. El sistema no almacena su ruteo ni ejecuta el vigía de inactividad.
                                 </p>
                             </div>
                         </div>
@@ -48,7 +48,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Editor CM</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Rol operativo por defecto. Permite crear, editar y eliminar incidentes de RRSS y Comentarios. No tiene acceso a la gestión de usuarios ni a la exportación general de la base de datos.
+                                    Rol operativo por defecto. Permite crear, editar y eliminar incidentes de RRSS y Comentarios. Dispone del panel de configuración de alertas visuales/sonoras. Cuenta con protección de inactividad automática y persistencia de vista al recargar (F5).
                                 </p>
                             </div>
                         </div>
@@ -60,7 +60,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Administrador CM</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Nivel gerencial. Además de las funciones del Editor, puede acceder a la pestaña de "Gestión de Usuarios" para asignar roles al equipo y habilitar/deshabilitar cuentas.
+                                    Nivel gerencial. Además de las funciones del Editor, puede acceder a la pestaña de "Gestión de Usuarios" para asignar roles al equipo y habilitar/deshabilitar cuentas. Está sujeto al vigía de cierre de sesión por inactividad.
                                 </p>
                             </div>
                         </div>
@@ -72,7 +72,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Administrador IT</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Control total del sistema. Puede pre-registrar usuarios, eliminar cuentas de forma permanente desde la base de datos y realizar respaldos JSON del sistema.
+                                    Control total del sistema. Puede pre-registrar usuarios, eliminar cuentas de forma permanente, monitorear el registro inmutable de auditoría y operar de forma exclusiva el ecosistema de copias de seguridad globales.
                                 </p>
                             </div>
                         </div>
@@ -109,7 +109,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                                 <div className="flex-1">
                                     <h4 className="font-bold theme-text-main text-sm">Preferencias de Usuario</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        Panel de configuración en la nube para personalizar el tema visual, habilitar efectos sonoros y elegir qué notificaciones de módulos específicos deseas recibir.
+                                        Panel de configuración en la nube para personalizar el tema visual y elegir qué notificaciones de módulos específicos deseas recibir con soporte para tonos de audio sintetizados nativamente.
                                     </p>
                                 </div>
                             </div>
@@ -139,25 +139,37 @@ export const AyudaView = ({ isAdmin }: any) => {
                             </div>
 
                             <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm">
-                                <div className="p-2 bg-blue-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
-                                    <MessageSquare className="w-5 h-5 text-blue-500" />
+                                <div className="p-2 bg-amber-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
+                                    <Database className="w-5 h-5 text-amber-500" />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="font-bold theme-text-main text-sm">Trazabilidad de Comentarios</h4>
+                                    <h4 className="font-bold theme-text-main text-sm">Backups Core Unificado</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        Herramienta de control para capturar quejas o ataques focalizados en pautas o posteos orgánicos. Mantiene un registro dinámico para evaluar la efectividad de las respuestas.
+                                        Centro exclusivo de IT para compilar y descargar respaldos globales de la plataforma. Su motor inverso inyecta inteligentemente registros borrados (Hackeos, RRSS, Comentarios) omitiendo duplicaciones.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm">
+                                <div className="p-2 bg-blue-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
+                                    <Clock className="w-5 h-5 text-blue-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold theme-text-main text-sm">Cierre por Inactividad & UX</h4>
+                                    <p className="text-xs theme-text-muted mt-1 leading-relaxed">
+                                        Vigía que detecta el abandono de la app por 1 minuto, iniciando un conteo límite de 5 minutos antes de destruir la sesión. El sistema conserva su vista de trabajo si actualiza la página mediante F5.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm md:col-span-2">
                                 <div className="p-2 bg-emerald-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
                                     <FileText className="w-5 h-5 text-emerald-500" />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="font-bold theme-text-main text-sm">Reportes Ejecutivos y Exportación</h4>
+                                    <h4 className="font-bold theme-text-main text-sm">Reportes Ejecutivos y Exportación Universal</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        El Dashboard permite descargar un <strong>Reporte Ejecutivo en PDF</strong> con métricas en tiempo real. Todos los historiales cuentan con <strong>Exportación Inteligente CSV</strong> y generación de anexos en formato Word (.docx).
+                                        El Dashboard permite descargar un <strong>Reporte Ejecutivo en PDF</strong> con métricas en tiempo real. Todos los historiales cuentan con <strong>Exportación Inteligente CSV</strong> por año/mes (con aplanamiento para Comentarios en Excel) y anexos en formato Word (.docx).
                                     </p>
                                 </div>
                             </div>

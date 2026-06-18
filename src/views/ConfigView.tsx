@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { 
-    Settings, Moon, Sun, Database, Download, ShieldAlert, 
-    Bell, Volume2, VolumeX, ShieldCheck, Megaphone, 
-    MessageSquare, Search, Lock, Activity, X 
+    Settings, Moon, Sun, Bell, Volume2, VolumeX, 
+    ShieldCheck, Megaphone, MessageSquare, Search, 
+    X, Activity 
 } from 'lucide-react';
 
 export const ConfigView = ({ 
@@ -33,31 +33,54 @@ export const ConfigView = ({
     // ==========================================
     // FUNCIONES
     // ==========================================
-    const handleExportDB = () => {
+    
+    // 🔊 GENERADOR SINTETIZADO DIGITAL TIPO GOOGLE MEET / SLACK (SIN ARCHIVOS MP3)
+    const playSynthesizedNotification = () => {
         try {
-            const data = {
-                incidents,
-                checklistState,
-                exportDate: new Date().toISOString()
-            };
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", `backup_innova_management_${new Date().toISOString().split('T')[0]}.json`);
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-            showToast('Base de datos exportada correctamente');
+            // Inicializar el contexto de audio nativo del navegador
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+            
+            const ctx = new AudioContext();
+            
+            // Creamos los nodos del sintetizador (Oscilador de onda + Control de volumen)
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.type = 'sine'; // Onda senoidal pura para un tono suave y moderno
+            
+            // Efecto rampa de frecuencia (Slack-style chime): Inicia en 580Hz y sube rápido a 880Hz
+            const now = ctx.currentTime;
+            osc.frequency.setValueAtTime(580, now);
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+            
+            // Control del volumen (Fade-out para evitar golpes secos en la bocina)
+            gain.gain.setValueAtTime(0.3, now); // Volumen al 30%
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35); // Se apaga suavemente en 350ms
+            
+            // Conectar el sintetizador hacia la salida de audio
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            // Arrancar y destruir de inmediato
+            osc.start(now);
+            osc.stop(now + 0.35);
         } catch (error) {
-            showToast('Error al exportar los datos', true);
+            console.error("La Web Audio API no está soportada o fue bloqueada:", error);
         }
     };
 
-    // Esta función ahora guarda directamente en la nube usando el hook de useFirebase
     const handleTogglePref = (key: string) => {
-        const newPrefs = { ...prefs, [key]: !prefs[key] };
+        const newValue = !prefs[key];
+        const newPrefs = { ...prefs, [key]: newValue };
+        
         updateUserPrefs(newPrefs);
         showToast('Preferencias actualizadas en la nube');
+
+        // Si se activa el switch de sonido, detona el generador nativo
+        if (key === 'sound' && newValue === true) {
+            playSynthesizedNotification();
+        }
     };
 
     const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
@@ -69,6 +92,14 @@ export const ConfigView = ({
         </button>
     );
 
+    // ==========================================
+    // CONTROL DE TRES NIVELES DE PERMISOS
+    // ==========================================
+    const cleanRole = userRole?.toUpperCase()?.trim() || '';
+    
+    const isITAdmin = cleanRole === 'ADMIN_IT';
+    const isCMUser = cleanRole === 'ADMIN_CM' || cleanRole === 'EDITOR_CM';
+
     return (
         <div className="max-w-6xl mx-auto space-y-6 fade-in pb-10">
             
@@ -79,17 +110,17 @@ export const ConfigView = ({
                         <Settings className="w-6 h-6 text-[var(--primary)]" />
                         Configuración
                     </h2>
-                    <p className="theme-text-muted text-sm mt-1">Ajustes del sistema, preferencias y respaldo de datos.</p>
+                    <p className="theme-text-muted text-sm mt-1">Ajustes del sistema, preferencias y control de interfaz.</p>
                 </div>
             </div>
 
-            {/* ESTRUCTURA PRINCIPAL EN 2 COLUMNAS */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            {/* ESTRUCTURA DINÁMICA DE GRID SEGÚN EL ROL ACUMULADO */}
+            <div className={isITAdmin ? "grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch" : "grid grid-cols-1 gap-6"}>
                 
                 {/* ==========================================
-                    COLUMNA IZQUIERDA (1/3)
+                    BLOQUE DE INTERFAZ Y NOTIFICACIONES
                 ========================================== */}
-                <div className="lg:col-span-1 flex flex-col gap-6">
+                <div className={isITAdmin ? "lg:col-span-1 flex flex-col gap-6" : "w-full flex flex-col gap-6"}>
                     
                     {/* 1. INTERFAZ */}
                     <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
@@ -112,75 +143,77 @@ export const ConfigView = ({
                     </div>
 
                     {/* 2. NOTIFICACIONES */}
-                    <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-sm font-bold theme-text-main mb-4 uppercase tracking-wider flex items-center gap-2">
-                            <Bell className="w-4 h-4 text-orange-500" /> Notificaciones
-                        </h3>
-                        
-                        <div className="space-y-5">
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg ${prefs.sound ? 'bg-blue-500/10 text-blue-500' : 'bg-gray-500/10 text-gray-500'}`}>
-                                        {prefs.sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                    {(isCMUser || isITAdmin) && (
+                        <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
+                            <h3 className="text-sm font-bold theme-text-main mb-4 uppercase tracking-wider flex items-center gap-2">
+                                <Bell className="w-4 h-4 text-orange-500" /> Notificaciones
+                            </h3>
+                            
+                            <div className="space-y-5">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg ${prefs.sound ? 'bg-blue-500/10 text-blue-500' : 'bg-gray-500/10 text-gray-500'}`}>
+                                            {prefs.sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold theme-text-main">Efectos de Sonido</p>
+                                            <p className="text-xs theme-text-muted">Sonidos al recibir alertas</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-bold theme-text-main">Efectos de Sonido</p>
-                                        <p className="text-xs theme-text-muted">Sonidos al recibir alertas</p>
-                                    </div>
+                                    <ToggleSwitch checked={prefs.sound} onChange={() => handleTogglePref('sound')} />
                                 </div>
-                                <ToggleSwitch checked={prefs.sound} onChange={() => handleTogglePref('sound')} />
-                            </div>
 
-                            <div className="h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+                                <div className="h-px w-full bg-gray-200 dark:bg-gray-800"></div>
 
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <ShieldCheck className="w-4 h-4 text-red-500" />
-                                    <div>
-                                        <p className="text-sm font-bold theme-text-main">Seguridad IT</p>
-                                        <p className="text-xs theme-text-muted">Alertas de Hackeos</p>
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <ShieldCheck className="w-4 h-4 text-red-500" />
+                                        <div>
+                                            <p className="text-sm font-bold theme-text-main">Seguridad IT</p>
+                                            <p className="text-xs theme-text-muted">Alertas de Hackeos</p>
+                                        </div>
                                     </div>
+                                    <ToggleSwitch checked={prefs.security} onChange={() => handleTogglePref('security')} />
                                 </div>
-                                <ToggleSwitch checked={prefs.security} onChange={() => handleTogglePref('security')} />
-                            </div>
 
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <Megaphone className="w-4 h-4 text-orange-500" />
-                                    <div>
-                                        <p className="text-sm font-bold theme-text-main">Crisis RRSS</p>
-                                        <p className="text-xs theme-text-muted">Incidencias de Reputación</p>
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <Megaphone className="w-4 h-4 text-orange-500" />
+                                        <div>
+                                            <p className="text-sm font-bold theme-text-main">Crisis RRSS</p>
+                                            <p className="text-xs theme-text-muted">Incidencias de Reputación</p>
+                                        </div>
                                     </div>
+                                    <ToggleSwitch checked={prefs.rrss} onChange={() => handleTogglePref('rrss')} />
                                 </div>
-                                <ToggleSwitch checked={prefs.rrss} onChange={() => handleTogglePref('rrss')} />
-                            </div>
 
-                            <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <MessageSquare className="w-4 h-4 text-blue-500" />
-                                    <div>
-                                        <p className="text-sm font-bold theme-text-main">Comentarios</p>
-                                        <p className="text-xs theme-text-muted">Reportes de Trazabilidad</p>
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <MessageSquare className="w-4 h-4 text-blue-500" />
+                                        <div>
+                                            <p className="text-sm font-bold theme-text-main">Comentarios</p>
+                                            <p className="text-xs theme-text-muted">Reportes de Trazabilidad</p>
+                                        </div>
                                     </div>
+                                    <ToggleSwitch checked={prefs.comments} onChange={() => handleTogglePref('comments')} />
                                 </div>
-                                <ToggleSwitch checked={prefs.comments} onChange={() => handleTogglePref('comments')} />
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* ==========================================
-                    COLUMNA DERECHA (2/3)
+                    COLUMNA EXCLUSIVA DE LOGS (ADMIN_IT)
                 ========================================== */}
-                <div className="lg:col-span-2 flex flex-col gap-6">
-                    
-                    {/* 3. LOG DE AUDITORÍA (Se estira para ocupar el espacio central) */}
-                    <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm flex flex-col flex-1 min-h-[400px]">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                            <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-emerald-500" /> Log de Auditoría
-                            </h3>
-                            {userRole === 'ADMIN_IT' && (
+                {isITAdmin && (
+                    <div className="lg:col-span-2 flex flex-col gap-6">
+                        
+                        {/* 3. LOG DE AUDITORÍA */}
+                        <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm flex flex-col flex-1 min-h-[400px]">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                                <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-emerald-500" /> Log de Auditoría
+                                </h3>
                                 <div className="relative w-full sm:w-64">
                                     <Search className="absolute left-2.5 top-2.5 text-gray-400 w-4 h-4 pointer-events-none" />
                                     <input 
@@ -192,14 +225,11 @@ export const ConfigView = ({
                                     />
                                     {logSearch && <button onClick={() => setLogSearch('')} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X className="w-4 h-4" /></button>}
                                 </div>
-                            )}
-                        </div>
+                            </div>
 
-                        {userRole === 'ADMIN_IT' ? (
                             <div className="flex-1 overflow-hidden flex flex-col border theme-border rounded-xl bg-[var(--surface)]">
                                 <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
                                     <table className="w-full text-left border-collapse">
-                                        {/* FIX: Se ajustó el z-index de z-10 a z-[1] para evitar choques con el dropdown de notificaciones */}
                                         <thead className="bg-black/5 dark:bg-white/5 sticky top-0 backdrop-blur-md z-[1] shadow-sm">
                                             <tr>
                                                 <th className="p-3 text-[10px] font-bold theme-text-muted uppercase tracking-wider border-b theme-border whitespace-nowrap">Fecha</th>
@@ -231,46 +261,10 @@ export const ConfigView = ({
                                     </table>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center border theme-border border-dashed rounded-xl bg-black/5 dark:bg-white/5 p-6 text-center">
-                                <Lock className="w-8 h-8 text-amber-500 mb-3 opacity-80" />
-                                <h4 className="font-bold theme-text-main text-sm mb-1">Registro Restringido</h4>
-                                <p className="text-xs theme-text-muted max-w-sm">
-                                    El registro inmutable de auditoría está reservado exclusivamente para el Administrador IT.
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                        </div>
 
-                    {/* 4. RESPALDO DE BASE DE DATOS */}
-                    <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
-                        <h3 className="text-sm font-bold theme-text-main mb-4 uppercase tracking-wider flex items-center gap-2">
-                            <Database className="w-4 h-4 text-blue-500" /> Respaldo de Base de Datos
-                        </h3>
-                        
-                        {userRole === 'ADMIN_IT' ? (
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-sm font-bold theme-text-main">Exportar JSON Core</p>
-                                    <p className="text-xs theme-text-muted mt-0.5 max-w-md">Descarga un respaldo duro de las colecciones operativas para restauraciones de emergencia.</p>
-                                </div>
-                                <button 
-                                    onClick={handleExportDB}
-                                    className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-[var(--primary)] text-white rounded-xl hover:brightness-110 transition-all font-bold text-sm shadow-sm"
-                                >
-                                    <Download className="w-4 h-4"/> Exportar Datos
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-3 p-4 theme-bg-lowest rounded-xl border border-dashed theme-border">
-                                <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                                <p className="text-xs theme-text-muted leading-relaxed">
-                                    No tienes permisos. Solo el <strong className="theme-text-main">Administrador IT</strong> puede realizar respaldos.
-                                </p>
-                            </div>
-                        )}
                     </div>
-                </div>
+                )}
 
             </div>
         </div>

@@ -40,16 +40,18 @@ npm run dev
 
 ## Arquitectura Modular y Características Principales
 
-La plataforma ha sido estructurada visual y operativamente en bloques funcionales, centralizados en un panel de control avanzado:
+La plataforma ha sido estruturada visual y operativamente en bloques funcionales, centralizados en un panel de control avanzado:
 
 ### Panel de Control (Dashboard) y Preferencias
 * **Métricas Consolidadas:** Gráficas SVG interactivas que muestran índices de resolución, picos de ataques y análisis de sentimiento en tiempo real.
 * **Notificaciones en Tiempo Real:** Campana de alertas inteligente con motor de audio nativo (Web Audio API) y panel de preferencias en la nube para silenciar módulos específicos.
+* **Persistencia de Navegación UX:** Integración de estados basados en `localStorage` coordinados entre la aplicación y el Sidebar para evitar redirecciones accidentales al Dashboard al presionar F5 o refrescar la página.
 
 ### 1. Seguridad IT y Cumplimiento (Compliance)
-* **Log de Auditoría Inmutable:** Registro estricto de todas las acciones del sistema (creación, edición y eliminación de datos) reservado para el Administrador IT.
+* **Log de Auditoría Inmutable:** Registro estricto de todas las acciones del sistema (creación, edición y eliminación de datos) reservado exclusivamente para el Administrador IT.
 * **Reporte de Hackeos y Checklist:** Documentación estructurada de vectores de ataque y sala de crisis global con sincronización en tiempo real para tareas de contención.
-* **Respaldo Core:** Opción de exportación de la base de datos completa en formato JSON para restauraciones de emergencia.
+* **Vigía de Inactividad Global:** Monitoreo en segundo plano que detecta el abandono de la plataforma por 1 minuto, abriendo un modal en cuenta regresiva (5 minutos) antes de destruir la sesión por seguridad.
+* **Centro de Respaldos Core Unificado:** Módulo independiente y exclusivo para el Administrador IT que compila un JSON general de todo el ecosistema (Hackeos, RRSS, Comentarios) y ejecuta inyecciones de restauración inteligentes omitiendo duplicaciones.
 
 ### 2. Reputación y Crisis RRSS
 * **Gestión de Contingencias:** Herramienta enfocada en la detección de picos inusuales de alertas en canales digitales oficiales.
@@ -63,7 +65,7 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 ## Seguridad, Roles y Motor de Exportación
 
 * **Control de Accesos Basado en Roles (RBAC):** Sistema robusto con 4 niveles de jerarquía (Lector, Editor CM, Administrador CM y Administrador IT).
-* **Privacidad por Defecto:** Los usuarios en Modo Lector poseen acceso restringido. La identidad del personal que reporta se enmascara automáticamente en la pantalla y en las exportaciones para proteger al equipo.
+* **Privacidad por Defecto y Registro Protegido:** Los usuarios en Modo Lector poseen acceso restringido. La identidad del personal que reporta se enmascara automáticamente. El módulo de registro de cambios (Changelog) queda blindado únicamente para personal autenticado.
 * **Exportación Inteligente Universal:**
   * **CSV Dinámico:** Descarga masiva de historiales filtrables por "Año" o "Año + Mes", optimizados para cruces de datos en Excel.
   * **Documentos Word (.docx):** Generación nativa basada en XML para descargar reportes individuales con texto enriquecido.

@@ -9,8 +9,14 @@ const changelogData = [
         version: 'v3.2.0',
         date: 'Junio 2026',
         tag: 'Última Versión',
-        title: 'Compliance, Preferencias SaaS & Exportación Inteligente',
+        title: 'Seguridad Global, Centro de Respaldos Core & Persistencia UX',
         changes: [
+            { type: 'security', text: 'Vigía de Inactividad Global: Implementación de un doble temporizador en segundo plano que detecta la inactividad del usuario (1 minuto de gracia), lanza un aviso visual en reversa de 5 minutos y ejecuta el cierre forzado de sesión.' },
+            { type: 'feature', text: 'Centro de Respaldos Core (Módulo Backups): Nueva vista exclusiva para el Administrador IT capaz de compilar un JSON unificado del sistema e inyectar copias de seguridad de emergencia restaurando reportes caídos (Hackeos, RRSS, Comentarios) sin duplicar datos vivos.' },
+            { type: 'feature', text: 'Persistencia de Navegación por Recarga: Inyección de estados basados en localStorage para retener la vista actual al presionar F5 o refrescar el navegador, mitigando redirecciones accidentales al Dashboard.' },
+            { type: 'security', text: 'Protección de Privacidad de Cambios: El Changelog queda blindado exclusivamente detrás del inicio de sesión (RBAC), impidiendo el acceso a usuarios no identificados o con rol de Lector.' },
+            { type: 'divider' },
+            { type: 'title', text: 'Log de Auditoría & Preferencias' },
             { type: 'security', text: 'Log de Auditoría (Compliance): Registro inmutable de actividad del sistema (creación, edición, eliminación de registros), restringido exclusivamente para el rol de Administrador IT.' },
             { type: 'feature', text: 'Preferencias de Usuario en la Nube: Panel interactivo para activar/desactivar alertas sonoras y notificaciones por módulo específico (Hackeos, RRSS, Comentarios), sincronizado con Firestore.' },
             { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento y con un tono tenue.' },
@@ -83,7 +89,6 @@ const changelogData = [
     }
 ];
 
-// Helper para asignar iconos y colores según el tipo de cambio
 const getChangeStyle = (type: string) => {
     switch (type) {
         case 'feature': return { icon: <Zap className="w-4 h-4 text-blue-500" />, bg: 'bg-blue-500/10', text: 'text-blue-500' };
@@ -94,7 +99,6 @@ const getChangeStyle = (type: string) => {
 };
 
 export const ChangelogView = () => {
-    // Por defecto, la última versión (la primera del arreglo) aparece abierta
     const [expandedVersions, setExpandedSections] = useState<Record<string, boolean>>({ [changelogData[0].version]: true });
 
     const toggleVersion = (version: string) => {
@@ -103,8 +107,6 @@ export const ChangelogView = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            
-            {/* ENCABEZADO */}
             <div className="theme-bg-container p-6 sm:p-8 rounded-2xl border theme-border shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                     <History className="w-48 h-48" />
@@ -120,15 +122,12 @@ export const ChangelogView = () => {
                 </div>
             </div>
 
-            {/* LISTA DE VERSIONES EN ACORDEÓN */}
             <div className="space-y-4">
                 {changelogData.map((item) => {
                     const isExpanded = !!expandedVersions[item.version];
 
                     return (
                         <div key={item.version} className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm transition-all hover:border-gray-500/50">
-                            
-                            {/* Cabecera del Acordeón */}
                             <button 
                                 onClick={() => toggleVersion(item.version)}
                                 className="w-full flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-6 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-left gap-4"
@@ -154,7 +153,6 @@ export const ChangelogView = () => {
                                 </div>
                             </button>
 
-                            {/* Contenido (Lista de Cambios) */}
                             {isExpanded && (
                                 <div className="p-6 border-t theme-border bg-[var(--background)]">
                                     <ul className="space-y-2">
@@ -191,10 +189,9 @@ export const ChangelogView = () => {
                 })}
             </div>
 
-            {/* Footer del Changelog */}
             <div className="text-center pt-8 pb-4">
                 <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">
-                    Innova Management &copy; {new Date().getFullYear()}
+                    Innova Management &copy; 2026
                 </p>
             </div>
         </div>

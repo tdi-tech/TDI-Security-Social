@@ -8,6 +8,7 @@ import { useFirebase } from './hooks/useFirebase';
 // Componentes
 import { Sidebar } from './components/Sidebar';
 import { LoginModal, ConfirmModal } from './components/Modals';
+import { Inactivity } from './components/Inactivity';
 
 // Vistas
 import { StaticProtocoloView, RolesView, GlosarioView, ProtocoloRRSSView } from './views/StaticViews';
@@ -19,6 +20,7 @@ import { ConfigView } from './views/ConfigView';
 import { NewRRSSIncidentView, HistorialRRSSView } from './views/RRSSViews';
 import { NewCommentView, HistorialCommentView } from './views/CommentViews';
 import { UserManagementView } from './views/UserViews';
+import { BackupView } from './views/BackupView';
 
 // Componente Placeholder (En construcción)
 const PlaceholderView = ({ title }: { title: string }) => (
@@ -36,9 +38,12 @@ const PlaceholderView = ({ title }: { title: string }) => (
 export default function App() {
     const { isDarkMode, toggleTheme } = useTheme();
 
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    // 🔄 PERSISTENCIA UX: Leemos localStorage al arrancar la app
+    const [currentView, setCurrentView] = useState(() => {
+        return localStorage.getItem('innova_current_view') || 'dashboard';
+    });
     
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false); 
     const [notifMenuOpen, setNotifMenuOpen] = useState(false);
     const [notifTab, setNotifTab] = useState('unread');
@@ -70,15 +75,39 @@ export default function App() {
         showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal
     });
 
+    // 🔄 ENRUTADOR PROTEGIDO Y PERSISTENTE
     const navigate = (view: string) => {
-        if ((view === 'nuevo' || view === 'checklist' || view === 'nuevo-rss' || view === 'nuevo-comentario' || view === 'gestion-usuarios') && !isAdmin) {
-            showToast('Debes ser Admin para acceder a esta sección.', true);
+        const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups'];
+        const loggedInViews = [...adminViews, 'changelog'];
+        
+        // Bloqueo 1: Requiere sesión iniciada corporativa
+        if (loggedInViews.includes(view) && !isAdmin) {
+            showToast('Debes iniciar sesión para acceder a esta sección.', true);
             setLoginModalOpen(true);
             return;
         }
+
+        // Bloqueo 2: Acceso exclusivo Administrador IT
+        if (view === 'backups' && userRole !== 'ADMIN_IT') {
+            showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
+            return;
+        }
+
         setCurrentView(view); 
+        localStorage.setItem('innova_current_view', view); // 👈 Guardamos el estado en el almacenamiento local
         setSidebarOpen(false);
     };
+
+    // 🔄 SEGURIDAD EXTRA: Limpieza del storage si no hay una sesión activa
+    useEffect(() => {
+        if (!user && !isAdmin) {
+            const publicViews = ['dashboard', 'protocolo', 'historial', 'glosario', 'protocolo-rss', 'historial-rss', 'historial-comentario', 'roles', 'config', 'ayuda'];
+            if (!publicViews.includes(currentView)) {
+                setCurrentView('dashboard');
+                localStorage.setItem('innova_current_view', 'dashboard');
+            }
+        }
+    }, [user, isAdmin, currentView]);
 
     useEffect(() => {
         const handleClickOutside = (e: any) => {
@@ -110,7 +139,6 @@ export default function App() {
         }
     };
 
-    // FORMATEADOR DEL NOMBRE DEL ROL PARA MOSTRAR BAJO LA FOTO
     const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' : userRole === 'ADMIN_CM' ? 'Administrador CM' : userRole === 'EDITOR_CM' ? 'Editor CM' : 'Administrador';
 
     const renderHeaderTitle = () => {
@@ -134,6 +162,7 @@ export default function App() {
             case 'historial-comentario': return <div className={baseClass}><span className={parentClass}>Comentarios</span><span className={separatorClass}>/</span><span className={childClass}>Historial</span></div>;
             case 'roles': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Roles</h1>;
             case 'changelog': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Changelog</h1>;
+            case 'backups': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Copias de Seguridad Core</h1>;
             case 'config': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Configuración</h1>;
             case 'ayuda': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Ayuda</h1>;
             default: return <h1 className="text-xl font-bold theme-text-main tracking-tight capitalize">{currentView.replace(/-/g, ' ')}</h1>;
@@ -142,6 +171,8 @@ export default function App() {
 
     return (
         <div className={`h-screen print:h-auto print:block flex relative font-sans transition-colors duration-300 ${isAdmin ? 'is-admin' : ''}`}>
+
+            {((user && user.email) || isAdmin) && <Inactivity onLogout={logoutAdmin} />}
 
             <div className="fixed top-5 right-5 z-[70] flex flex-col gap-2 no-print">
                 {toast && (
@@ -156,6 +187,7 @@ export default function App() {
                 sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}
                 currentView={currentView} navigate={navigate}
                 isAdmin={isAdmin} cloudStatus={cloudStatus}
+                userRole={userRole}
             />
 
             <main className="flex-1 print:block flex flex-col h-full print:h-auto relative overflow-x-hidden print:overflow-visible w-full bg-[var(--surface)]">
@@ -287,10 +319,21 @@ export default function App() {
                     {currentView === 'glosario' && <GlosarioView />}
                     {currentView === 'ayuda' && <AyudaView isAdmin={isAdmin} />}
                     
-                    {/* AQUI PASAMOS LOS NUEVOS ESTADOS DE PREFERENCIAS AL CONFIG VIEW */}
                     {currentView === 'config' && <ConfigView isDarkMode={isDarkMode} toggleTheme={toggleTheme} incidents={incidents} checklistState={checklistState} showToast={showToast} isAdmin={isAdmin} userRole={userRole} auditLogs={auditLogs} userPrefs={userPrefs} updateUserPrefs={updateUserPrefs} />}
                     
                     {currentView === 'gestion-usuarios' && <UserManagementView appUsers={appUsers} userRole={userRole} updateUserRole={updateUserRole} toggleUserStatus={toggleUserStatus} deleteUserRecord={deleteUserRecord} addManualUser={addManualUser} />}
+
+                    {currentView === 'backups' && userRole === 'ADMIN_IT' && (
+                        <BackupView 
+                            incidents={incidents} 
+                            rrssIncidents={rrssIncidents} 
+                            comments={comments} 
+                            showToast={showToast}
+                            addIncidentRaw={updateIncident} 
+                            addRrssIncidentRaw={updateRrssIncident} 
+                            addCommentRaw={updateComment} 
+                        />
+                    )}
 
                     {currentView === 'protocolo-rss' && <ProtocoloRRSSView />}
                     {currentView === 'nuevo-rss' && <NewRRSSIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
@@ -348,7 +391,6 @@ export default function App() {
                 </div>
             )}
 
-            {/* CAMBIO APLICADO: Innova Management en el print-header */}
             <div id="print-header" className="hidden text-black font-bold text-2xl">Reporte: Innova Management</div>
 
             <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={loginWithGoogle} />

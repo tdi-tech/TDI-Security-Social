@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { 
     LayoutDashboard, Leaf, ShieldAlert, FileText, ListChecks, Users, BookOpen, 
     AlertTriangle, Settings, HelpCircle, Smartphone, MessageSquareWarning, 
-    ChevronDown, ChevronRight, History, Cloud, CloudOff
+    ChevronDown, ChevronRight, History, Cloud, CloudOff, Database
 } from 'lucide-react';
 
-export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus }: any) => {
+export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus, userRole }: any) => {
     const isLector = cloudStatus.includes('Lector');
     const isError = cloudStatus.includes('Error');
     const isConnecting = cloudStatus.includes('Conectando');
@@ -13,7 +13,14 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
     const dotColor = isConnecting ? 'bg-[var(--warning)] animate-pulse' : isError ? 'bg-[var(--error)]' : isLector ? 'bg-slate-400' : 'bg-[var(--success)]';
     const textColor = isError ? 'text-[var(--error)]' : isConnecting ? 'text-[var(--warning)]' : isLector ? 'theme-text-muted' : 'text-[var(--success)]';
 
-    const [openGroup, setOpenGroup] = useState<string>('hackeos');
+    // 🔄 MEJORA PERSISTENCIA EN ACORDEONES: Inicializa el grupo abierto basándose en el currentView real guardado en memoria.
+    const [openGroup, setOpenGroup] = useState<string>(() => {
+        const view = currentView || localStorage.getItem('innova_current_view') || '';
+        if (['protocolo', 'nuevo', 'checklist', 'historial', 'glosario'].includes(view)) return 'hackeos';
+        if (['protocolo-rss', 'nuevo-rss', 'historial-rss'].includes(view)) return 'rss';
+        if (['nuevo-comentario', 'historial-comentario'].includes(view)) return 'comentarios';
+        return 'hackeos'; // Grupo por defecto
+    });
 
     const toggleGroup = (group: string) => {
         setOpenGroup(openGroup === group ? '' : group);
@@ -81,6 +88,8 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         );
     };
 
+    const isITAdmin = userRole?.toUpperCase()?.trim() === 'ADMIN_IT';
+
     return (
         <>
             {sidebarOpen && <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 md:hidden" onClick={() => setSidebarOpen(false)}></div>}
@@ -124,8 +133,8 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
                     <NavBtn id="roles" icon={Users} label="Roles" />
-                    {/* INYECTADO: Botón de navegación al Changelog */}
-                    <NavBtn id="changelog" icon={History} label="Changelog" />
+                    {isAdmin && <NavBtn id="changelog" icon={History} label="Changelog" />}
+                    {isITAdmin && <NavBtn id="backups" icon={Database} label="Backups Core" />}
                 </nav>
 
                 <div className="p-4 border-t theme-border space-y-2">
