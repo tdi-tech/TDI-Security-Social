@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
     Save, Download, Trash2, Smartphone, Printer, X, Edit3, Link as LinkIcon, HardDrive, 
-    Search, ChevronDown, ChevronRight, ChevronLeft 
+    Search, ChevronDown, ChevronRight, ChevronLeft, FileText 
 } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
@@ -117,7 +117,6 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAct
 };
 
 export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrssIncident, deleteRrssIncident }: any) => {
-    // ... Código del Historial RRSS intacto (acordeones y búsqueda funcionan igual)
     const [selectedIncident, setSelectedIncident] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -132,10 +131,27 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
 
+    // ESTADOS DEL MODAL DE EXPORTACIÓN
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportType, setExportType] = useState('all'); // all | year | month
+    const [exportYear, setExportYear] = useState('');
+    const [exportMonth, setExportMonth] = useState('');
+
     const availableYears = useMemo(() => {
         const years = new Set(safeIncidents.map((i: any) => i.fecha ? i.fecha.split('-')[0] : null).filter(Boolean));
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
     }, [safeIncidents]);
+
+    // OBTENER MESES DISPONIBLES EN BASE AL AÑO SELECCIONADO PARA EXPORTAR
+    const availableMonthsForExport = useMemo(() => {
+        if (!exportYear) return [];
+        const months = new Set(
+            safeIncidents
+                .filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear)
+                .map((i: any) => i.fecha.split('-')[1])
+        );
+        return Array.from(months).sort((a: any, b: any) => b.localeCompare(a));
+    }, [safeIncidents, exportYear]);
 
     const filteredIncidents = useMemo(() => {
         return safeIncidents.filter((inc: any) => {
@@ -204,18 +220,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
     const openEdit = () => { setIsDetailOpen(false); setIsEditOpen(true); };
     const handleDelete = () => { setIsDetailOpen(false); deleteRrssIncident(selectedIncident.id); };
 
-    const exportToCSV = () => {
-        if (filteredIncidents.length === 0) return showToast('No hay datos para exportar', true);
-        const headers = isAdmin ? ['Fecha,Usuario RRSS,Medio,Campus,Riesgo,Area Responsable,Total,Descripcion,Comentarios,Autor'] : ['Fecha,Usuario RRSS,Medio,Campus,Riesgo,Area Responsable,Total,Descripcion,Comentarios'];
-        const rows = filteredIncidents.map((i: any) => {
-            const safeDesc = i.descripcion ? i.descripcion.replace(/"/g, '""') : '';
-            const safeCom = i.comentarios ? i.comentarios.replace(/"/g, '""') : '';
-            const baseData = `"${i.fecha}","${i.usuario}","${i.medio}","${i.campus}","${i.riesgo}","${i.area}","${i.totalIncidencias}","${safeDesc}","${safeCom}"`;
-            return isAdmin ? `${baseData},"${i.autor || 'Administrador'}"` : baseData;
-        });
-        const link = document.createElement("a"); link.href = encodeURI("data:text/csv;charset=utf-8," + [headers, ...rows].join("\n")); link.download = `Historial_RRSS_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    };
-
     const getRiskColor = (risk: string) => {
         switch(risk) {
             case 'Bajo': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
@@ -231,6 +235,42 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
         if (editEditorRef.current && command !== 'foreColor' && command !== 'fontSize') editEditorRef.current.focus();
     };
 
+    // LÓGICA DE EXPORTACIÓN INTELIGENTE (ADAPTADA A RRSS)
+    const handleExecuteExport = () => {
+        let dataToExport = safeIncidents;
+        let filenameSuffix = 'Todo';
+
+        if (exportType === 'year') {
+            if (!exportYear) return showToast('Selecciona un año para exportar', true);
+            dataToExport = safeIncidents.filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear);
+            filenameSuffix = exportYear;
+        } else if (exportType === 'month') {
+            if (!exportYear || !exportMonth) return showToast('Selecciona año y mes para exportar', true);
+            dataToExport = safeIncidents.filter((i: any) => i.fecha && i.fecha.startsWith(`${exportYear}-${exportMonth}`));
+            filenameSuffix = `${exportYear}_${exportMonth}`;
+        }
+
+        if (dataToExport.length === 0) return showToast('No hay datos registrados en esa fecha', true);
+
+        const headers = isAdmin ? ['Fecha,Usuario RRSS,Medio,Campus,Riesgo,Area Responsable,Total,Descripcion,Comentarios,Autor'] : ['Fecha,Usuario RRSS,Medio,Campus,Riesgo,Area Responsable,Total,Descripcion,Comentarios'];
+        const rows = dataToExport.map((i: any) => {
+            const safeDesc = i.descripcion ? i.descripcion.replace(/"/g, '""') : '';
+            const safeCom = i.comentarios ? i.comentarios.replace(/"/g, '""') : '';
+            const baseData = `"${i.fecha}","${i.usuario}","${i.medio}","${i.campus}","${i.riesgo}","${i.area}","${i.totalIncidencias}","${safeDesc}","${safeCom}"`;
+            return isAdmin ? `${baseData},"${i.autor || 'Administrador'}"` : baseData;
+        });
+
+        const link = document.createElement("a"); 
+        link.href = encodeURI("data:text/csv;charset=utf-8," + [headers, ...rows].join("\n")); 
+        link.download = `Historial_RRSS_${filenameSuffix}_${new Date().toISOString().split('T')[0]}.csv`; 
+        document.body.appendChild(link); 
+        link.click(); 
+        document.body.removeChild(link);
+
+        setIsExportModalOpen(false);
+        showToast('Exportación completada exitosamente');
+    };
+
     return (
         <>
             <style>{editorStyles}</style>
@@ -242,7 +282,7 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                             <h2 className="text-2xl font-bold theme-text-main">Historial RRSS</h2>
                             <p className="theme-text-muted text-sm mt-1">Registro histórico de incidencias en redes sociales.</p>
                         </div>
-                        <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition-all text-sm font-bold shadow-sm">
+                        <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-500 transition-all text-sm font-bold shadow-sm">
                             <Download className="w-4 h-4"/> Exportar CSV
                         </button>
                     </div>
@@ -333,6 +373,65 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                 </div>
             </div>
 
+            {/* MODAL DE EXPORTACIÓN INTELIGENTE */}
+            {isExportModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
+                    <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
+                        <div className="p-5 border-b theme-border flex justify-between items-center bg-orange-500/5">
+                            <h3 className="font-bold theme-text-main flex items-center gap-2"><Download className="w-5 h-5 text-orange-500" /> Exportación Inteligente CSV</h3>
+                            <button onClick={() => setIsExportModalOpen(false)} className="p-2 theme-text-muted hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
+                        </div>
+                        <div className="p-6 space-y-5">
+                            <p className="text-sm theme-text-muted">Selecciona el alcance de los datos que deseas descargar en formato CSV para tu reporte.</p>
+                            <div className="space-y-3">
+                                <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'all' ? 'border-orange-500 bg-orange-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
+                                    <input type="radio" name="exportType" checked={exportType === 'all'} onChange={() => setExportType('all')} className="w-4 h-4 text-orange-500" />
+                                    <div><p className="text-sm font-bold theme-text-main">Todo el Historial</p><p className="text-xs theme-text-muted">Descarga todos los incidentes registrados.</p></div>
+                                </label>
+                                
+                                <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'year' ? 'border-orange-500 bg-orange-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input type="radio" name="exportType" checked={exportType === 'year'} onChange={() => { setExportType('year'); if(!exportYear && availableYears.length) setExportYear(availableYears[0]); }} className="w-4 h-4 text-orange-500" />
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Año</p><p className="text-xs theme-text-muted">Descarga un año en específico.</p></div>
+                                    </div>
+                                    {exportType === 'year' && (
+                                        <div className="ml-7 fade-in">
+                                            <select value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={inputStyles}>
+                                                <option value="" disabled>Selecciona un año</option>
+                                                {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </label>
+
+                                <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'month' ? 'border-orange-500 bg-orange-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input type="radio" name="exportType" checked={exportType === 'month'} onChange={() => { setExportType('month'); if(!exportYear && availableYears.length) setExportYear(availableYears[0]); }} className="w-4 h-4 text-orange-500" />
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes</p><p className="text-xs theme-text-muted">Descarga un mes y año específico.</p></div>
+                                    </div>
+                                    {exportType === 'month' && (
+                                        <div className="ml-7 flex gap-3 fade-in">
+                                            <select value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                <option value="" disabled>Año</option>
+                                                {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                            </select>
+                                            <select value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                <option value="" disabled>Mes</option>
+                                                {availableMonthsForExport.map((m: any) => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t theme-border flex justify-end gap-3 bg-black/5 dark:bg-white/5">
+                            <button onClick={() => setIsExportModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Cancelar</button>
+                            <button onClick={handleExecuteExport} className="px-5 py-2.5 rounded-xl font-bold bg-orange-600 text-white hover:bg-orange-500 flex items-center gap-2 shadow-sm"><Download className="w-4 h-4"/> Generar CSV</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isDetailOpen && selectedIncident && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in print:static print:block print:p-0 print:bg-transparent">
                     <div className="theme-bg-container rounded-2xl w-full max-w-2xl shadow-2xl border theme-border overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-full">
@@ -342,7 +441,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                                 <div><h3 className="font-bold theme-text-main text-lg">{selectedIncident.medio}</h3><p className="text-xs theme-text-muted font-medium">{selectedIncident.fecha}</p></div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button onClick={() => handleDownloadDocx(selectedIncident)} className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Descargar Word (.docx)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg></button>
                                 <button onClick={() => window.print()} className="p-2 theme-text-muted hover:theme-text-main hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors" title="Imprimir"><Printer className="w-5 h-5"/></button>
                                 {isAdmin && (
                                     <>
@@ -365,8 +463,14 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                             <div className="space-y-6">
                                 <div><p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Descripción de la incidencia</p><div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main whitespace-pre-wrap text-sm leading-relaxed">{selectedIncident.descripcion}</div></div>
                                 {selectedIncident.comentarios && <div><p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Comentarios adicionales</p><div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main whitespace-pre-wrap text-sm">{selectedIncident.comentarios}</div></div>}
-                                {selectedIncident.reporteTexto && <div><p className="text-xs theme-text-muted font-medium mb-2 uppercase tracking-wider">Reporte Oficial (Bitácora Enriquecida)</p><div className="p-4 theme-bg-low rounded-xl border theme-border theme-text-main text-sm leading-relaxed wysiwyg-content" dangerouslySetInnerHTML={{ __html: selectedIncident.reporteTexto }}/></div>}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                                    {selectedIncident.reporteTexto && (
+                                        <button onClick={() => handleDownloadDocx(selectedIncident)} className="flex items-center gap-3 p-3 theme-bg-low border theme-border rounded-xl hover:border-blue-500 transition-colors group no-print text-left">
+                                            <div className="p-2 bg-blue-500/10 text-blue-500 rounded-lg group-hover:scale-110 transition-transform"><FileText className="w-4 h-4"/></div>
+                                            <div className="overflow-hidden"><p className="text-xs font-bold theme-text-main">Reporte Oficial</p><p className="text-[10px] theme-text-muted truncate">Descargar (.docx)</p></div>
+                                        </button>
+                                    )}
                                     {selectedIncident.enlacePublicacion && (<a href={selectedIncident.enlacePublicacion} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 theme-bg-low border theme-border rounded-xl hover:border-orange-500 transition-colors group no-print"><div className="p-2 bg-orange-500/10 text-orange-500 rounded-lg group-hover:scale-110 transition-transform"><LinkIcon className="w-4 h-4"/></div><div className="overflow-hidden"><p className="text-xs font-bold theme-text-main">Ver Publicación</p><p className="text-[10px] theme-text-muted truncate">{selectedIncident.enlacePublicacion}</p></div></a>)}
                                     {selectedIncident.enlaceDrive && (<a href={selectedIncident.enlaceDrive} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 theme-bg-low border theme-border rounded-xl hover:border-orange-500 transition-colors group no-print"><div className="p-2 bg-green-500/10 text-green-600 rounded-lg group-hover:scale-110 transition-transform"><HardDrive className="w-4 h-4"/></div><div className="overflow-hidden"><p className="text-xs font-bold theme-text-main">Evidencia (Drive)</p><p className="text-[10px] theme-text-muted truncate">{selectedIncident.enlaceDrive}</p></div></a>)}
                                 </div>

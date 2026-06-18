@@ -63,7 +63,9 @@ export default function App() {
         updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
         notifications, markAsRead, deleteNotification, logAction,
         // DATOS DE GESTIÓN DE ROLES
-        userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser
+        userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser,
+        // NUEVOS DATOS DE AUDITORÍA Y PREFERENCIAS
+        auditLogs, userPrefs, updateUserPrefs
     } = useFirebase({
         showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal
     });
@@ -274,7 +276,7 @@ export default function App() {
                 </header>
 
                 <div id="main-content" className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-8 print:p-0 w-full">
-                    {currentView === 'dashboard' && <DashboardView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} isAdmin={isAdmin} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} />}
+                    {currentView === 'dashboard' && <DashboardView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} isAdmin={isAdmin} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} showToast={showToast} />}
                     {currentView === 'protocolo' && <StaticProtocoloView />}
                     {currentView === 'nuevo' && <NewIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
                     {currentView === 'historial' && <HistorialView incidents={incidents} showToast={showToast} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} isAdmin={isAdmin} />}
@@ -285,7 +287,8 @@ export default function App() {
                     {currentView === 'glosario' && <GlosarioView />}
                     {currentView === 'ayuda' && <AyudaView isAdmin={isAdmin} />}
                     
-                    {currentView === 'config' && <ConfigView isDarkMode={isDarkMode} toggleTheme={toggleTheme} incidents={incidents} checklistState={checklistState} showToast={showToast} isAdmin={isAdmin} userRole={userRole} />}
+                    {/* AQUI PASAMOS LOS NUEVOS ESTADOS DE PREFERENCIAS AL CONFIG VIEW */}
+                    {currentView === 'config' && <ConfigView isDarkMode={isDarkMode} toggleTheme={toggleTheme} incidents={incidents} checklistState={checklistState} showToast={showToast} isAdmin={isAdmin} userRole={userRole} auditLogs={auditLogs} userPrefs={userPrefs} updateUserPrefs={updateUserPrefs} />}
                     
                     {currentView === 'gestion-usuarios' && <UserManagementView appUsers={appUsers} userRole={userRole} updateUserRole={updateUserRole} toggleUserStatus={toggleUserStatus} deleteUserRecord={deleteUserRecord} addManualUser={addManualUser} />}
 

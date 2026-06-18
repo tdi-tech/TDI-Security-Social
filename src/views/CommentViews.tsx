@@ -120,7 +120,6 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }
 };
 
 export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComment, deleteComment }: any) => {
-    // ... Código del Historial de Comentarios intacto
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -132,6 +131,12 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
 
+    // ESTADOS DEL MODAL DE EXPORTACIÓN
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportType, setExportType] = useState('all'); // all | year | month
+    const [exportYear, setExportYear] = useState('');
+    const [exportMonth, setExportMonth] = useState('');
+
     const getNormalizedComments = (com: any) => {
         if (com.comentariosList && com.comentariosList.length > 0) return com.comentariosList.map((c: any) => ({ ...c, redSocial: c.redSocial || com.redSocial || 'Facebook', campus: c.campus || com.campus || 'Sin especificar', sentiment: c.sentiment || com.sentiment || '', posteoTipo: c.posteoTipo || com.posteoTipo || 'url', posteoUrl: c.posteoUrl || com.posteoUrl || '', posteoTexto: c.posteoTexto || com.posteoTexto || '' }));
         return [{ usuario: com.usuario || 'N/A', comentario: com.descripcion || 'Sin comentario', redSocial: com.redSocial || 'Facebook', campus: com.campus || 'Sin especificar', sentiment: com.sentiment || '', posteoTipo: com.posteoTipo || 'url', posteoUrl: com.posteoUrl || '', posteoTexto: com.posteoTexto || '' }];
@@ -141,6 +146,17 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
         const years = new Set(comments.map((c: any) => c.fechaInicio ? c.fechaInicio.split('-')[0] : null).filter(Boolean));
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
     }, [comments]);
+
+    // OBTENER MESES DISPONIBLES EN BASE AL AÑO SELECCIONADO PARA EXPORTAR
+    const availableMonthsForExport = useMemo(() => {
+        if (!exportYear) return [];
+        const months = new Set(
+            comments
+                .filter((c: any) => c.fechaInicio && c.fechaInicio.split('-')[0] === exportYear)
+                .map((c: any) => c.fechaInicio.split('-')[1])
+        );
+        return Array.from(months).sort((a: any, b: any) => b.localeCompare(a));
+    }, [comments, exportYear]);
 
     const filteredComments = useMemo(() => {
         return comments.filter((com: any) => {
@@ -191,16 +207,66 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
     const handleDelete = () => { setIsDetailOpen(false); deleteComment(selectedComment.id); };
     const handleEditUpdate = (e: React.FormEvent) => { e.preventDefault(); updateComment(editData.id, editData); setIsEditOpen(false); };
 
-    const exportToCSV = () => {
-        if (filteredComments.length === 0) return showToast('No hay datos', true);
-        const headers = isAdmin ? ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Comentarios Individuales (Red - Campus - Sentiment - Usuario - Posteo - Comentario),Autor'] : ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Comentarios Individuales (Red - Campus - Sentiment - Usuario - Posteo - Comentario)'];
-        const rows = filteredComments.map((i: any) => {
+    // LÓGICA DE EXPORTACIÓN INTELIGENTE (DESGLOSADA POR COMENTARIO)
+    const handleExecuteExport = () => {
+        let dataToExport = comments;
+        let filenameSuffix = 'Todo';
+
+        if (exportType === 'year') {
+            if (!exportYear) return showToast('Selecciona un año para exportar', true);
+            dataToExport = comments.filter((i: any) => i.fechaInicio && i.fechaInicio.split('-')[0] === exportYear);
+            filenameSuffix = exportYear;
+        } else if (exportType === 'month') {
+            if (!exportYear || !exportMonth) return showToast('Selecciona año y mes para exportar', true);
+            dataToExport = comments.filter((i: any) => i.fechaInicio && i.fechaInicio.startsWith(`${exportYear}-${exportMonth}`));
+            filenameSuffix = `${exportYear}_${exportMonth}`;
+        }
+
+        if (dataToExport.length === 0) return showToast('No hay datos registrados en esa fecha', true);
+
+        // 1. Separamos cada dato en su propia columna en los encabezados
+        const headers = isAdmin 
+            ? ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Red Social,Campus,Sentiment,Usuario,Tipo Posteo,Posteo Original,Comentario,Autor'] 
+            : ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Red Social,Campus,Sentiment,Usuario,Tipo Posteo,Posteo Original,Comentario'];
+        
+        // 2. Aplanamos los datos: 1 Fila = 1 Comentario individual
+        const rows = dataToExport.flatMap((i: any) => {
             const list = getNormalizedComments(i);
-            const str = list.map((c: any) => `[${c.redSocial}|${c.campus}|${c.sentiment||'N/A'}] ${c.usuario}: ${c.comentario}`).join('\n').replace(/"/g, '""');
-            const baseData = `"${i.fechaInicio}","${i.fechaFin}","${i.contenido}","${i.evidencia || ''}","${str}"`;
-            return isAdmin ? `${baseData},"${i.autor || 'Admin'}"` : baseData;
+            
+            return list.map((c: any) => {
+                // Función auxiliar para escapar comillas dobles y saltos de línea y evitar que se rompa el CSV
+                const escape = (text: string) => `"${(text || '').toString().replace(/"/g, '""')}"`;
+                
+                const posteoOriginal = c.posteoTipo === 'url' ? c.posteoUrl : c.posteoTexto;
+                
+                const baseData = [
+                    escape(i.fechaInicio),
+                    escape(i.fechaFin),
+                    escape(i.contenido),
+                    escape(i.evidencia),
+                    escape(c.redSocial),
+                    escape(c.campus),
+                    escape(c.sentiment || 'N/A'),
+                    escape(c.usuario),
+                    escape(c.posteoTipo),
+                    escape(posteoOriginal),
+                    escape(c.comentario)
+                ].join(',');
+
+                return isAdmin ? `${baseData},${escape(i.autor || 'Admin')}` : baseData;
+            });
         });
-        const link = document.createElement("a"); link.href = encodeURI("data:text/csv;charset=utf-8," + [headers, ...rows].join("\n")); link.download = `Comentarios.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+
+        const link = document.createElement("a"); 
+        // \uFEFF es el BOM de UTF-8 que fuerza a Excel a leer correctamente los acentos
+        link.href = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + [headers, ...rows].join("\n")); 
+        link.download = `Comentarios_${filenameSuffix}_${new Date().toISOString().split('T')[0]}.csv`; 
+        document.body.appendChild(link); 
+        link.click(); 
+        document.body.removeChild(link);
+
+        setIsExportModalOpen(false);
+        showToast('Exportación desglosada completada exitosamente');
     };
 
     return (
@@ -209,7 +275,7 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                 <div className={(isDetailOpen || isEditOpen) ? 'print:hidden' : ''}>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                         <div><h2 className="text-2xl font-bold theme-text-main">Historial de Comentarios</h2><p className="theme-text-muted text-sm mt-1">Registro organizado de incidencias y reputación.</p></div>
-                        <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-all text-sm font-bold shadow-sm"><Download className="w-4 h-4"/> Exportar CSV</button>
+                        <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-all text-sm font-bold shadow-sm"><Download className="w-4 h-4"/> Exportar CSV</button>
                     </div>
 
                     <div className="p-4 theme-bg-container border theme-border rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -303,6 +369,65 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                     )}
                 </div>
             </div>
+
+            {/* MODAL DE EXPORTACIÓN INTELIGENTE */}
+            {isExportModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
+                    <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
+                        <div className="p-5 border-b theme-border flex justify-between items-center bg-blue-500/5">
+                            <h3 className="font-bold theme-text-main flex items-center gap-2"><Download className="w-5 h-5 text-blue-500" /> Exportación Inteligente CSV</h3>
+                            <button onClick={() => setIsExportModalOpen(false)} className="p-2 theme-text-muted hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
+                        </div>
+                        <div className="p-6 space-y-5">
+                            <p className="text-sm theme-text-muted">Selecciona el alcance de los datos que deseas descargar en formato CSV para tu reporte.</p>
+                            <div className="space-y-3">
+                                <label className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'all' ? 'border-blue-500 bg-blue-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
+                                    <input type="radio" name="exportType" checked={exportType === 'all'} onChange={() => setExportType('all')} className="w-4 h-4 text-blue-500" />
+                                    <div><p className="text-sm font-bold theme-text-main">Todo el Historial</p><p className="text-xs theme-text-muted">Descarga todos los incidentes registrados.</p></div>
+                                </label>
+                                
+                                <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'year' ? 'border-blue-500 bg-blue-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input type="radio" name="exportType" checked={exportType === 'year'} onChange={() => { setExportType('year'); if(!exportYear && availableYears.length) setExportYear(availableYears[0]); }} className="w-4 h-4 text-blue-500" />
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Año</p><p className="text-xs theme-text-muted">Descarga un año en específico.</p></div>
+                                    </div>
+                                    {exportType === 'year' && (
+                                        <div className="ml-7 fade-in">
+                                            <select value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={inputStyles}>
+                                                <option value="" disabled>Selecciona un año</option>
+                                                {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </label>
+
+                                <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'month' ? 'border-blue-500 bg-blue-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <input type="radio" name="exportType" checked={exportType === 'month'} onChange={() => { setExportType('month'); if(!exportYear && availableYears.length) setExportYear(availableYears[0]); }} className="w-4 h-4 text-blue-500" />
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes</p><p className="text-xs theme-text-muted">Descarga un mes y año específico.</p></div>
+                                    </div>
+                                    {exportType === 'month' && (
+                                        <div className="ml-7 flex gap-3 fade-in">
+                                            <select value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                <option value="" disabled>Año</option>
+                                                {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                            </select>
+                                            <select value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                <option value="" disabled>Mes</option>
+                                                {availableMonthsForExport.map((m: any) => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                </label>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t theme-border flex justify-end gap-3 bg-black/5 dark:bg-white/5">
+                            <button onClick={() => setIsExportModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Cancelar</button>
+                            <button onClick={handleExecuteExport} className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2 shadow-sm"><Download className="w-4 h-4"/> Generar CSV</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {isDetailOpen && selectedComment && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in print:static print:block print:p-0 print:bg-transparent">

@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { auth, db, appId } from '../firebase/config';
 import { 
     signInAnonymously, onAuthStateChanged, signOut, 
     GoogleAuthProvider, signInWithPopup 
 } from "firebase/auth";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, addDoc } from "firebase/firestore";
+import { 
+    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, 
+    query, orderBy, limit 
+} from "firebase/firestore";
 
 export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
 
@@ -24,6 +27,64 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const [checklistState, setChecklistState] = useState<any>({});
     const [comments, setComments] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
+    
+    // NUEVO: ESTADO PARA LOG DE AUDITORÍA
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+    // NUEVO: ESTADOS Y REFERENCIAS PARA PREFERENCIAS
+    const [userPrefs, setUserPrefs] = useState({
+        sound: true,
+        security: true,
+        rrss: true,
+        comments: true
+    });
+    // Referencia para leer las preferencias actualizadas dentro de los listeners (onSnapshot)
+    const prefsRef = useRef(userPrefs);
+    useEffect(() => { prefsRef.current = userPrefs; }, [userPrefs]);
+
+    // ========================================================
+    // SINTETIZADOR DE AUDIO NATIVO (Estilo Google Meet)
+    // ========================================================
+    const playNotificationSound = () => {
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            // Tono suave (Onda senoidal)
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+
+            // Control de volumen (0.15 = 15% de volumen para que sea tenue)
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (e) {
+            console.warn("El navegador bloqueó el audio automático.");
+        }
+    };
+
+    // ========================================================
+    // ACTUALIZACIÓN DE PREFERENCIAS EN FIREBASE
+    // ========================================================
+    const updateUserPrefs = async (newPrefs: any) => {
+        if (!user || user.isAnonymous) return;
+        try {
+            setUserPrefs(newPrefs);
+            const selfRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.email);
+            await setDoc(selfRef, { preferences: newPrefs }, { merge: true });
+        } catch (error) {
+            showToast("Error guardando preferencias", true);
+        }
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -101,7 +162,10 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                         } else {
                             setUserRole(data.role);
                         }
-                        // Actualizar foto y nombre si cambiaron en Google
+                        
+                        // Cargar Preferencias
+                        if (data.preferences) setUserPrefs(data.preferences);
+
                         if (data.photoURL !== user.photoURL || data.displayName !== user.displayName) {
                             await setDoc(selfRef, { photoURL: user.photoURL, displayName: user.displayName }, { merge: true });
                         }
@@ -113,7 +177,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                         displayName: user.displayName,
                         photoURL: user.photoURL,
                         role: initialRole,
-                        disabled: false
+                        disabled: false,
+                        preferences: userPrefs // Guardamos las preferencias base
                     });
                     setUserRole(initialRole);
                 }
@@ -135,7 +200,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         };
     }, [user, userRole]);
 
-    // FUNCIONES DE GESTIÓN DE USUARIOS
     const updateUserRole = async (email: string, newRole: string) => {
         if (email === 'marcosg@tierradeideas.mx') return showToast('Acción denegada: Superuser intocable.', true);
         try {
@@ -167,7 +231,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         });
     };
 
-    // NUEVA FUNCIÓN: AGREGAR USUARIO MANUALMENTE (PRE-REGISTRO)
     const addManualUser = async (email: string, role: string) => {
         if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') return showToast('Permisos insuficientes.', true);
         if (!email.endsWith('@tierradeideas.mx')) return showToast('Solo se permiten correos @tierradeideas.mx', true);
@@ -176,7 +239,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', email);
             await setDoc(docRef, {
                 email: email.trim().toLowerCase(),
-                displayName: email.split('@')[0], // Nombre temporal extraído del correo
+                displayName: email.split('@')[0], 
                 photoURL: '',
                 role: role,
                 disabled: false
@@ -225,18 +288,49 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             if (!found) setChecklistState({});
         });
 
+        // NUEVO: Listener de Auditoría (Solo últimos 100 eventos)
+        const qLogs = query(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'), orderBy('date', 'desc'), limit(100));
+        const unsubLogs = onSnapshot(qLogs, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAuditLogs(data);
+        });
+
         const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
         const unsubNotif = onSnapshot(notifRef, (snapshot) => {
             const data: any[] = [];
             snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
             data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setNotifications(data);
+
+            // LOGICA PARA DISPARAR SONIDO SEGÚN PREFERENCIAS
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const notif = change.doc.data();
+                    const isRecent = (new Date().getTime() - new Date(notif.timestamp).getTime()) < 10000;
+                    
+                    // Solo suena si es reciente, y si no fue el usuario actual quien hizo la acción
+                    if (isRecent && user && notif.userId !== user.uid) {
+                        let moduleKey: 'security' | 'rrss' | 'comments' = 'security';
+                        if (notif.module === 'Incidencia RRSS') moduleKey = 'rrss';
+                        if (notif.module === 'Comentarios') moduleKey = 'comments';
+
+                        const currentPrefs = prefsRef.current;
+                        if (moduleKey === 'security' && !currentPrefs.security) return;
+                        if (moduleKey === 'rrss' && !currentPrefs.rrss) return;
+                        if (moduleKey === 'comments' && !currentPrefs.comments) return;
+
+                        if (currentPrefs.sound) {
+                            playNotificationSound();
+                        }
+                    }
+                }
+            });
         });
 
         return () => {
-            unsubIncidents(); unsubRrss(); unsubComments(); unsubChecklist(); unsubNotif();
+            unsubIncidents(); unsubRrss(); unsubComments(); unsubChecklist(); unsubNotif(); unsubLogs();
         };
-    }, []);
+    }, [user]);
 
     const loginWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
@@ -259,8 +353,9 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const logAction = async (actionText: string, moduleName: string, actionType: 'create'|'edit'|'delete', incidentId: string = '') => {
-        if (!user) return;
+        if (!user || user.isAnonymous) return;
         try {
+            // 1. Guardar notificación de campana (Existente)
             const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
             await addDoc(notifRef, {
                 userId: user.uid,
@@ -273,7 +368,17 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 timestamp: new Date().toISOString(),
                 isRead: false
             });
-        } catch (error) { console.error('Error al guardar notificación', error); }
+
+            // 2. Guardar en el Log de Auditoría (Compliance)
+            const auditRef = collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs');
+            await addDoc(auditRef, {
+                date: new Date().toISOString(),
+                user: user.email || user.displayName || 'Usuario Desconocido',
+                action: actionText,
+                module: moduleName,
+                type: actionType
+            });
+        } catch (error) { console.error('Error registrando acción', error); }
     };
 
     const markAsRead = async (id: string) => {
@@ -367,7 +472,11 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
         notifications, markAsRead, deleteNotification, logAction,
         userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord,
-        // EXPORTAMOS LA FUNCIÓN MANUAL
-        addManualUser
+        addManualUser,
+        
+        // NUEVAS EXPORTACIONES DE AUDITORÍA Y PREFERENCIAS
+        auditLogs,
+        userPrefs,
+        updateUserPrefs
     };
 };

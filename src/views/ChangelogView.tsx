@@ -6,9 +6,27 @@ import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layou
 // ==========================================
 const changelogData = [
     {
-        version: 'v3.1.0',
+        version: 'v3.2.0',
         date: 'Junio 2026',
         tag: 'Última Versión',
+        title: 'Compliance, Preferencias SaaS & Exportación Inteligente',
+        changes: [
+            { type: 'security', text: 'Log de Auditoría (Compliance): Registro inmutable de actividad del sistema (creación, edición, eliminación de registros), restringido exclusivamente para el rol de Administrador IT.' },
+            { type: 'feature', text: 'Preferencias de Usuario en la Nube: Panel interactivo para activar/desactivar alertas sonoras y notificaciones por módulo específico (Hackeos, RRSS, Comentarios), sincronizado con Firestore.' },
+            { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento y con un tono tenue.' },
+            { type: 'ui', text: 'Rediseño de Configuración: Arquitectura en columnas dinámicas (Grid) para acomodar la gestión de preferencias y el monitoreo IT.' },
+            { type: 'divider' },
+            { type: 'title', text: 'Exportación y Reportes' },
+            { type: 'feature', text: 'Modal Inteligente de Exportación CSV: Permite descargar todo el historial, filtrar por Año específico o por "Año + Mes".' },
+            { type: 'feature', text: 'Exportación aplanada para Comentarios: Desglose avanzado (1 fila = 1 comentario) para análisis dinámicos en Excel sin anidaciones rotas.' },
+            { type: 'feature', text: 'Reporte Ejecutivo en PDF: Exportación nativa y optimizada para impresión directo desde las métricas del Dashboard.' },
+            { type: 'ui', text: 'Mejora UX/UI en modales de detalle: Reemplazo de bloques de texto masivos por "Action Cards" limpias para descarga de anexos y reportes.' }
+        ]
+    },
+    {
+        version: 'v3.1.0',
+        date: 'Junio 2026',
+        tag: 'Estable',
         title: 'Dashboard Dinámico, Seguridad & SaaS Plus',
         changes: [
             { type: 'feature', text: 'Dashboard rediseñado con navegación por pestañas (Seguridad, RRSS, Comentarios).' },

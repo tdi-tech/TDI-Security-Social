@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Eye, ShieldAlert, FileText, Megaphone, MessageSquare, HelpCircle, Lock, Users, Bell } from 'lucide-react';
+import { Leaf, Eye, ShieldAlert, FileText, Megaphone, MessageSquare, HelpCircle, Lock, Users, Bell, Settings, Activity } from 'lucide-react';
 
 export const AyudaView = ({ isAdmin }: any) => {
     const currentYear = new Date().getFullYear();
@@ -103,6 +103,18 @@ export const AyudaView = ({ isAdmin }: any) => {
                             </div>
 
                             <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm">
+                                <div className="p-2 bg-purple-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
+                                    <Settings className="w-5 h-5 text-purple-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold theme-text-main text-sm">Preferencias de Usuario</h4>
+                                    <p className="text-xs theme-text-muted mt-1 leading-relaxed">
+                                        Panel de configuración en la nube para personalizar el tema visual, habilitar efectos sonoros y elegir qué notificaciones de módulos específicos deseas recibir.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm">
                                 <div className="p-2 bg-orange-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
                                     <Megaphone className="w-5 h-5 text-orange-500" />
                                 </div>
@@ -110,6 +122,18 @@ export const AyudaView = ({ isAdmin }: any) => {
                                     <h4 className="font-bold theme-text-main text-sm">Crisis de Reputación</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
                                         Módulo especializado para registrar picos inusuales de alertas en canales digitales. Ayuda a documentar el nivel de riesgo reputacional (Bajo, Medio, Alto) y aplicar la matriz de escalamiento.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm">
+                                <div className="p-2 bg-cyan-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
+                                    <Activity className="w-5 h-5 text-cyan-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold theme-text-main text-sm">Compliance y Auditoría</h4>
+                                    <p className="text-xs theme-text-muted mt-1 leading-relaxed">
+                                        Registro inmutable (Log) que rastrea creación, edición, eliminación de incidentes y accesos al sistema. Módulo restringido exclusivamente al Administrador IT para garantizar transparencia.
                                     </p>
                                 </div>
                             </div>
@@ -131,9 +155,9 @@ export const AyudaView = ({ isAdmin }: any) => {
                                     <FileText className="w-5 h-5 text-emerald-500" />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="font-bold theme-text-main text-sm">Evidencias, Exportación y PDF</h4>
+                                    <h4 className="font-bold theme-text-main text-sm">Reportes Ejecutivos y Exportación</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        Todos los historiales permiten descargar la base de datos en formato CSV para Excel, y cada reporte individual cuenta con impresión formateada limpia a PDF o exportación a Word (.docx).
+                                        El Dashboard permite descargar un <strong>Reporte Ejecutivo en PDF</strong> con métricas en tiempo real. Todos los historiales cuentan con <strong>Exportación Inteligente CSV</strong> y generación de anexos en formato Word (.docx).
                                     </p>
                                 </div>
                             </div>
