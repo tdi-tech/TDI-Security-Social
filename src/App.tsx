@@ -80,25 +80,22 @@ export default function App() {
         const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups'];
         const loggedInViews = [...adminViews, 'changelog'];
         
-        // Bloqueo 1: Requieres sesión iniciada corporativa[cite: 6]
         if (loggedInViews.includes(view) && !isAdmin) {
             showToast('Debes iniciar sesión para acceder a esta sección.', true);
             setLoginModalOpen(true);
             return;
         }
 
-        // Bloqueo 2: Acceso exclusivo Administrador IT[cite: 6]
         if (view === 'backups' && userRole !== 'ADMIN_IT') {
             showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
             return;
         }
 
         setCurrentView(view); 
-        localStorage.setItem('innova_current_view', view); //[cite: 6]
+        localStorage.setItem('innova_current_view', view); 
         setSidebarOpen(false);
     };
 
-    // 🔄 SEGURIDAD EXTRA: Limpieza del storage si no hay una sesión activa[cite: 6]
     useEffect(() => {
         if (!user && !isAdmin) {
             const publicViews = ['dashboard', 'protocolo', 'historial', 'glosario', 'protocolo-rss', 'historial-rss', 'historial-comentario', 'roles', 'config', 'ayuda'];
@@ -141,7 +138,6 @@ export default function App() {
 
     const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' : userRole === 'ADMIN_CM' ? 'Administrador CM' : userRole === 'EDITOR_CM' ? 'Editor CM' : 'Administrador';
 
-    // 🔄 RESPONSIVIDAD MEJORADA: Se ajustaron las clases CSS de las migas de pan para colapsar en móviles (hidden sm:inline)
     const renderHeaderTitle = () => {
         const baseClass = "text-sm sm:text-xl font-bold flex items-center gap-1.5 sm:gap-2.5 tracking-tight select-none truncate max-w-[160px] sm:max-w-none";
         const parentClass = "hidden sm:inline theme-text-muted opacity-80 font-semibold";
@@ -208,8 +204,8 @@ export default function App() {
                                     {unreadNotifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--surface)] animate-pulse"></span>}
                                 </button>
                                 {notifMenuOpen && (
-                                    /* 🔄 NOTIFICACIONES RESPONSIVAS: Centrado absoluto en celulares mediante fixed inset-x-4, y en desktop vuelve a ser un dropdown clásico right-0 absolute */
-                                    <div className="fixed sm:absolute right-auto sm:right-0 left-4 sm:left-auto inset-x-4 sm:inset-x-auto mt-3 w-auto sm:w-80 theme-bg-container border theme-border rounded-xl shadow-2xl z-50 fade-in flex flex-col max-h-[420px] sm:max-h-[450px]">
+                                    /* 🔄 NOTIFICACIONES OPTIMIZADAS: Cambiado left-4 por right-4 para alinearse perfectamente a la derecha en móviles, y creció el tamaño máximo */
+                                    <div className="fixed sm:absolute left-4 sm:left-auto right-4 sm:right-0 inset-x-4 sm:inset-x-auto mt-3 w-auto sm:w-80 theme-bg-container border theme-border rounded-xl shadow-2xl z-50 fade-in flex flex-col max-h-[500px] sm:max-h-[450px]">
                                         <div className="p-4 border-b theme-border flex items-center justify-between bg-[var(--primary)]/5">
                                             <h3 className="font-bold theme-text-main">Actividad Reciente</h3>
                                             <span className="text-xs font-bold theme-text-muted bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">{validNotifications.length}</span>
