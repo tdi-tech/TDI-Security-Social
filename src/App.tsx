@@ -80,25 +80,25 @@ export default function App() {
         const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups'];
         const loggedInViews = [...adminViews, 'changelog'];
         
-        // Bloqueo 1: Requiere sesión iniciada corporativa
+        // Bloqueo 1: Requieres sesión iniciada corporativa[cite: 6]
         if (loggedInViews.includes(view) && !isAdmin) {
             showToast('Debes iniciar sesión para acceder a esta sección.', true);
             setLoginModalOpen(true);
             return;
         }
 
-        // Bloqueo 2: Acceso exclusivo Administrador IT
+        // Bloqueo 2: Acceso exclusivo Administrador IT[cite: 6]
         if (view === 'backups' && userRole !== 'ADMIN_IT') {
             showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
             return;
         }
 
         setCurrentView(view); 
-        localStorage.setItem('innova_current_view', view); // 👈 Guardamos el estado en el almacenamiento local
+        localStorage.setItem('innova_current_view', view); //[cite: 6]
         setSidebarOpen(false);
     };
 
-    // 🔄 SEGURIDAD EXTRA: Limpieza del storage si no hay una sesión activa
+    // 🔄 SEGURIDAD EXTRA: Limpieza del storage si no hay una sesión activa[cite: 6]
     useEffect(() => {
         if (!user && !isAdmin) {
             const publicViews = ['dashboard', 'protocolo', 'historial', 'glosario', 'protocolo-rss', 'historial-rss', 'historial-comentario', 'roles', 'config', 'ayuda'];
@@ -141,15 +141,16 @@ export default function App() {
 
     const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' : userRole === 'ADMIN_CM' ? 'Administrador CM' : userRole === 'EDITOR_CM' ? 'Editor CM' : 'Administrador';
 
+    // 🔄 RESPONSIVIDAD MEJORADA: Se ajustaron las clases CSS de las migas de pan para colapsar en móviles (hidden sm:inline)
     const renderHeaderTitle = () => {
-        const baseClass = "text-xl font-bold flex items-center gap-2.5 tracking-tight select-none";
-        const parentClass = "theme-text-muted opacity-80 font-semibold";
-        const separatorClass = "text-gray-600 font-light text-lg";
-        const childClass = "theme-text-main font-bold";
+        const baseClass = "text-sm sm:text-xl font-bold flex items-center gap-1.5 sm:gap-2.5 tracking-tight select-none truncate max-w-[160px] sm:max-w-none";
+        const parentClass = "hidden sm:inline theme-text-muted opacity-80 font-semibold";
+        const separatorClass = "hidden sm:inline text-gray-600 font-light text-lg";
+        const childClass = "theme-text-main font-bold truncate";
 
         switch (currentView) {
-            case 'dashboard': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Dashboard</h1>;
-            case 'gestion-usuarios': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Gestión de Usuarios</h1>;
+            case 'dashboard': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Dashboard</h1>;
+            case 'gestion-usuarios': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Gestión de Usuarios</h1>;
             case 'protocolo': return <div className={baseClass}><span className={parentClass}>Hackeos</span><span className={separatorClass}>/</span><span className={childClass}>Protocolo</span></div>;
             case 'nuevo': return <div className={baseClass}><span className={parentClass}>Hackeos</span><span className={separatorClass}>/</span><span className={childClass}>Crear incidente</span></div>;
             case 'checklist': return <div className={baseClass}><span className={parentClass}>Hackeos</span><span className={separatorClass}>/</span><span className={childClass}>Checklist Rápido</span></div>;
@@ -160,12 +161,12 @@ export default function App() {
             case 'historial-rss': return <div className={baseClass}><span className={parentClass}>Incidencias RRSS</span><span className={separatorClass}>/</span><span className={childClass}>Historial</span></div>;
             case 'nuevo-comentario': return <div className={baseClass}><span className={parentClass}>Comentarios</span><span className={separatorClass}>/</span><span className={childClass}>Capturar comentarios</span></div>;
             case 'historial-comentario': return <div className={baseClass}><span className={parentClass}>Comentarios</span><span className={separatorClass}>/</span><span className={childClass}>Historial</span></div>;
-            case 'roles': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Roles</h1>;
-            case 'changelog': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Changelog</h1>;
-            case 'backups': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Copias de Seguridad Core</h1>;
-            case 'config': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Configuración</h1>;
-            case 'ayuda': return <h1 className="text-xl font-bold theme-text-main tracking-tight">Ayuda</h1>;
-            default: return <h1 className="text-xl font-bold theme-text-main tracking-tight capitalize">{currentView.replace(/-/g, ' ')}</h1>;
+            case 'roles': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Roles</h1>;
+            case 'changelog': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Changelog</h1>;
+            case 'backups': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Copias de Seguridad Core</h1>;
+            case 'config': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Configuración</h1>;
+            case 'ayuda': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Ayuda</h1>;
+            default: return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight capitalize truncate">{currentView.replace(/-/g, ' ')}</h1>;
         }
     };
 
@@ -193,12 +194,12 @@ export default function App() {
             <main className="flex-1 print:block flex flex-col h-full print:h-auto relative overflow-x-hidden print:overflow-visible w-full bg-[var(--surface)]">
 
                 <header className="h-16 border-b theme-border theme-bg-container flex items-center justify-between px-4 sm:px-6 no-print shadow-sm z-10">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 theme-text-muted hover:theme-text-main rounded-lg"><Menu className="w-6 h-6"/></button>
                         <div className="flex items-center">{renderHeaderTitle()}</div>
                     </div>
                     
-                    <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-1 sm:gap-4">
                         
                         {isAdmin && (
                             <div className="relative notif-container">
@@ -207,7 +208,8 @@ export default function App() {
                                     {unreadNotifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--surface)] animate-pulse"></span>}
                                 </button>
                                 {notifMenuOpen && (
-                                    <div className="absolute right-0 mt-3 w-80 theme-bg-container border theme-border rounded-xl shadow-2xl z-50 fade-in flex flex-col max-h-[450px]">
+                                    /* 🔄 NOTIFICACIONES RESPONSIVAS: Centrado absoluto en celulares mediante fixed inset-x-4, y en desktop vuelve a ser un dropdown clásico right-0 absolute */
+                                    <div className="fixed sm:absolute right-auto sm:right-0 left-4 sm:left-auto inset-x-4 sm:inset-x-auto mt-3 w-auto sm:w-80 theme-bg-container border theme-border rounded-xl shadow-2xl z-50 fade-in flex flex-col max-h-[420px] sm:max-h-[450px]">
                                         <div className="p-4 border-b theme-border flex items-center justify-between bg-[var(--primary)]/5">
                                             <h3 className="font-bold theme-text-main">Actividad Reciente</h3>
                                             <span className="text-xs font-bold theme-text-muted bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg">{validNotifications.length}</span>
@@ -267,24 +269,24 @@ export default function App() {
                             </div>
                         )}
                         
-                        <button onClick={toggleTheme} className="p-2 theme-text-muted hover:theme-text-main rounded-lg transition-colors" title="Cambiar Tema">
+                        <button onClick={toggleTheme} className="p-1 sm:p-2 theme-text-muted hover:theme-text-main rounded-lg transition-colors" title="Cambiar Tema">
                             {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
                         </button>
                         
                         {isAdmin ? (
-                            <div className="flex items-center gap-3 pl-2 relative profile-container">
+                            <div className="flex items-center gap-1.5 sm:gap-3 pl-1 relative profile-container">
                                 <div className="text-right hidden sm:block">
                                     <p className="text-sm font-bold theme-text-main leading-none">{user?.displayName}</p>
                                     <p className="text-[10px] theme-text-muted uppercase font-bold mt-1 tracking-wider">{displayRoleName}</p>
                                 </div>
                                 <div className="relative">
                                     {user?.photoURL ? (
-                                        <img src={user.photoURL} alt="Perfil" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border-[3px] border-[var(--primary)] shadow-sm cursor-pointer hover:scale-105 transition-transform" onClick={() => setProfileMenuOpen(!profileMenuOpen)} />
+                                        <img src={user.photoURL} alt="Perfil" referrerPolicy="no-referrer" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-[2px] sm:border-[3px] border-[var(--primary)] shadow-sm cursor-pointer hover:scale-105 transition-transform" onClick={() => setProfileMenuOpen(!profileMenuOpen)} />
                                     ) : (
-                                        <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="w-10 h-10 rounded-full bg-[var(--primary)] hover:brightness-110 flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform">{user?.displayName?.charAt(0) || 'A'}</button>
+                                        <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[var(--primary)] hover:brightness-110 flex items-center justify-center text-white font-bold text-xs sm:text-sm cursor-pointer hover:scale-105 transition-transform">{user?.displayName?.charAt(0) || 'A'}</button>
                                     )}
                                     {profileMenuOpen && (
-                                        <div className="absolute right-0 mt-3 w-56 theme-bg-container border theme-border rounded-xl shadow-2xl py-2 z-50 fade-in">
+                                        <div className="absolute right-0 mt-3 w-52 sm:w-56 theme-bg-container border theme-border rounded-xl shadow-2xl py-2 z-50 fade-in">
                                             <div className="px-4 py-3 border-b theme-border sm:hidden"><p className="text-sm font-bold theme-text-main truncate">{user?.displayName}</p><p className="text-xs theme-text-muted mt-0.5">{displayRoleName}</p></div>
                                             
                                             {(userRole === 'ADMIN_IT' || userRole === 'ADMIN_CM') && (
@@ -302,7 +304,7 @@ export default function App() {
                                 </div>
                             </div>
                         ) : (
-                            <button onClick={() => setLoginModalOpen(true)} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all shadow-sm flex items-center gap-2 bg-[var(--primary)] text-white hover:brightness-110`}><Lock className="w-4 h-4"/><span className="hidden sm:inline">Entrar como Admin</span></button>
+                            <button onClick={() => setLoginModalOpen(true)} className={`px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5 bg-[var(--primary)] text-white hover:brightness-110`}><Lock className="w-3.5 h-3.5"/><span className="hidden xs:inline sm:inline">Entrar</span></button>
                         )}
                     </div>
                 </header>
