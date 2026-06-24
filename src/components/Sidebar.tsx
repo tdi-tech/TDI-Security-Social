@@ -30,8 +30,8 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         <button
             onClick={() => navigate(id)}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${currentView === id
-                    ? 'bg-[var(--primary)] text-white shadow-sm'
-                    : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
+                ? 'bg-[var(--primary)] text-white shadow-sm'
+                : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
                 }`}
         >
             <Icon className="w-5 h-5" />
@@ -46,8 +46,8 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
             <button
                 onClick={() => navigate(id)}
                 className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all pl-8 ${currentView === id
-                        ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-bold'
-                        : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
+                    ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-bold'
+                    : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
                     }`}
             >
                 <Icon className="w-4 h-4 opacity-70" />
@@ -98,7 +98,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                         <Leaf className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas</h1>
+                        <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas IT</h1>
                         <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.2</p>
                     </div>
                 </div>
