@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Trash2, UserX, UserCheck, Users, Info, Plus, Save, X } from 'lucide-react';
+import { PROTECTED_ADMIN_IT_EMAILS } from '../hooks/useFirebase';
 
 export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser }: any) => {
-    
+
     const [isAdding, setIsAdding] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [newRole, setNewRole] = useState('EDITOR_CM');
@@ -15,10 +16,12 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
         setIsAdding(false);
     };
 
-    // ALGORITMO PARA ANCLAR AL SUPERUSER EN LA POSICIÓN 1 Y ORDENAR AL RESTO
+    // ALGORITMO PARA ANCLAR A LOS ADMINISTRADORES IT PROTEGIDOS ARRIBA Y ORDENAR AL RESTO
     const sortedUsers = [...appUsers].sort((a, b) => {
-        if (a.email === 'marcosg@tierradeideas.mx') return -1;
-        if (b.email === 'marcosg@tierradeideas.mx') return 1;
+        const aProtected = PROTECTED_ADMIN_IT_EMAILS.includes(a.email);
+        const bProtected = PROTECTED_ADMIN_IT_EMAILS.includes(b.email);
+        if (aProtected && !bProtected) return -1;
+        if (!aProtected && bProtected) return 1;
         return (a.displayName || '').localeCompare(b.displayName || '');
     });
 
@@ -34,14 +37,14 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                         Controla los accesos, asigna roles y deshabilita cuentas del equipo.
                     </p>
                 </div>
-                
+
                 {/* EL BOTÓN SOLO SE RENDERIZA SI ERES ADMIN_IT */}
                 {userRole === 'ADMIN_IT' && (
-                    <button 
+                    <button
                         onClick={() => setIsAdding(!isAdding)}
                         className="flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white font-bold text-sm rounded-lg hover:brightness-110 shadow-sm transition-all"
                     >
-                        {isAdding ? <X className="w-4 h-4"/> : <Plus className="w-4 h-4"/>}
+                        {isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                         {isAdding ? 'Cancelar' : 'Pre-registrar Usuario'}
                     </button>
                 )}
@@ -53,18 +56,18 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                     <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                         <div className="w-full sm:flex-1 space-y-1">
                             <label className="text-xs font-bold theme-text-muted">Correo Corporativo</label>
-                            <input 
-                                type="email" 
-                                required 
-                                placeholder="ejemplo@tierradeideas.mx" 
+                            <input
+                                type="email"
+                                required
+                                placeholder="ejemplo@tierradeideas.mx"
                                 value={newEmail}
                                 onChange={(e) => setNewEmail(e.target.value)}
-                                className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]" 
+                                className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]"
                             />
                         </div>
                         <div className="w-full sm:w-64 space-y-1">
                             <label className="text-xs font-bold theme-text-muted">Asignar Rol</label>
-                            <select 
+                            <select
                                 value={newRole}
                                 onChange={(e) => setNewRole(e.target.value)}
                                 className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]"
@@ -102,8 +105,8 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                         </thead>
                         <tbody className="divide-y theme-border">
                             {sortedUsers.map((u: any) => {
-                                const isSuperUser = u.email === 'marcosg@tierradeideas.mx';
-                                
+                                const isSuperUser = PROTECTED_ADMIN_IT_EMAILS.includes(u.email);
+
                                 return (
                                     <tr key={u.email} className={`transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${u.disabled ? 'opacity-50' : ''}`}>
                                         <td className="p-4">
@@ -124,9 +127,9 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                                 </div>
                                             </div>
                                         </td>
-                                        
+
                                         <td className="p-4">
-                                            <select 
+                                            <select
                                                 value={u.role}
                                                 onChange={(e) => updateUserRole(u.email, e.target.value)}
                                                 disabled={isSuperUser || u.disabled}
@@ -136,6 +139,11 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                                 <option value="ADMIN_CM">Administrador CM</option>
                                                 <option value="EDITOR_CM">Editor CM</option>
                                             </select>
+                                            {isSuperUser && (
+                                                <p className="text-[10px] text-[var(--primary)] font-bold mt-1 flex items-center gap-1">
+                                                    <ShieldAlert className="w-3 h-3" /> Administrador IT Protegido
+                                                </p>
+                                            )}
                                         </td>
 
                                         <td className="p-4 text-center">
@@ -147,7 +155,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                         <td className="p-4">
                                             <div className="flex items-center justify-end gap-2">
                                                 {/* Botón de Habilitar/Deshabilitar */}
-                                                <button 
+                                                <button
                                                     onClick={() => toggleUserStatus(u.email, u.disabled)}
                                                     disabled={isSuperUser}
                                                     title={isSuperUser ? "Intocable" : (u.disabled ? "Habilitar Cuenta" : "Deshabilitar Cuenta")}
@@ -158,7 +166,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
 
                                                 {/* Botón de Eliminar (Solo ADMIN IT) */}
                                                 {userRole === 'ADMIN_IT' && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => deleteUserRecord(u.email)}
                                                         disabled={isSuperUser}
                                                         title={isSuperUser ? "Intocable" : "Eliminar permanentemente"}

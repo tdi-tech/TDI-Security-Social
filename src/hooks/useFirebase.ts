@@ -1,33 +1,41 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { auth, db, appId } from '../firebase/config';
-import { 
-    signInAnonymously, onAuthStateChanged, signOut, 
-    GoogleAuthProvider, signInWithPopup 
+import {
+    signInAnonymously, onAuthStateChanged, signOut,
+    GoogleAuthProvider, signInWithPopup
 } from "firebase/auth";
-import { 
-    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, 
-    query, orderBy, limit 
+import {
+    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc,
+    query, orderBy, limit
 } from "firebase/firestore";
+
+// Lista de correos cuyo rol ADMIN_IT está protegido y se auto-restaura.
+// Cualquier usuario en esta lista recuperará automáticamente el rol ADMIN_IT
+// al iniciar sesión, aunque alguien se lo haya cambiado desde la UI.
+export const PROTECTED_ADMIN_IT_EMAILS = [
+    'marcosg@tierradeideas.mx',
+    'rperez@tierradeideas.mx'
+];
 
 export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
 
     const [user, setUser] = useState<any>(null);
     const [isAdmin, setIsAdmin] = useState(false);
-    
+
     const [userRole, setUserRole] = useState<string>('');
     const [appUsers, setAppUsers] = useState<any[]>([]);
-    
+
     const [cloudStatus, setCloudStatus] = useState(() => {
-        return localStorage.getItem('auth_hint') === 'admin' 
+        return localStorage.getItem('auth_hint') === 'admin'
             ? 'Conectando...' : 'Desconectado de Firebase (Lector)';
     });
-    
+
     const [incidents, setIncidents] = useState<any[]>([]);
     const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
     const [checklistState, setChecklistState] = useState<any>({});
     const [comments, setComments] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
-    
+
     // NUEVO: ESTADO PARA LOG DE AUDITORÍA
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
@@ -101,7 +109,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 if (localStorage.getItem('auth_hint') === 'admin') setCloudStatus('Conectando...');
                 else setCloudStatus('Desconectado de Firebase (Lector)');
 
-                try { await signInAnonymously(auth); } 
+                try { await signInAnonymously(auth); }
                 catch (error) {
                     localStorage.setItem('auth_hint', 'lector');
                     setCloudStatus('Desconectado de Firebase (Lector)');
@@ -148,7 +156,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
         if (user && !user.isAnonymous) {
             const selfRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.email);
-            
+
             unsubSelf = onSnapshot(selfRef, async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
@@ -156,13 +164,15 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                         showToast('Tu cuenta ha sido deshabilitada por un administrador.', true);
                         await logoutAdmin();
                     } else {
-                        if (user.email === 'marcosg@tierradeideas.mx' && data.role !== 'ADMIN_IT') {
+                        // Auto-restauración de ADMIN_IT para correos protegidos
+                        const isProtectedAdmin = PROTECTED_ADMIN_IT_EMAILS.includes(user.email);
+                        if (isProtectedAdmin && data.role !== 'ADMIN_IT') {
                             await setDoc(selfRef, { role: 'ADMIN_IT' }, { merge: true });
                             setUserRole('ADMIN_IT');
                         } else {
                             setUserRole(data.role);
                         }
-                        
+
                         // Cargar Preferencias
                         if (data.preferences) setUserPrefs(data.preferences);
 
@@ -171,7 +181,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                         }
                     }
                 } else {
-                    const initialRole = user.email === 'marcosg@tierradeideas.mx' ? 'ADMIN_IT' : 'EDITOR_CM';
+                    const initialRole = PROTECTED_ADMIN_IT_EMAILS.includes(user.email) ? 'ADMIN_IT' : 'EDITOR_CM';
                     await setDoc(selfRef, {
                         email: user.email,
                         displayName: user.displayName,
@@ -201,7 +211,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     }, [user, userRole]);
 
     const updateUserRole = async (email: string, newRole: string) => {
-        if (email === 'marcosg@tierradeideas.mx') return showToast('Acción denegada: Superuser intocable.', true);
+        if (PROTECTED_ADMIN_IT_EMAILS.includes(email)) return showToast('Acción denegada: Administrador IT protegido.', true);
         try {
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { role: newRole }, { merge: true });
             showToast('Rol actualizado exitosamente');
@@ -209,7 +219,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const toggleUserStatus = async (email: string, currentStatus: boolean) => {
-        if (email === 'marcosg@tierradeideas.mx') return showToast('Acción denegada: Superuser intocable.', true);
+        if (PROTECTED_ADMIN_IT_EMAILS.includes(email)) return showToast('Acción denegada: Administrador IT protegido.', true);
         try {
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { disabled: !currentStatus }, { merge: true });
             showToast(!currentStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada');
@@ -218,8 +228,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
     const deleteUserRecord = (email: string) => {
         if (userRole !== 'ADMIN_IT') return showToast('Permisos insuficientes.', true);
-        if (email === 'marcosg@tierradeideas.mx') return showToast('Acción denegada: Superuser intocable.', true);
-        
+        if (PROTECTED_ADMIN_IT_EMAILS.includes(email)) return showToast('Acción denegada: Administrador IT protegido.', true);
+
         setConfirmModal({
             isOpen: true, title: 'Eliminar Usuario', msg: `¿Seguro que deseas eliminar el acceso de ${email}?`,
             onConfirm: async () => {
@@ -239,7 +249,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', email);
             await setDoc(docRef, {
                 email: email.trim().toLowerCase(),
-                displayName: email.split('@')[0], 
+                displayName: email.split('@')[0],
                 photoURL: '',
                 role: role,
                 disabled: false
@@ -307,7 +317,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 if (change.type === 'added') {
                     const notif = change.doc.data();
                     const isRecent = (new Date().getTime() - new Date(notif.timestamp).getTime()) < 10000;
-                    
+
                     // Solo suena si es reciente, y si no fue el usuario actual quien hizo la acción
                     if (isRecent && user && notif.userId !== user.uid) {
                         let moduleKey: 'security' | 'rrss' | 'comments' = 'security';
@@ -334,13 +344,13 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
     const loginWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ hd: 'tierradeideas.mx' }); 
+        provider.setCustomParameters({ hd: 'tierradeideas.mx' });
         try {
             const result = await signInWithPopup(auth, provider);
             const loggedInEmail = result.user.email || '';
             if (!loggedInEmail.endsWith('@tierradeideas.mx')) {
                 localStorage.setItem('auth_hint', 'lector');
-                await signOut(auth); 
+                await signOut(auth);
                 showToast('Acceso denegado. Usa un correo @tierradeideas.mx', true);
                 return;
             }
@@ -352,7 +362,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         }
     };
 
-    const logAction = async (actionText: string, moduleName: string, actionType: 'create'|'edit'|'delete', incidentId: string = '') => {
+    const logAction = async (actionText: string, moduleName: string, actionType: 'create' | 'edit' | 'delete', incidentId: string = '') => {
         if (!user || user.isAnonymous) return;
         try {
             // 1. Guardar notificación de campana (Existente)
@@ -382,12 +392,12 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const markAsRead = async (id: string) => {
-        try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), { isRead: true }, { merge: true }); } 
-        catch (err) {}
+        try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), { isRead: true }, { merge: true }); }
+        catch (err) { }
     };
 
     const deleteNotification = async (id: string) => {
-        try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id)); } 
+        try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id)); }
         catch (err) { showToast('Error al eliminar la notificación', true); }
     };
 
@@ -419,7 +429,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                     await logAction(`Eliminó de forma permanente un registro`, 'Hackeos', 'delete');
                     showToast('Incidente eliminado');
                     setDetailModalOpen(false);
-                } catch(err) { showToast('Error', true); }
+                } catch (err) { showToast('Error', true); }
             }
         });
     };
@@ -440,7 +450,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id));
                     await logAction(`Eliminó permanentemente un caso de crisis`, 'Incidencia RRSS', 'delete');
                     showToast('Registro eliminado exitosamente');
-                } catch(err) { showToast('Error al eliminar', true); }
+                } catch (err) { showToast('Error al eliminar', true); }
             }
         });
     };
@@ -466,14 +476,14 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         });
     };
 
-    return { 
-        user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState, 
+    return {
+        user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState,
         loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
         updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
         notifications, markAsRead, deleteNotification, logAction,
         userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord,
         addManualUser,
-        
+
         // NUEVAS EXPORTACIONES DE AUDITORÍA Y PREFERENCIAS
         auditLogs,
         userPrefs,
