@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Menu, CheckCircle2, XCircle, Sun, Moon, LogOut, Hammer, Bell, Trash2, Eye, Users, ChevronRight, X, Megaphone, MessageSquare } from 'lucide-react';
+import { getDoc, doc } from 'firebase/firestore';
+import { db, appId } from './firebase/config';
 
 // Hooks
 import { useTheme } from './hooks/useTheme';
@@ -14,7 +16,7 @@ import { Inactivity } from './components/Inactivity';
 import { StaticProtocoloView, RolesView, GlosarioView, ProtocoloRRSSView } from './views/StaticViews';
 import { DashboardView } from './views/DashboardView';
 import { ChangelogView } from './views/ChangelogView';
-import { HistorialView, ChecklistView, NewIncidentView, DetailModal, EditIncidentModal } from './views/HackViews';
+import { HistorialView, ChecklistView, NewIncidentView } from './views/HackViews';
 import { AyudaView } from './views/AyudaView';
 import { ConfigView } from './views/ConfigView';
 import { NewRRSSIncidentView, HistorialRRSSView } from './views/RRSSViews';
@@ -36,9 +38,6 @@ export default function App() {
 
     const [toast, setToast] = useState<any>(null);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
-    const [detailModalOpen, setDetailModalOpen] = useState(false);
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
     const [confirmModal, setConfirmModal] = useState<any>({ isOpen: false, title: '', msg: '', onConfirm: null });
 
     const [previewModal, setPreviewModal] = useState<{isOpen: boolean, type: string, data: any}>({isOpen: false, type: '', data: null});
@@ -49,14 +48,14 @@ export default function App() {
     };
 
     const {
-        user, isAdmin, cloudStatus, isLoading, incidents, rrssIncidents, checklistState, setChecklistState,
-        loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
-        updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
+        user, isAdmin, cloudStatus, checklistState, setChecklistState,
+        loginWithGoogle, logoutAdmin, updateIncident, deleteIncident, toggleIncidentStatus,
+        updateRrssIncident, deleteRrssIncident, updateComment, deleteComment,
         notifications, markAsRead, hideNotification, deleteNotification, logAction,
         userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser,
         userPrefs, updateUserPrefs 
     } = useFirebase({
-        showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal
+        showToast, setLoginModalOpen, setConfirmModal
     });
 
     const navigate = (view: string) => {
@@ -80,7 +79,6 @@ export default function App() {
     };
 
     useEffect(() => {
-        // 🛑 SOLUCIÓN: Si Firebase aún está cargando la sesión, detenemos la expulsión
         if (cloudStatus === 'Conectando...') return;
 
         if (!user && !isAdmin) {
@@ -90,7 +88,7 @@ export default function App() {
                 localStorage.setItem('innova_current_view', 'dashboard');
             }
         }
-    }, [user, isAdmin, currentView, cloudStatus]); // <-- Agregamos cloudStatus aquí
+    }, [user, isAdmin, currentView, cloudStatus]);
 
     useEffect(() => {
         const handleClickOutside = (e: any) => {
@@ -108,20 +106,34 @@ export default function App() {
     const unreadNotifications = validNotifications.filter((n: any) => !(n.readBy && n.readBy.includes(user?.uid)));
     const readNotifications = validNotifications.filter((n: any) => (n.readBy && n.readBy.includes(user?.uid)));
 
-    const handleViewIncident = (n: any) => {
+    // 🛑 SEGURIDAD AL HACER CLIC EN NOTIFICACIONES: Busca el registro directo en Firestore
+    const handleViewIncident = async (n: any) => {
         setNotifMenuOpen(false);
-        if (n.module === 'Hackeos') {
-            const inc = incidents.find(i => i.id === n.incidentId);
-            if (inc) { setSelectedIncidentId(inc.id); setDetailModalOpen(true); } 
-            else showToast('El incidente ya no existe o fue eliminado', true);
-        } else if (n.module === 'Incidencia RRSS') {
-            const inc = rrssIncidents.find(i => i.id === n.incidentId);
-            if (inc) setPreviewModal({isOpen: true, type: 'rrss', data: inc});
-            else showToast('El registro ya no existe o fue eliminado', true);
-        } else if (n.module === 'Comentarios') {
-            const inc = comments.find(i => i.id === n.incidentId);
-            if (inc) setPreviewModal({isOpen: true, type: 'comment', data: inc});
-            else showToast('El reporte ya no existe o fue eliminado', true);
+        try {
+            let colName = '';
+            if (n.module === 'Hackeos') colName = 'incidents';
+            else if (n.module === 'Incidencia RRSS') colName = 'rrss_incidents';
+            else if (n.module === 'Comentarios') colName = 'comments';
+
+            if (!colName) return;
+            const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, n.incidentId));
+            
+            if (docSnap.exists()) {
+                const data = { id: docSnap.id, ...docSnap.data() };
+                if (colName === 'incidents') {
+                     // Dirigimos al historial general para hackeos
+                     navigate('historial');
+                     showToast('Apertura rápida. Busca el incidente en la lista superior.');
+                } else if (colName === 'rrss_incidents') {
+                     setPreviewModal({isOpen: true, type: 'rrss', data});
+                } else {
+                     setPreviewModal({isOpen: true, type: 'comment', data});
+                }
+            } else {
+                showToast('El registro ya no existe o fue eliminado', true);
+            }
+        } catch(e) {
+            showToast('Error al obtener el registro del servidor', true);
         }
     };
 
@@ -185,7 +197,6 @@ export default function App() {
                     </div>
                     
                     <div className="flex items-center gap-1 sm:gap-4">
-                        
                         {isAdmin && (
                             <div className="relative notif-container">
                                 <button onClick={() => setNotifMenuOpen(!notifMenuOpen)} className="p-2 theme-text-muted hover:theme-text-main rounded-lg transition-colors relative" title="Notificaciones">
@@ -293,15 +304,11 @@ export default function App() {
                 </header>
 
                 <div id="main-content" className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-8 print:p-0 w-full">
-                    {currentView === 'dashboard' && <DashboardView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} isAdmin={isAdmin} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} showToast={showToast} />}
+                    {currentView === 'dashboard' && <DashboardView isAdmin={isAdmin} navigate={navigate} showToast={showToast} toggleIncidentStatus={toggleIncidentStatus} updateIncident={updateIncident} deleteIncident={deleteIncident} />}
                     {currentView === 'protocolo' && <StaticProtocoloView />}
                     {currentView === 'nuevo' && <NewIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
-                    
-                    {/* 🔄 COMPONENTE INDEPENDIENTE (Ya no le pasamos los datos desde aquí) */}
-                    {currentView === 'historial' && <HistorialView showToast={showToast} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} isAdmin={isAdmin} />}
-                    
+                    {currentView === 'historial' && <HistorialView showToast={showToast} isAdmin={isAdmin} />}
                     {currentView === 'checklist' && <ChecklistView checklistState={checklistState} setChecklistState={setChecklistState} isAdmin={isAdmin} showToast={showToast} setConfirmModal={setConfirmModal} />}
-                    
                     {currentView === 'roles' && <RolesView />}
                     {currentView === 'changelog' && <ChangelogView />}
                     {currentView === 'glosario' && <GlosarioView />}
@@ -311,32 +318,22 @@ export default function App() {
                         <ConfigView 
                             isDarkMode={isDarkMode} toggleTheme={toggleTheme} userRole={userRole} 
                             userPrefs={userPrefs} updateUserPrefs={updateUserPrefs} showToast={showToast}
-                            incidents={incidents} rrssIncidents={rrssIncidents} comments={comments}
-                            notifications={notifications} deleteNotification={deleteNotification}
                         />
                     )}
                     
                     {currentView === 'gestion-usuarios' && <UserManagementView appUsers={appUsers} userRole={userRole} updateUserRole={updateUserRole} toggleUserStatus={toggleUserStatus} deleteUserRecord={deleteUserRecord} addManualUser={addManualUser} />}
 
                     {currentView === 'backups' && userRole === 'ADMIN_IT' && (
-                        <BackupView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} showToast={showToast} addIncidentRaw={updateIncident} addRrssIncidentRaw={updateRrssIncident} addCommentRaw={updateComment} />
+                        <BackupView showToast={showToast} />
                     )}
 
                     {currentView === 'protocolo-rss' && <ProtocoloRRSSView />}
                     {currentView === 'nuevo-rss' && <NewRRSSIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
-                    
-                    {/* 🔄 COMPONENTE INDEPENDIENTE */}
                     {currentView === 'historial-rss' && <HistorialRRSSView showToast={showToast} isAdmin={isAdmin} updateRrssIncident={updateRrssIncident} deleteRrssIncident={deleteRrssIncident} />}
-
                     {currentView === 'nuevo-comentario' && <NewCommentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
-                    
-                    {/* 🔄 COMPONENTE INDEPENDIENTE */}
                     {currentView === 'historial-comentario' && <HistorialCommentView showToast={showToast} isAdmin={isAdmin} updateComment={updateComment} deleteComment={deleteComment} />}
                 </div>
             </main>
-
-            <DetailModal isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} incident={incidents.find((i: any) => i.id === selectedIncidentId)} isAdmin={isAdmin} onToggleStatus={toggleIncidentStatus} onEdit={() => { setDetailModalOpen(false); setEditModalOpen(true); }} onDelete={deleteIncident} />
-            <EditIncidentModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} incident={incidents.find((i: any) => i.id === selectedIncidentId)} onUpdate={updateIncident} />
 
             {previewModal.isOpen && previewModal.data && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">

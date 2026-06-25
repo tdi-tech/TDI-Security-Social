@@ -5,7 +5,7 @@ import {
     GoogleAuthProvider, signInWithPopup
 } from "firebase/auth";
 import {
-    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, arrayUnion
+    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, arrayUnion, getDoc
 } from "firebase/firestore";
 
 export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
@@ -14,22 +14,23 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const [isAdmin, setIsAdmin] = useState(false);
     const [userRole, setUserRole] = useState<string>('');
     const [appUsers, setAppUsers] = useState<any[]>([]);
-
     const [cloudStatus, setCloudStatus] = useState(() => {
         return localStorage.getItem('auth_hint') === 'admin' ? 'Conectando...' : 'Desconectado de Firebase';
     });
 
-    // 🔄 NUEVO: ESTADO DE CARGA PARA ANIMACIONES SKELETON
-    const [isLoading, setIsLoading] = useState(true);
+    // 🛑 SEGURIDAD APLICADA: Colecciones masivas purgadas del hook global.
+    // Exportamos variables vacías para que la interfaz (App.tsx) no se rompa,
+    // garantizando que el Lazy Loading de las vistas funcione al 100%.
+    const isLoading = false;
+    const incidents: any[] = [];
+    const rrssIncidents: any[] = [];
+    const comments: any[] = [];
 
-    const [incidents, setIncidents] = useState<any[]>([]);
-    const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
     const [checklistState, setChecklistState] = useState<any>({});
-    const [comments, setComments] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
-
     const [userPrefs, setUserPrefs] = useState({ sound: true, security: true, rrss: true, comments: true });
     const prefsRef = useRef(userPrefs);
+    
     useEffect(() => { prefsRef.current = userPrefs; }, [userPrefs]);
 
     const playNotificationSound = () => {
@@ -72,6 +73,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 setUser(null); setIsAdmin(false); setUserRole('');
                 if (localStorage.getItem('auth_hint') === 'admin') setCloudStatus('Conectando...');
                 else setCloudStatus('Desconectado de Firebase');
+  
                 try { await signInAnonymously(auth); }
                 catch (error) { localStorage.setItem('auth_hint', 'lector'); setCloudStatus('Desconectado de Firebase'); }
             }
@@ -117,7 +119,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 if (snap.exists()) {
                     const data = snap.data();
                     if (data.disabled) {
-                        showToast('Tu cuenta ha sido deshabilitada por un administrador.', true);
+                        showToast('Tu cuenta ha sido deshabilitada.', true);
                         await logoutAdmin();
                     } else {
                         setUserRole(data.role);
@@ -145,70 +147,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         return () => { if (unsubSelf) unsubSelf(); if (unsubAllUsers) unsubAllUsers(); };
     }, [user]);
 
-    const updateUserRole = async (email: string, newRole: string) => {
-        try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { role: newRole }, { merge: true });
-            showToast('Rol actualizado exitosamente');
-        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
-    };
-
-    const toggleUserStatus = async (email: string, currentStatus: boolean) => {
-        try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { disabled: !currentStatus }, { merge: true });
-            showToast(!currentStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada');
-        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
-    };
-
-    const deleteUserRecord = (email: string) => {
-        setConfirmModal({
-            isOpen: true, title: 'Eliminar Usuario', msg: `¿Seguro que deseas eliminar el acceso de ${email}?`,
-            onConfirm: async () => {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email));
-                    showToast('Usuario eliminado del sistema');
-                } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
-            }
-        });
-    };
-
-    const addManualUser = async (email: string, role: string) => {
-        if (!email.endsWith('@tierradeideas.mx')) return showToast('Solo se permiten correos @tierradeideas.mx', true);
-        try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), {
-                email: email.trim().toLowerCase(), displayName: email.split('@')[0], photoURL: '', role: role, disabled: false
-            }, { merge: true });
-            showToast(`Usuario ${email} pre-registrado correctamente.`);
-        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
-    };
-
-    // 🔄 LECTURA DE DATOS: AQUI INICIAMOS EL LOADING
+    // 🔄 LECTURA DE DATOS MENORES (Checklist y Notificaciones)
     useEffect(() => {
-        setIsLoading(true); // Iniciamos animación de carga
-
-        const incidentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'incidents');
-        const unsubIncidents = onSnapshot(incidentsRef, (snapshot) => {
-            const data: any[] = [];
-            snapshot.forEach((doc) => data.push(doc.data()));
-            data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-            setIncidents(data);
-        }, (error) => setCloudStatus('Desconectado de Firebase'));
-
-        const rrssRef = collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents');
-        const unsubRrss = onSnapshot(rrssRef, (snapshot) => {
-            const data: any[] = [];
-            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
-            data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-            setRrssIncidents(data);
-        });
-
-        const commentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'comments');
-        const unsubComments = onSnapshot(commentsRef, (snapshot) => {
-            const data: any[] = [];
-            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
-            data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            setComments(data);
-        });
-
         const checklistRef = collection(db, 'artifacts', appId, 'public', 'data', 'appState');
         const unsubChecklist = onSnapshot(checklistRef, (snapshot) => {
             let found = false;
@@ -219,6 +159,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             });
             if (!found) setChecklistState({});
         });
+
+        if (!user) return () => unsubChecklist();
 
         const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
         const unsubNotif = onSnapshot(notifRef, (snapshot) => {
@@ -231,7 +173,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 if (change.type === 'added') {
                     const notif = change.doc.data();
                     const isRecent = (new Date().getTime() - new Date(notif.timestamp).getTime()) < 10000;
-                    if (isRecent && user && notif.userId !== user.uid) {
+                    if (isRecent && notif.userId !== user.uid) {
                         let moduleKey: 'security' | 'rrss' | 'comments' = 'security';
                         if (notif.module === 'Incidencia RRSS') moduleKey = 'rrss';
                         if (notif.module === 'Comentarios') moduleKey = 'comments';
@@ -245,13 +187,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             });
         }, (error) => {});
 
-        // 🔄 APAGAMOS LA ANIMACIÓN DESPUÉS DE UN SEGUNDO (UX Fluida)
-        const timer = setTimeout(() => { setIsLoading(false); }, 800);
-
-        return () => { 
-            unsubIncidents(); unsubRrss(); unsubComments(); unsubChecklist(); unsubNotif(); 
-            clearTimeout(timer);
-        };
+        return () => { unsubChecklist(); unsubNotif(); };
     }, [user]);
 
     const loginWithGoogle = async () => {
@@ -294,7 +230,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const hideNotification = async (id: string) => {
         if (!user) return;
         try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), { deletedBy: arrayUnion(user.uid) }, { merge: true }); } 
-        catch (err) { showToast('Error al ocultar notificación', true); }
+        catch (err) { showToast('Error al ocultar', true); }
     };
 
     const deleteNotification = async (id: string) => {
@@ -302,13 +238,52 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         catch (err) { showToast('Acción denegada por el servidor', true); }
     };
 
-    const toggleIncidentStatus = async (id: string) => {
-        const inc = incidents.find(i => i.id === id);
-        if (!inc) return;
-        const newStatus = inc.estado === 'Resuelto' ? 'Abierto' : 'Resuelto';
+    const updateUserRole = async (email: string, newRole: string) => {
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'incidents', inc.id), { ...inc, estado: newStatus });
-            await logAction(`Cambió el estado a ${newStatus}`, 'Hackeos', 'edit', inc.id);
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { role: newRole }, { merge: true });
+            showToast('Rol actualizado exitosamente');
+        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
+    };
+
+    const toggleUserStatus = async (email: string, currentStatus: boolean) => {
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { disabled: !currentStatus }, { merge: true });
+            showToast(!currentStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada');
+        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
+    };
+
+    const deleteUserRecord = (email: string) => {
+        setConfirmModal({
+            isOpen: true, title: 'Eliminar Usuario', msg: `¿Seguro que deseas eliminar el acceso de ${email}?`,
+            onConfirm: async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email));
+                    showToast('Usuario eliminado del sistema');
+                } catch (e) { showToast('Acción denegada por el servidor.', true); }
+            }
+        });
+    };
+
+    const addManualUser = async (email: string, role: string) => {
+        if (!email.endsWith('@tierradeideas.mx')) return showToast('Solo correos @tierradeideas.mx', true);
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), {
+                email: email.trim().toLowerCase(), displayName: email.split('@')[0], photoURL: '', role: role, disabled: false
+            }, { merge: true });
+            showToast(`Usuario pre-registrado correctamente.`);
+        } catch (e) { showToast('Acción denegada por el servidor.', true); }
+    };
+
+    // 🛑 SOLUCIÓN AL ERROR QUE MARCASTE: Lee desde Firebase en lugar de la variable local vacía
+    const toggleIncidentStatus = async (id: string) => {
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) return;
+            const inc = docSnap.data();
+            const newStatus = inc.estado === 'Resuelto' ? 'Abierto' : 'Resuelto';
+            await setDoc(docRef, { ...inc, estado: newStatus });
+            await logAction(`Cambió el estado a ${newStatus}`, 'Hackeos', 'edit', id);
             showToast(`Estado cambiado a ${newStatus}`);
         } catch (err) { showToast('Acción denegada', true); }
     };
@@ -345,7 +320,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
     const deleteRrssIncident = (id: string) => {
         setConfirmModal({
-            isOpen: true, title: 'Eliminar Incidente RRSS', msg: 'Esta acción eliminará el registro de forma permanente. ¿Seguro?',
+            isOpen: true, title: 'Eliminar Incidente RRSS', msg: 'Eliminará el registro de forma permanente. ¿Seguro?',
             onConfirm: async () => {
                 try {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id));
@@ -366,7 +341,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
     const deleteComment = (id: string) => {
         setConfirmModal({
-            isOpen: true, title: 'Eliminar Reporte', msg: 'Esta acción eliminará el reporte de forma permanente. ¿Estás seguro?',
+            isOpen: true, title: 'Eliminar Reporte', msg: 'Eliminará el reporte de forma permanente. ¿Estás seguro?',
             onConfirm: async () => {
                 try {
                     await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id));
