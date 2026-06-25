@@ -5,13 +5,10 @@ import {
     GoogleAuthProvider, signInWithPopup
 } from "firebase/auth";
 import {
-    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc,
-    query, orderBy, limit
+    collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, arrayUnion
 } from "firebase/firestore";
 
 // Lista de correos cuyo rol ADMIN_IT está protegido y se auto-restaura.
-// Cualquier usuario en esta lista recuperará automáticamente el rol ADMIN_IT
-// al iniciar sesión, aunque alguien se lo haya cambiado desde la UI.
 export const PROTECTED_ADMIN_IT_EMAILS = [
     'marcosg@tierradeideas.mx',
     'rperez@tierradeideas.mx'
@@ -25,9 +22,10 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const [userRole, setUserRole] = useState<string>('');
     const [appUsers, setAppUsers] = useState<any[]>([]);
 
+    // 🔄 TEXTOS LIMPIOS
     const [cloudStatus, setCloudStatus] = useState(() => {
         return localStorage.getItem('auth_hint') === 'admin'
-            ? 'Conectando...' : 'Desconectado de Firebase (Lector)';
+            ? 'Conectando...' : 'Desconectado de Firebase';
     });
 
     const [incidents, setIncidents] = useState<any[]>([]);
@@ -36,23 +34,16 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const [comments, setComments] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<any[]>([]);
 
-    // NUEVO: ESTADO PARA LOG DE AUDITORÍA
-    const [auditLogs, setAuditLogs] = useState<any[]>([]);
-
-    // NUEVO: ESTADOS Y REFERENCIAS PARA PREFERENCIAS
     const [userPrefs, setUserPrefs] = useState({
         sound: true,
         security: true,
         rrss: true,
         comments: true
     });
-    // Referencia para leer las preferencias actualizadas dentro de los listeners (onSnapshot)
+    
     const prefsRef = useRef(userPrefs);
     useEffect(() => { prefsRef.current = userPrefs; }, [userPrefs]);
 
-    // ========================================================
-    // SINTETIZADOR DE AUDIO NATIVO (Estilo Google Meet)
-    // ========================================================
     const playNotificationSound = () => {
         try {
             const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -61,12 +52,10 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
-            // Tono suave (Onda senoidal)
             osc.type = 'sine';
             osc.frequency.setValueAtTime(600, ctx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
 
-            // Control de volumen (0.15 = 15% de volumen para que sea tenue)
             gain.gain.setValueAtTime(0, ctx.currentTime);
             gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.05);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
@@ -80,9 +69,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         }
     };
 
-    // ========================================================
-    // ACTUALIZACIÓN DE PREFERENCIAS EN FIREBASE
-    // ========================================================
     const updateUserPrefs = async (newPrefs: any) => {
         if (!user || user.isAnonymous) return;
         try {
@@ -101,18 +87,19 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 const isAdm = !currentUser.isAnonymous;
                 setIsAdmin(isAdm);
                 localStorage.setItem('auth_hint', isAdm ? 'admin' : 'lector');
-                setCloudStatus(isAdm ? 'Conectado a Firebase (Administrador)' : 'Desconectado de Firebase (Lector)');
+                // 🔄 TEXTOS LIMPIOS
+                setCloudStatus(isAdm ? 'Conectado a Firebase' : 'Desconectado de Firebase');
             } else {
                 setUser(null);
                 setIsAdmin(false);
                 setUserRole('');
                 if (localStorage.getItem('auth_hint') === 'admin') setCloudStatus('Conectando...');
-                else setCloudStatus('Desconectado de Firebase (Lector)');
+                else setCloudStatus('Desconectado de Firebase');
 
                 try { await signInAnonymously(auth); }
                 catch (error) {
                     localStorage.setItem('auth_hint', 'lector');
-                    setCloudStatus('Desconectado de Firebase (Lector)');
+                    setCloudStatus('Desconectado de Firebase');
                 }
             }
         });
@@ -164,7 +151,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                         showToast('Tu cuenta ha sido deshabilitada por un administrador.', true);
                         await logoutAdmin();
                     } else {
-                        // Auto-restauración de ADMIN_IT para correos protegidos
                         const isProtectedAdmin = PROTECTED_ADMIN_IT_EMAILS.includes(user.email);
                         if (isProtectedAdmin && data.role !== 'ADMIN_IT') {
                             await setDoc(selfRef, { role: 'ADMIN_IT' }, { merge: true });
@@ -173,7 +159,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                             setUserRole(data.role);
                         }
 
-                        // Cargar Preferencias
                         if (data.preferences) setUserPrefs(data.preferences);
 
                         if (data.photoURL !== user.photoURL || data.displayName !== user.displayName) {
@@ -188,7 +173,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                         photoURL: user.photoURL,
                         role: initialRole,
                         disabled: false,
-                        preferences: userPrefs // Guardamos las preferencias base
+                        preferences: userPrefs
                     });
                     setUserRole(initialRole);
                 }
@@ -260,7 +245,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         }
     };
 
-    // LECTURA DE RESTO DE COLECCIONES
     useEffect(() => {
         const incidentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'incidents');
         const unsubIncidents = onSnapshot(incidentsRef, (snapshot) => {
@@ -268,7 +252,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             snapshot.forEach((doc) => data.push(doc.data()));
             data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
             setIncidents(data);
-        }, (error) => setCloudStatus('Desconectado de Firebase (Lector)'));
+        }, (error) => setCloudStatus('Desconectado de Firebase')); // 🔄 TEXTO LIMPIO
 
         const rrssRef = collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents');
         const unsubRrss = onSnapshot(rrssRef, (snapshot) => {
@@ -298,13 +282,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             if (!found) setChecklistState({});
         });
 
-        // NUEVO: Listener de Auditoría (Solo últimos 100 eventos)
-        const qLogs = query(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'), orderBy('date', 'desc'), limit(100));
-        const unsubLogs = onSnapshot(qLogs, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setAuditLogs(data);
-        });
-
         const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
         const unsubNotif = onSnapshot(notifRef, (snapshot) => {
             const data: any[] = [];
@@ -312,13 +289,11 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setNotifications(data);
 
-            // LOGICA PARA DISPARAR SONIDO SEGÚN PREFERENCIAS
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const notif = change.doc.data();
                     const isRecent = (new Date().getTime() - new Date(notif.timestamp).getTime()) < 10000;
 
-                    // Solo suena si es reciente, y si no fue el usuario actual quien hizo la acción
                     if (isRecent && user && notif.userId !== user.uid) {
                         let moduleKey: 'security' | 'rrss' | 'comments' = 'security';
                         if (notif.module === 'Incidencia RRSS') moduleKey = 'rrss';
@@ -338,7 +313,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         });
 
         return () => {
-            unsubIncidents(); unsubRrss(); unsubComments(); unsubChecklist(); unsubNotif(); unsubLogs();
+            unsubIncidents(); unsubRrss(); unsubComments(); unsubChecklist(); unsubNotif();
         };
     }, [user]);
 
@@ -365,7 +340,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const logAction = async (actionText: string, moduleName: string, actionType: 'create' | 'edit' | 'delete', incidentId: string = '') => {
         if (!user || user.isAnonymous) return;
         try {
-            // 1. Guardar notificación de campana (Existente)
             const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
             await addDoc(notifRef, {
                 userId: user.uid,
@@ -376,29 +350,33 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 type: actionType,
                 incidentId: incidentId,
                 timestamp: new Date().toISOString(),
-                isRead: false
-            });
-
-            // 2. Guardar en el Log de Auditoría (Compliance)
-            const auditRef = collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs');
-            await addDoc(auditRef, {
-                date: new Date().toISOString(),
-                user: user.email || user.displayName || 'Usuario Desconocido',
-                action: actionText,
-                module: moduleName,
-                type: actionType
+                readBy: [],     
+                deletedBy: []   
             });
         } catch (error) { console.error('Error registrando acción', error); }
     };
 
     const markAsRead = async (id: string) => {
-        try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), { isRead: true }, { merge: true }); }
-        catch (err) { }
+        if (!user) return;
+        try { 
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), { 
+                readBy: arrayUnion(user.uid) 
+            }, { merge: true }); 
+        } catch (err) { }
+    };
+
+    const hideNotification = async (id: string) => {
+        if (!user) return;
+        try { 
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id), { 
+                deletedBy: arrayUnion(user.uid) 
+            }, { merge: true }); 
+        } catch (err) { showToast('Error al ocultar la notificación', true); }
     };
 
     const deleteNotification = async (id: string) => {
         try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id)); }
-        catch (err) { showToast('Error al eliminar la notificación', true); }
+        catch (err) { showToast('Error al eliminar la notificación del servidor', true); }
     };
 
     const toggleIncidentStatus = async (id: string) => {
@@ -480,12 +458,9 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState,
         loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
         updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
-        notifications, markAsRead, deleteNotification, logAction,
+        notifications, markAsRead, hideNotification, deleteNotification, logAction,
         userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord,
         addManualUser,
-
-        // NUEVAS EXPORTACIONES DE AUDITORÍA Y PREFERENCIAS
-        auditLogs,
         userPrefs,
         updateUserPrefs
     };

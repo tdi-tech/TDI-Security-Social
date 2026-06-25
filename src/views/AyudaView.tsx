@@ -1,5 +1,5 @@
 import React from 'react';
-import { Leaf, Eye, ShieldAlert, FileText, Megaphone, MessageSquare, HelpCircle, Lock, Users, Bell, Settings, Activity, Database, Clock } from 'lucide-react';
+import { Leaf, Eye, ShieldAlert, FileText, Megaphone, MessageSquare, HelpCircle, Lock, Users, Bell, Settings, Server, Database, Clock } from 'lucide-react';
 
 export const AyudaView = ({ isAdmin }: any) => {
     const currentYear = new Date().getFullYear();
@@ -72,7 +72,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Administrador IT</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Control total del sistema. Puede pre-registrar usuarios, eliminar cuentas de forma permanente, monitorear el registro inmutable de auditoría y operar de forma exclusiva el ecosistema de copias de seguridad globales.
+                                    Control total del sistema. Puede pre-registrar usuarios, eliminar cuentas de forma permanente, monitorear la salud del servidor (cuota de base de datos) y operar de forma exclusiva el ecosistema de copias de seguridad globales.
                                 </p>
                             </div>
                         </div>
@@ -127,13 +127,13 @@ export const AyudaView = ({ isAdmin }: any) => {
                             </div>
 
                             <div className="theme-bg-container theme-border border p-5 rounded-xl flex items-start gap-4 shadow-sm">
-                                <div className="p-2 bg-cyan-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
-                                    <Activity className="w-5 h-5 text-cyan-500" />
+                                <div className="p-2 bg-emerald-500/10 rounded-lg h-9 w-9 flex items-center justify-center flex-shrink-0">
+                                    <Server className="w-5 h-5 text-emerald-500" />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="font-bold theme-text-main text-sm">Compliance y Auditoría</h4>
+                                    <h4 className="font-bold theme-text-main text-sm">Monitor Analítico y Salud DB</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        Registro inmutable (Log) que rastrea creación, edición, eliminación de incidentes y accesos al sistema. Módulo restringido exclusivamente al Administrador IT para garantizar transparencia.
+                                        Panel analítico exclusivo para el Administrador IT que evalúa el consumo de cuota en Firebase y permite purgar rastros obsoletos o liberar caché local para optimizar el rendimiento.
                                     </p>
                                 </div>
                             </div>
@@ -182,7 +182,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <Lock className="w-4 h-4 text-amber-500" />
                         </div>
                         <p className="text-xs theme-text-muted leading-relaxed flex-1">
-                            Las funciones avanzadas de captura de incidentes, manipulación de listas de verificación compartidas, auditoría de identidades y exportación de datos en sábanas CSV están restringidas únicamente para el personal técnico autorizado de IT y Community Managers.
+                            Las funciones avanzadas de captura de incidentes, manipulación de listas de verificación compartidas, monitoreo de salud del servidor y exportación de datos en sábanas CSV están restringidas únicamente para el personal técnico autorizado de IT y Community Managers.
                         </p>
                     </div>
                 )}

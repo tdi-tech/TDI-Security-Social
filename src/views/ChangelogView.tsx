@@ -16,8 +16,8 @@ const changelogData = [
             { type: 'feature', text: 'Persistencia de Navegación por Recarga: Inyección de estados basados en localStorage para retener la vista actual al presionar F5 o refrescar el navegador, mitigando redirecciones accidentales al Dashboard.' },
             { type: 'security', text: 'Protección de Privacidad de Cambios: El Changelog queda blindado exclusivamente detrás del inicio de sesión (RBAC), impidiendo el acceso a usuarios no identificados o con rol de Lector.' },
             { type: 'divider' },
-            { type: 'title', text: 'Log de Auditoría & Preferencias' },
-            { type: 'security', text: 'Log de Auditoría (Compliance): Registro inmutable de actividad del sistema (creación, edición, eliminación de registros), restringido exclusivamente para el rol de Administrador IT.' },
+            { type: 'title', text: 'Salud del Servidor & Preferencias' },
+            { type: 'security', text: 'Monitor Analítico y Salud DB: Nuevo panel exclusivo para Administrador IT con métricas de consumo de Firebase, estimación de cuota y herramientas de purgado (limpieza de caché local y vaciado de rastros obsoletos del servidor).' },
             { type: 'feature', text: 'Preferencias de Usuario en la Nube: Panel interactivo para activar/desactivar alertas sonoras y notificaciones por módulo específico (Hackeos, RRSS, Comentarios), sincronizado con Firestore.' },
             { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento y con un tono tenue.' },
             { type: 'ui', text: 'Rediseño de Configuración: Arquitectura en columnas dinámicas (Grid) para acomodar la gestión de preferencias y el monitoreo IT.' },
@@ -44,7 +44,7 @@ const changelogData = [
             { type: 'feature', text: 'Modales de "Vista Rápida" (Preview) inyectados directamente en el Dashboard.' },
             { type: 'divider' },
             { type: 'title', text: 'Funcionalidades Plus (SaaS)' },
-            { type: 'feature', text: 'Centro de Notificaciones en tiempo real: Campana interactiva con insignias numéricas, panel filtrable por leídas/no leídas y enlaces de auditoría directos al incidente.' },
+            { type: 'feature', text: 'Centro de Notificaciones en tiempo real: Campana interactiva con insignias numéricas, panel filtrable por leídas/no leídas y enlaces directos al incidente.' },
             { type: 'security', text: 'Gestión de Usuarios RBAC: Panel de control dedicado para Administradores, pre-registro manual de cuentas, bloqueo de accesos y asignación de roles (Administrador IT, Administrador CM y Editor CM).' }
         ]
     },

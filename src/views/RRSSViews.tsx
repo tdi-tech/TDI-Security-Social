@@ -64,7 +64,6 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAct
                 ...formData, reporteTexto: finalReporte, autor: user?.displayName || 'Administrador', timestamp: new Date().toISOString()
             });
             
-            // INYECCIÓN DE LA NOTIFICACIÓN AL CREAR
             if (logAction) await logAction('Creó un nuevo reporte de reputación', 'Incidencia RRSS', 'create', docRef.id);
 
             showToast('Incidente RRSS guardado exitosamente.'); navigate('historial-rss');
@@ -142,7 +141,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
     }, [safeIncidents]);
 
-    // OBTENER MESES DISPONIBLES EN BASE AL AÑO SELECCIONADO PARA EXPORTAR
     const availableMonthsForExport = useMemo(() => {
         if (!exportYear) return [];
         const months = new Set(
@@ -235,7 +233,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
         if (editEditorRef.current && command !== 'foreColor' && command !== 'fontSize') editEditorRef.current.focus();
     };
 
-    // LÓGICA DE EXPORTACIÓN INTELIGENTE (ADAPTADA A RRSS)
     const handleExecuteExport = () => {
         let dataToExport = safeIncidents;
         let filenameSuffix = 'Todo';
@@ -343,7 +340,11 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                                                                                 <div className="text-[11px] theme-text-muted mt-2 px-1"><span className="font-semibold theme-text-main">Área responsable:</span> {inc.area || 'Operaciones'}</div>
                                                                                 <div className="mt-4 flex items-center justify-between pt-3 border-t theme-border">
                                                                                     <div className="flex items-center gap-2"><span className={`px-2.5 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider ${getRiskColor(inc.riesgo)}`}>{inc.riesgo}</span><span className="px-2.5 py-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">Incidencias: {inc.totalIncidencias}</span></div>
-                                                                                    <button onClick={(e) => { e.stopPropagation(); handleDownloadDocx(inc); }} className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors no-print" title="Descargar reporte (.docx)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg></button>
+                                                                                    
+                                                                                    {/* 👇 AQUI ESTA LA CONDICION PARA OCULTAR EL BOTON SI NO HAY REPORTE TEXTO */}
+                                                                                    {inc.reporteTexto && (
+                                                                                        <button onClick={(e) => { e.stopPropagation(); handleDownloadDocx(inc); }} className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors no-print" title="Descargar reporte (.docx)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg></button>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                         ))}

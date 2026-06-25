@@ -22,23 +22,9 @@ import { NewCommentView, HistorialCommentView } from './views/CommentViews';
 import { UserManagementView } from './views/UserViews';
 import { BackupView } from './views/BackupView';
 
-// Componente Placeholder (En construcción)
-const PlaceholderView = ({ title }: { title: string }) => (
-    <div className="fade-in h-full flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-20 h-20 bg-[var(--primary)]/10 rounded-full flex items-center justify-center mb-6">
-            <Hammer className="w-10 h-10 text-[var(--primary)]" />
-        </div>
-        <h2 className="text-3xl font-bold theme-text-main mb-3">{title}</h2>
-        <p className="theme-text-muted max-w-md">
-            Esta sección está siendo desarrollada. Pronto podrás gestionar y administrar este apartado directamente desde aquí.
-        </p>
-    </div>
-);
-
 export default function App() {
     const { isDarkMode, toggleTheme } = useTheme();
 
-    // 🔄 PERSISTENCIA UX: Leemos localStorage al arrancar la app
     const [currentView, setCurrentView] = useState(() => {
         return localStorage.getItem('innova_current_view') || 'dashboard';
     });
@@ -66,16 +52,13 @@ export default function App() {
         user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState,
         loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
         updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
-        notifications, markAsRead, deleteNotification, logAction,
-        // DATOS DE GESTIÓN DE ROLES
+        notifications, markAsRead, hideNotification, deleteNotification, logAction, // 🔄 Traemos la nueva función
         userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser,
-        // NUEVOS DATOS DE AUDITORÍA Y PREFERENCIAS
-        auditLogs, userPrefs, updateUserPrefs
+        userPrefs, updateUserPrefs 
     } = useFirebase({
         showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal
     });
 
-    // 🔄 ENRUTADOR PROTEGIDO Y PERSISTENTE
     const navigate = (view: string) => {
         const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups'];
         const loggedInViews = [...adminViews, 'changelog'];
@@ -115,9 +98,13 @@ export default function App() {
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    const validNotifications = notifications.filter((n: any) => n.userId !== user?.uid);
-    const unreadNotifications = validNotifications.filter((n: any) => !n.isRead);
-    const readNotifications = validNotifications.filter((n: any) => n.isRead);
+    // 🔄 NUEVA LÓGICA DE FILTRADO PER-USER: Verifica si TU ID está en los arreglos
+    const validNotifications = notifications.filter((n: any) => 
+        n.userId !== user?.uid && 
+        !(n.deletedBy && n.deletedBy.includes(user?.uid))
+    );
+    const unreadNotifications = validNotifications.filter((n: any) => !(n.readBy && n.readBy.includes(user?.uid)));
+    const readNotifications = validNotifications.filter((n: any) => (n.readBy && n.readBy.includes(user?.uid)));
 
     const handleViewIncident = (n: any) => {
         setNotifMenuOpen(false);
@@ -204,7 +191,6 @@ export default function App() {
                                     {unreadNotifications.length > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[var(--surface)] animate-pulse"></span>}
                                 </button>
                                 {notifMenuOpen && (
-                                    /* 🔄 NOTIFICACIONES OPTIMIZADAS: Cambiado left-4 por right-4 para alinearse perfectamente a la derecha en móviles, y creció el tamaño máximo */
                                     <div className="fixed sm:absolute left-4 sm:left-auto right-4 sm:right-0 inset-x-4 sm:inset-x-auto mt-3 w-auto sm:w-80 theme-bg-container border theme-border rounded-xl shadow-2xl z-50 fade-in flex flex-col max-h-[500px] sm:max-h-[450px]">
                                         <div className="p-4 border-b theme-border flex items-center justify-between bg-[var(--primary)]/5">
                                             <h3 className="font-bold theme-text-main">Actividad Reciente</h3>
@@ -252,14 +238,14 @@ export default function App() {
                                                         )}
                                                     </div>
                                                     {notifTab === 'read' && (
-                                                        <button onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); }} className="absolute top-3 right-3 p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Eliminar">
+                                                        /* 🔄 Usamos hideNotification en lugar del deleteNotification global */
+                                                        <button onClick={(e) => { e.stopPropagation(); hideNotification(n.id); }} className="absolute top-3 right-3 p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Eliminar">
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
-                                        {notifTab === 'read' && readNotifications.length > 0 && <div className="p-3 border-t theme-border bg-[var(--surface)] text-center"><p className="text-[10px] theme-text-muted italic">Las notificaciones leídas se limpian automáticamente del servidor después de 2 semanas.</p></div>}
                                     </div>
                                 )}
                             </div>
@@ -317,7 +303,21 @@ export default function App() {
                     {currentView === 'glosario' && <GlosarioView />}
                     {currentView === 'ayuda' && <AyudaView isAdmin={isAdmin} />}
                     
-                    {currentView === 'config' && <ConfigView isDarkMode={isDarkMode} toggleTheme={toggleTheme} incidents={incidents} checklistState={checklistState} showToast={showToast} isAdmin={isAdmin} userRole={userRole} auditLogs={auditLogs} userPrefs={userPrefs} updateUserPrefs={updateUserPrefs} />}
+                    {currentView === 'config' && (
+                        <ConfigView 
+                            isDarkMode={isDarkMode} 
+                            toggleTheme={toggleTheme} 
+                            userRole={userRole} 
+                            userPrefs={userPrefs} 
+                            updateUserPrefs={updateUserPrefs} 
+                            showToast={showToast}
+                            incidents={incidents}
+                            rrssIncidents={rrssIncidents}
+                            comments={comments}
+                            notifications={notifications}
+                            deleteNotification={deleteNotification}
+                        />
+                    )}
                     
                     {currentView === 'gestion-usuarios' && <UserManagementView appUsers={appUsers} userRole={userRole} updateUserRole={updateUserRole} toggleUserStatus={toggleUserStatus} deleteUserRecord={deleteUserRecord} addManualUser={addManualUser} />}
 
