@@ -1,14 +1,23 @@
-# 1. Bloquear iframes para prevenir Clickjacking
-Header always set X-Frame-Options "DENY"
+# Seguridad HTTP - Innova Management
 
-# 2. Forzar protección contra inyección de scripts (XSS)
-Header always set X-XSS-Protection "1; mode=block"
+<IfModule mod_headers.c>
 
-# 3. Deshabilitar el rastreo automático de tipos MIME (Content Sniffing)
-Header always set X-Content-Type-Options "nosniff"
+  # 1. Prevenir Clickjacking
+  Header always set X-Frame-Options "DENY"
 
-# 4. Forzar comunicación encriptada mediante SSL de forma estricta (HSTS)
-Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  # 2. Prevenir MIME Sniffing
+  Header always set X-Content-Type-Options "nosniff"
 
-# 5. Política de Seguridad de Contenido (CSP) ESTRICTA - Cero unsafe-inline
-Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com; frame-ancestors 'none'; form-action 'self';"
+  # 3. Forzar HTTPS estricto
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+  # 4. Política de Referrer
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # 5. Bloquear permisos de hardware no usados
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+  # 6. Content Security Policy compatible con React/Vite y Firebase
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none';"
+
+</IfModule>

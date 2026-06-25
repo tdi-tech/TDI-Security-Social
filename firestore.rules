@@ -1,0 +1,112 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function isAnySignedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(appId) {
+      return /databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.token.email);
+    }
+
+    function userExists(appId) {
+      return isAuthenticated() && exists(userPath(appId));
+    }
+
+    function getUserData(appId) {
+      return get(userPath(appId)).data;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated()
+        && (
+          request.auth.token.email == 'marcosg@tierradeideas.mx'
+          || request.auth.token.email == 'rperez@tierradeideas.mx'
+        );
+    }
+
+    function hasRole(appId, role) {
+      return userExists(appId) && getUserData(appId).role == role;
+    }
+
+    function isITAdmin(appId) {
+      return isSuperAdmin() || hasRole(appId, 'ADMIN_IT');
+    }
+
+    function isCMAdmin(appId) {
+      return hasRole(appId, 'ADMIN_CM');
+    }
+
+    function isCMEditor(appId) {
+      return hasRole(appId, 'EDITOR_CM');
+    }
+
+    function isCMTeam(appId) {
+      return isITAdmin(appId) || isCMAdmin(appId) || isCMEditor(appId);
+    }
+
+    match /artifacts/{appId}/public/data {
+
+      match /users/{userEmail} {
+        allow read: if isITAdmin(appId) || isCMAdmin(appId) || request.auth.token.email == userEmail;
+
+        allow create: if isITAdmin(appId)
+          || (
+            isCMAdmin(appId)
+            && request.resource.data.role != 'ADMIN_IT'
+            && request.resource.data.isProtected != true
+          );
+
+        allow update: if (
+          isAuthenticated()
+          && request.auth.token.email == userEmail
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['role', 'disabled', 'isProtected'])
+        )
+        || isITAdmin(appId)
+        || (
+          isCMAdmin(appId)
+          && resource.data.role != 'ADMIN_IT'
+          && request.resource.data.role != 'ADMIN_IT'
+          && request.resource.data.isProtected != true
+        );
+
+        allow delete: if isITAdmin(appId);
+      }
+
+      match /incidents/{incidentId} {
+        allow read: if isAnySignedIn();
+        allow create, update, delete: if isITAdmin(appId);
+      }
+
+      match /rrss_incidents/{incidentId} {
+        allow read: if isAnySignedIn();
+        allow create, update, delete: if isCMTeam(appId);
+      }
+
+      match /comments/{commentId} {
+        allow read: if isAnySignedIn();
+        allow create: if isCMTeam(appId);
+        allow update, delete: if isITAdmin(appId) || isCMAdmin(appId);
+      }
+
+      match /notifications/{notifId} {
+        allow read, create, update: if userExists(appId);
+        allow delete: if isITAdmin(appId);
+      }
+
+      match /appState/{docId} {
+        allow read: if isAnySignedIn();
+        allow write: if isITAdmin(appId);
+      }
+    }
+  }
+}

@@ -1,4 +1,6 @@
+# =========================================
 # Logs
+# =========================================
 logs
 *.log
 npm-debug.log*
@@ -7,38 +9,66 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# =========================================
 # Dependencias y Builds
-node_modules
-dist
-dist-ssr
+# =========================================
+node_modules/
+dist/
+dist-ssr/
 *.local
 
+# =========================================
 # Cache y Testing
+# =========================================
 .eslintcache
 .vite/
 coverage/
 
 # =========================================
-# VARIABLES DE ENTORNO (¡CRÍTICO PARA SEGURIDAD!)
+# Variables de entorno (CRÍTICO)
 # =========================================
 .env
 .env.*
 !.env.example
+
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# =========================================
 # Firebase
+# =========================================
+
+# Configuración local de Firebase CLI
 .firebase/
+
+# Logs de Firebase
 firebase-debug.log
 firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
 
-# Editor directories and files
+# Exportaciones del Emulator Suite
+firebase-export/
+
+# =========================================
+# Editor
+# =========================================
 .vscode/*
 !.vscode/extensions.json
-.idea
+
+.idea/
+
+# =========================================
+# Sistema Operativo
+# =========================================
 .DS_Store
+Thumbs.db
+
+# =========================================
+# Visual Studio
+# =========================================
 *.suo
 *.ntvs*
 *.njsproj
