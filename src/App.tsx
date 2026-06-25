@@ -49,10 +49,10 @@ export default function App() {
     };
 
     const {
-        user, isAdmin, cloudStatus, incidents, rrssIncidents, checklistState, setChecklistState,
+        user, isAdmin, cloudStatus, isLoading, incidents, rrssIncidents, checklistState, setChecklistState,
         loginWithGoogle, logoutAdmin, toggleIncidentStatus, updateIncident, deleteIncident,
         updateRrssIncident, deleteRrssIncident, comments, updateComment, deleteComment,
-        notifications, markAsRead, hideNotification, deleteNotification, logAction, // 🔄 Traemos la nueva función
+        notifications, markAsRead, hideNotification, deleteNotification, logAction,
         userRole, appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser,
         userPrefs, updateUserPrefs 
     } = useFirebase({
@@ -80,6 +80,9 @@ export default function App() {
     };
 
     useEffect(() => {
+        // 🛑 SOLUCIÓN: Si Firebase aún está cargando la sesión, detenemos la expulsión
+        if (cloudStatus === 'Conectando...') return;
+
         if (!user && !isAdmin) {
             const publicViews = ['dashboard', 'protocolo', 'historial', 'glosario', 'protocolo-rss', 'historial-rss', 'historial-comentario', 'roles', 'config', 'ayuda'];
             if (!publicViews.includes(currentView)) {
@@ -87,7 +90,7 @@ export default function App() {
                 localStorage.setItem('innova_current_view', 'dashboard');
             }
         }
-    }, [user, isAdmin, currentView]);
+    }, [user, isAdmin, currentView, cloudStatus]); // <-- Agregamos cloudStatus aquí
 
     useEffect(() => {
         const handleClickOutside = (e: any) => {
@@ -98,7 +101,6 @@ export default function App() {
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    // 🔄 NUEVA LÓGICA DE FILTRADO PER-USER: Verifica si TU ID está en los arreglos
     const validNotifications = notifications.filter((n: any) => 
         n.userId !== user?.uid && 
         !(n.deletedBy && n.deletedBy.includes(user?.uid))
@@ -238,7 +240,6 @@ export default function App() {
                                                         )}
                                                     </div>
                                                     {notifTab === 'read' && (
-                                                        /* 🔄 Usamos hideNotification en lugar del deleteNotification global */
                                                         <button onClick={(e) => { e.stopPropagation(); hideNotification(n.id); }} className="absolute top-3 right-3 p-1.5 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Eliminar">
                                                             <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
@@ -295,7 +296,10 @@ export default function App() {
                     {currentView === 'dashboard' && <DashboardView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} isAdmin={isAdmin} navigate={navigate} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} showToast={showToast} />}
                     {currentView === 'protocolo' && <StaticProtocoloView />}
                     {currentView === 'nuevo' && <NewIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
-                    {currentView === 'historial' && <HistorialView incidents={incidents} showToast={showToast} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} isAdmin={isAdmin} />}
+                    
+                    {/* 🔄 COMPONENTE INDEPENDIENTE (Ya no le pasamos los datos desde aquí) */}
+                    {currentView === 'historial' && <HistorialView showToast={showToast} setSelectedIncidentId={setSelectedIncidentId} setDetailModalOpen={setDetailModalOpen} isAdmin={isAdmin} />}
+                    
                     {currentView === 'checklist' && <ChecklistView checklistState={checklistState} setChecklistState={setChecklistState} isAdmin={isAdmin} showToast={showToast} setConfirmModal={setConfirmModal} />}
                     
                     {currentView === 'roles' && <RolesView />}
@@ -305,40 +309,29 @@ export default function App() {
                     
                     {currentView === 'config' && (
                         <ConfigView 
-                            isDarkMode={isDarkMode} 
-                            toggleTheme={toggleTheme} 
-                            userRole={userRole} 
-                            userPrefs={userPrefs} 
-                            updateUserPrefs={updateUserPrefs} 
-                            showToast={showToast}
-                            incidents={incidents}
-                            rrssIncidents={rrssIncidents}
-                            comments={comments}
-                            notifications={notifications}
-                            deleteNotification={deleteNotification}
+                            isDarkMode={isDarkMode} toggleTheme={toggleTheme} userRole={userRole} 
+                            userPrefs={userPrefs} updateUserPrefs={updateUserPrefs} showToast={showToast}
+                            incidents={incidents} rrssIncidents={rrssIncidents} comments={comments}
+                            notifications={notifications} deleteNotification={deleteNotification}
                         />
                     )}
                     
                     {currentView === 'gestion-usuarios' && <UserManagementView appUsers={appUsers} userRole={userRole} updateUserRole={updateUserRole} toggleUserStatus={toggleUserStatus} deleteUserRecord={deleteUserRecord} addManualUser={addManualUser} />}
 
                     {currentView === 'backups' && userRole === 'ADMIN_IT' && (
-                        <BackupView 
-                            incidents={incidents} 
-                            rrssIncidents={rrssIncidents} 
-                            comments={comments} 
-                            showToast={showToast}
-                            addIncidentRaw={updateIncident} 
-                            addRrssIncidentRaw={updateRrssIncident} 
-                            addCommentRaw={updateComment} 
-                        />
+                        <BackupView incidents={incidents} rrssIncidents={rrssIncidents} comments={comments} showToast={showToast} addIncidentRaw={updateIncident} addRrssIncidentRaw={updateRrssIncident} addCommentRaw={updateComment} />
                     )}
 
                     {currentView === 'protocolo-rss' && <ProtocoloRRSSView />}
                     {currentView === 'nuevo-rss' && <NewRRSSIncidentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
-                    {currentView === 'historial-rss' && <HistorialRRSSView rrssIncidents={rrssIncidents} showToast={showToast} isAdmin={isAdmin} updateRrssIncident={updateRrssIncident} deleteRrssIncident={deleteRrssIncident} />}
+                    
+                    {/* 🔄 COMPONENTE INDEPENDIENTE */}
+                    {currentView === 'historial-rss' && <HistorialRRSSView showToast={showToast} isAdmin={isAdmin} updateRrssIncident={updateRrssIncident} deleteRrssIncident={deleteRrssIncident} />}
 
                     {currentView === 'nuevo-comentario' && <NewCommentView isAdmin={isAdmin} user={user} showToast={showToast} navigate={navigate} logAction={logAction} />}
-                    {currentView === 'historial-comentario' && <HistorialCommentView comments={comments} showToast={showToast} isAdmin={isAdmin} updateComment={updateComment} deleteComment={deleteComment} />}
+                    
+                    {/* 🔄 COMPONENTE INDEPENDIENTE */}
+                    {currentView === 'historial-comentario' && <HistorialCommentView showToast={showToast} isAdmin={isAdmin} updateComment={updateComment} deleteComment={deleteComment} />}
                 </div>
             </main>
 

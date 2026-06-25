@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Trash2, UserX, UserCheck, Users, Info, Plus, Save, X } from 'lucide-react';
-import { PROTECTED_ADMIN_IT_EMAILS } from '../hooks/useFirebase';
 
 export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser }: any) => {
 
@@ -16,12 +15,13 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
         setIsAdding(false);
     };
 
-    // ALGORITMO PARA ANCLAR A LOS ADMINISTRADORES IT PROTEGIDOS ARRIBA Y ORDENAR AL RESTO
+    // ALGORITMO DINÁMICO: Ancla a todos los Administradores IT al inicio de la lista
     const sortedUsers = [...appUsers].sort((a, b) => {
-        const aProtected = PROTECTED_ADMIN_IT_EMAILS.includes(a.email);
-        const bProtected = PROTECTED_ADMIN_IT_EMAILS.includes(b.email);
-        if (aProtected && !bProtected) return -1;
-        if (!aProtected && bProtected) return 1;
+        const aIsAdminIT = a.role === 'ADMIN_IT';
+        const bIsAdminIT = b.role === 'ADMIN_IT';
+        if (aIsAdminIT && !bIsAdminIT) return -1;
+        if (!aIsAdminIT && bIsAdminIT) return 1;
+
         return (a.displayName || '').localeCompare(b.displayName || '');
     });
 
@@ -38,7 +38,6 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                     </p>
                 </div>
 
-                {/* EL BOTÓN SOLO SE RENDERIZA SI ERES ADMIN_IT */}
                 {userRole === 'ADMIN_IT' && (
                     <button
                         onClick={() => setIsAdding(!isAdding)}
@@ -50,28 +49,16 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                 )}
             </div>
 
-            {/* PANEL DE PRE-REGISTRO MANUAL (SOLO PARA ADMIN_IT) */}
             {isAdding && userRole === 'ADMIN_IT' && (
                 <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm fade-in mb-6">
                     <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                         <div className="w-full sm:flex-1 space-y-1">
                             <label className="text-xs font-bold theme-text-muted">Correo Corporativo</label>
-                            <input
-                                type="email"
-                                required
-                                placeholder="ejemplo@tierradeideas.mx"
-                                value={newEmail}
-                                onChange={(e) => setNewEmail(e.target.value)}
-                                className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]"
-                            />
+                            <input type="email" required placeholder="ejemplo@tierradeideas.mx" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]" />
                         </div>
                         <div className="w-full sm:w-64 space-y-1">
                             <label className="text-xs font-bold theme-text-muted">Asignar Rol</label>
-                            <select
-                                value={newRole}
-                                onChange={(e) => setNewRole(e.target.value)}
-                                className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]"
-                            >
+                            <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]">
                                 <option value="EDITOR_CM">Editor CM</option>
                                 <option value="ADMIN_CM">Administrador CM</option>
                                 <option value="ADMIN_IT">Administrador IT</option>
@@ -88,7 +75,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                 <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-sm theme-text-muted leading-relaxed">
                     <strong className="theme-text-main">Sincronización Automática:</strong><br />
-                    Si no pre-registras a un usuario, no te preocupes. Aparecerá en esta lista automáticamente en cuanto inicie sesión por primera vez con su cuenta <strong className="theme-text-main">@tierradeideas.mx</strong> y se le asignará el rol de <em>Editor CM</em> por defecto.
+                    Si no pre-registras a un usuario, aparecerá en esta lista automáticamente en cuanto inicie sesión por primera vez con su cuenta <strong className="theme-text-main">@tierradeideas.mx</strong> y se le asignará el rol de <em>Editor CM</em> por defecto.
                 </p>
             </div>
 
@@ -105,7 +92,9 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                         </thead>
                         <tbody className="divide-y theme-border">
                             {sortedUsers.map((u: any) => {
-                                const isSuperUser = PROTECTED_ADMIN_IT_EMAILS.includes(u.email);
+                                // 🛑 REGLA ABSOLUTA: Si el objetivo es ADMIN_IT, se considera intocable en el frontend
+                                const isSuperUser = u.role === 'ADMIN_IT';
+                                const canEdit = !isSuperUser; // Nadie puede editar a un ADMIN_IT desde la interfaz gráfica
 
                                 return (
                                     <tr key={u.email} className={`transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${u.disabled ? 'opacity-50' : ''}`}>
@@ -121,7 +110,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                                 <div>
                                                     <p className="text-sm font-bold theme-text-main flex items-center gap-2">
                                                         {u.displayName}
-                                                        {isSuperUser && <span title="Superuser Intocable" className="flex"><ShieldAlert className="w-3 h-3 text-[var(--primary)]" /></span>}
+                                                        {isSuperUser && <span title="Administrador IT Protegido" className="flex"><ShieldAlert className="w-3 h-3 text-[var(--primary)]" /></span>}
                                                     </p>
                                                     <p className="text-xs theme-text-muted">{u.email}</p>
                                                 </div>
@@ -132,16 +121,16 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                             <select
                                                 value={u.role}
                                                 onChange={(e) => updateUserRole(u.email, e.target.value)}
-                                                disabled={isSuperUser || u.disabled}
+                                                disabled={!canEdit || u.disabled}
                                                 className="w-full max-w-[200px] p-2 text-sm rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                {userRole === 'ADMIN_IT' && <option value="ADMIN_IT">Administrador IT</option>}
+                                                <option value="ADMIN_IT">Administrador IT</option>
                                                 <option value="ADMIN_CM">Administrador CM</option>
                                                 <option value="EDITOR_CM">Editor CM</option>
                                             </select>
                                             {isSuperUser && (
                                                 <p className="text-[10px] text-[var(--primary)] font-bold mt-1 flex items-center gap-1">
-                                                    <ShieldAlert className="w-3 h-3" /> Administrador IT Protegido
+                                                    <ShieldAlert className="w-3 h-3" /> Escudo del Sistema Activo
                                                 </p>
                                             )}
                                         </td>
@@ -154,22 +143,22 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
 
                                         <td className="p-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                {/* Botón de Habilitar/Deshabilitar */}
+                                                {/* Botón de Estado */}
                                                 <button
                                                     onClick={() => toggleUserStatus(u.email, u.disabled)}
-                                                    disabled={isSuperUser}
-                                                    title={isSuperUser ? "Intocable" : (u.disabled ? "Habilitar Cuenta" : "Deshabilitar Cuenta")}
+                                                    disabled={!canEdit}
+                                                    title={!canEdit ? "Nivel de privilegios intocable" : (u.disabled ? "Habilitar Cuenta" : "Deshabilitar Cuenta")}
                                                     className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${u.disabled ? 'text-emerald-500 hover:bg-emerald-500/10' : 'text-orange-500 hover:bg-orange-500/10'}`}
                                                 >
                                                     {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
                                                 </button>
 
-                                                {/* Botón de Eliminar (Solo ADMIN IT) */}
+                                                {/* Botón de Eliminar */}
                                                 {userRole === 'ADMIN_IT' && (
                                                     <button
                                                         onClick={() => deleteUserRecord(u.email)}
-                                                        disabled={isSuperUser}
-                                                        title={isSuperUser ? "Intocable" : "Eliminar permanentemente"}
+                                                        disabled={!canEdit}
+                                                        title={!canEdit ? "Nivel de privilegios intocable" : "Eliminar permanentemente"}
                                                         className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                                     >
                                                         <Trash2 className="w-4 h-4" />

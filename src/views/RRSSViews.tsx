@@ -3,7 +3,7 @@ import {
     Save, Download, Trash2, Smartphone, Printer, X, Edit3, Link as LinkIcon, HardDrive, 
     Search, ChevronDown, ChevronRight, ChevronLeft, FileText 
 } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
 
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
@@ -115,13 +115,17 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAct
     );
 };
 
-export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrssIncident, deleteRrssIncident }: any) => {
+export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, deleteRrssIncident }: any) => {
+    
+    // 🔄 ESTADOS LOCALES PARA LAZY LOADING
+    const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    
     const [selectedIncident, setSelectedIncident] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     
     const editEditorRef = useRef<HTMLDivElement>(null);
-    const safeIncidents = Array.isArray(rrssIncidents) ? rrssIncidents : [];
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterYear, setFilterYear] = useState('Todos');
@@ -130,29 +134,42 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
 
-    // ESTADOS DEL MODAL DE EXPORTACIÓN
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    const [exportType, setExportType] = useState('all'); // all | year | month
+    const [exportType, setExportType] = useState('all'); 
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
 
+    // 🔄 EFECTO DE CARGA INDEPENDIENTE
+    useEffect(() => {
+        setIsLoading(true);
+        const rrssRef = collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents');
+        const unsub = onSnapshot(rrssRef, (snapshot) => {
+            const data: any[] = [];
+            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+            data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+            setRrssIncidents(data);
+            setTimeout(() => setIsLoading(false), 600); // 600ms de gracia
+        });
+        return () => unsub();
+    }, []);
+
     const availableYears = useMemo(() => {
-        const years = new Set(safeIncidents.map((i: any) => i.fecha ? i.fecha.split('-')[0] : null).filter(Boolean));
+        const years = new Set(rrssIncidents.map((i: any) => i.fecha ? i.fecha.split('-')[0] : null).filter(Boolean));
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
-    }, [safeIncidents]);
+    }, [rrssIncidents]);
 
     const availableMonthsForExport = useMemo(() => {
         if (!exportYear) return [];
         const months = new Set(
-            safeIncidents
+            rrssIncidents
                 .filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear)
                 .map((i: any) => i.fecha.split('-')[1])
         );
         return Array.from(months).sort((a: any, b: any) => b.localeCompare(a));
-    }, [safeIncidents, exportYear]);
+    }, [rrssIncidents, exportYear]);
 
     const filteredIncidents = useMemo(() => {
-        return safeIncidents.filter((inc: any) => {
+        return rrssIncidents.filter((inc: any) => {
             const year = inc.fecha ? inc.fecha.split('-')[0] : '';
             const matchYear = filterYear === 'Todos' || year === filterYear;
             const term = searchTerm.toLowerCase();
@@ -167,7 +184,7 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
             
             return matchYear && matchSearch;
         });
-    }, [safeIncidents, searchTerm, filterYear, isAdmin]);
+    }, [rrssIncidents, searchTerm, filterYear, isAdmin]);
 
     const groupedData = useMemo(() => {
         const groups: Record<string, Record<string, any[]>> = {};
@@ -187,11 +204,7 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
             const newestYear = sortedYears[0];
             const sortedMonths = Object.keys(groupedData[newestYear]).sort((a, b) => b.localeCompare(a));
             const newestMonth = sortedMonths[0];
-            setExpandedSections(prev => ({
-                ...prev,
-                [newestYear]: true,
-                [`${newestYear}-${newestMonth}`]: true
-            }));
+            setExpandedSections(prev => ({ ...prev, [newestYear]: true, [`${newestYear}-${newestMonth}`]: true }));
         }
     }, [groupedData]);
 
@@ -234,16 +247,16 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
     };
 
     const handleExecuteExport = () => {
-        let dataToExport = safeIncidents;
+        let dataToExport = rrssIncidents;
         let filenameSuffix = 'Todo';
 
         if (exportType === 'year') {
             if (!exportYear) return showToast('Selecciona un año para exportar', true);
-            dataToExport = safeIncidents.filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear);
+            dataToExport = rrssIncidents.filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear);
             filenameSuffix = exportYear;
         } else if (exportType === 'month') {
             if (!exportYear || !exportMonth) return showToast('Selecciona año y mes para exportar', true);
-            dataToExport = safeIncidents.filter((i: any) => i.fecha && i.fecha.startsWith(`${exportYear}-${exportMonth}`));
+            dataToExport = rrssIncidents.filter((i: any) => i.fecha && i.fecha.startsWith(`${exportYear}-${exportMonth}`));
             filenameSuffix = `${exportYear}_${exportMonth}`;
         }
 
@@ -292,11 +305,33 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                         </div>
                         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-4">
                             <div className="flex items-center gap-2"><label className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label><select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-1.5 px-3 min-w-[100px]`}><option value="Todos">Todos</option>{availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}</select></div>
-                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap"><span className="text-xs font-bold theme-text-main">{filteredIncidents.length}</span><span className="text-[10px] theme-text-muted font-medium ml-1">de {safeIncidents.length}</span></div>
+                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap"><span className="text-xs font-bold theme-text-main">{filteredIncidents.length}</span><span className="text-[10px] theme-text-muted font-medium ml-1">de {rrssIncidents.length}</span></div>
                         </div>
                     </div>
 
-                    {filteredIncidents.length === 0 ? (
+                    {isLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 fade-in">
+                            {[1, 2, 3, 4, 5, 6].map(card => (
+                                <div key={card} className="p-5 theme-bg-container rounded-xl border theme-border shadow-sm h-44 animate-pulse flex flex-col">
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-700 flex-shrink-0"></div>
+                                        <div className="flex-1 space-y-2 py-1">
+                                            <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
+                                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 mt-2">
+                                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+                                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
+                                    </div>
+                                    <div className="mt-auto pt-3 border-t theme-border flex gap-2">
+                                        <div className="h-6 w-16 bg-gray-300 dark:bg-gray-700 rounded-md"></div>
+                                        <div className="h-6 w-20 bg-gray-300 dark:bg-gray-700 rounded-md"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : filteredIncidents.length === 0 ? (
                         <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border"><Smartphone className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No se encontraron registros con los criterios actuales.</p></div>
                     ) : (
                         <div className="space-y-4">
@@ -341,7 +376,6 @@ export const HistorialRRSSView = ({ rrssIncidents, showToast, isAdmin, updateRrs
                                                                                 <div className="mt-4 flex items-center justify-between pt-3 border-t theme-border">
                                                                                     <div className="flex items-center gap-2"><span className={`px-2.5 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider ${getRiskColor(inc.riesgo)}`}>{inc.riesgo}</span><span className="px-2.5 py-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">Incidencias: {inc.totalIncidencias}</span></div>
                                                                                     
-                                                                                    {/* 👇 AQUI ESTA LA CONDICION PARA OCULTAR EL BOTON SI NO HAY REPORTE TEXTO */}
                                                                                     {inc.reporteTexto && (
                                                                                         <button onClick={(e) => { e.stopPropagation(); handleDownloadDocx(inc); }} className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors no-print" title="Descargar reporte (.docx)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="12" y2="18"/><line x1="15" y1="15" x2="12" y2="18"/></svg></button>
                                                                                     )}

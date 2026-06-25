@@ -4,7 +4,7 @@ import {
     Link as LinkIcon, Calendar, PlusCircle, Share2, MapPin, 
     Frown, Meh, Search, ChevronDown, ChevronRight, ChevronLeft 
 } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
 
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
@@ -54,7 +54,6 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }
                 ...formData, autor: user?.displayName || 'Administrador', timestamp: new Date().toISOString() 
             });
 
-            // INYECCIÓN DE LA NOTIFICACIÓN AL CREAR
             if (logAction) await logAction('Creó un nuevo reporte de comentarios', 'Comentarios', 'create', docRef.id);
 
             showToast('Reporte guardado exitosamente.'); navigate('historial-comentario');
@@ -119,7 +118,12 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }
     );
 };
 
-export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComment, deleteComment }: any) => {
+export const HistorialCommentView = ({ showToast, isAdmin, updateComment, deleteComment }: any) => {
+    
+    // 🔄 ESTADOS LOCALES PARA LAZY LOADING
+    const [comments, setComments] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -131,11 +135,24 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
 
-    // ESTADOS DEL MODAL DE EXPORTACIÓN
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    const [exportType, setExportType] = useState('all'); // all | year | month
+    const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
+
+    // 🔄 EFECTO DE CARGA INDEPENDIENTE
+    useEffect(() => {
+        setIsLoading(true);
+        const commentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'comments');
+        const unsub = onSnapshot(commentsRef, (snapshot) => {
+            const data: any[] = [];
+            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+            data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setComments(data);
+            setTimeout(() => setIsLoading(false), 600); // 600ms de gracia para que se luzca la animación
+        });
+        return () => unsub();
+    }, []);
 
     const getNormalizedComments = (com: any) => {
         if (com.comentariosList && com.comentariosList.length > 0) return com.comentariosList.map((c: any) => ({ ...c, redSocial: c.redSocial || com.redSocial || 'Facebook', campus: c.campus || com.campus || 'Sin especificar', sentiment: c.sentiment || com.sentiment || '', posteoTipo: c.posteoTipo || com.posteoTipo || 'url', posteoUrl: c.posteoUrl || com.posteoUrl || '', posteoTexto: c.posteoTexto || com.posteoTexto || '' }));
@@ -147,7 +164,6 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
     }, [comments]);
 
-    // OBTENER MESES DISPONIBLES EN BASE AL AÑO SELECCIONADO PARA EXPORTAR
     const availableMonthsForExport = useMemo(() => {
         if (!exportYear) return [];
         const months = new Set(
@@ -207,7 +223,6 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
     const handleDelete = () => { setIsDetailOpen(false); deleteComment(selectedComment.id); };
     const handleEditUpdate = (e: React.FormEvent) => { e.preventDefault(); updateComment(editData.id, editData); setIsEditOpen(false); };
 
-    // LÓGICA DE EXPORTACIÓN INTELIGENTE (DESGLOSADA POR COMENTARIO)
     const handleExecuteExport = () => {
         let dataToExport = comments;
         let filenameSuffix = 'Todo';
@@ -224,33 +239,21 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
 
         if (dataToExport.length === 0) return showToast('No hay datos registrados en esa fecha', true);
 
-        // 1. Separamos cada dato en su propia columna en los encabezados
         const headers = isAdmin 
             ? ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Red Social,Campus,Sentiment,Usuario,Tipo Posteo,Posteo Original,Comentario,Autor'] 
             : ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Red Social,Campus,Sentiment,Usuario,Tipo Posteo,Posteo Original,Comentario'];
         
-        // 2. Aplanamos los datos: 1 Fila = 1 Comentario individual
         const rows = dataToExport.flatMap((i: any) => {
             const list = getNormalizedComments(i);
             
             return list.map((c: any) => {
-                // Función auxiliar para escapar comillas dobles y saltos de línea y evitar que se rompa el CSV
                 const escape = (text: string) => `"${(text || '').toString().replace(/"/g, '""')}"`;
-                
                 const posteoOriginal = c.posteoTipo === 'url' ? c.posteoUrl : c.posteoTexto;
                 
                 const baseData = [
-                    escape(i.fechaInicio),
-                    escape(i.fechaFin),
-                    escape(i.contenido),
-                    escape(i.evidencia),
-                    escape(c.redSocial),
-                    escape(c.campus),
-                    escape(c.sentiment || 'N/A'),
-                    escape(c.usuario),
-                    escape(c.posteoTipo),
-                    escape(posteoOriginal),
-                    escape(c.comentario)
+                    escape(i.fechaInicio), escape(i.fechaFin), escape(i.contenido), escape(i.evidencia),
+                    escape(c.redSocial), escape(c.campus), escape(c.sentiment || 'N/A'), escape(c.usuario),
+                    escape(c.posteoTipo), escape(posteoOriginal), escape(c.comentario)
                 ].join(',');
 
                 return isAdmin ? `${baseData},${escape(i.autor || 'Admin')}` : baseData;
@@ -258,15 +261,10 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
         });
 
         const link = document.createElement("a"); 
-        // \uFEFF es el BOM de UTF-8 que fuerza a Excel a leer correctamente los acentos
         link.href = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + [headers, ...rows].join("\n")); 
         link.download = `Comentarios_${filenameSuffix}_${new Date().toISOString().split('T')[0]}.csv`; 
-        document.body.appendChild(link); 
-        link.click(); 
-        document.body.removeChild(link);
-
-        setIsExportModalOpen(false);
-        showToast('Exportación desglosada completada exitosamente');
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        setIsExportModalOpen(false); showToast('Exportación desglosada completada exitosamente');
     };
 
     return (
@@ -290,7 +288,29 @@ export const HistorialCommentView = ({ comments, showToast, isAdmin, updateComme
                         </div>
                     </div>
 
-                    {filteredComments.length === 0 ? (
+                    {isLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 fade-in">
+                            {[1, 2, 3, 4, 5, 6].map(card => (
+                                <div key={card} className="p-5 theme-bg-container rounded-xl border theme-border shadow-sm h-44 animate-pulse flex flex-col">
+                                    <div className="flex items-start gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-700 flex-shrink-0"></div>
+                                        <div className="flex-1 space-y-2 py-1">
+                                            <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
+                                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 mt-2">
+                                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+                                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
+                                    </div>
+                                    <div className="mt-auto pt-3 border-t theme-border flex gap-2">
+                                        <div className="h-6 w-16 bg-gray-300 dark:bg-gray-700 rounded-md"></div>
+                                        <div className="h-6 w-20 bg-gray-300 dark:bg-gray-700 rounded-md"></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : filteredComments.length === 0 ? (
                         <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border"><MessageSquare className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No se encontraron reportes con los criterios actuales.</p></div>
                     ) : (
                         <div className="space-y-4">

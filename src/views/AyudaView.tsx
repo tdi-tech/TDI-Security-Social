@@ -25,7 +25,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                 ========================================== */}
                 <div className="space-y-4">
                     <h3 className="text-xs font-bold theme-text-muted uppercase tracking-widest flex items-center gap-2">
-                        <HelpCircle className="w-4 h-4 text-gray-500" /> Jerarquía de Accesos
+                        <HelpCircle className="w-4 h-4 text-gray-500" /> Jerarquía de Accesos (Zero-Trust)
                     </h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -36,7 +36,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Lector (Público)</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Diseñado para consulta abierta del personal. Permite revisar el glosario, leer los protocolos y auditar el historial general. La identidad de los autores permanece oculta. El sistema no almacena su ruteo ni ejecuta el vigía de inactividad.
+                                    Diseñado para consulta abierta del personal. Permite revisar el glosario, leer los protocolos y auditar el historial general. La identidad de los autores permanece oculta. Restringido por Firewall en la nube.
                                 </p>
                             </div>
                         </div>
@@ -48,7 +48,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Editor CM</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Rol operativo por defecto. Permite crear, editar y eliminar incidentes de RRSS y Comentarios. Dispone del panel de configuración de alertas visuales/sonoras. Cuenta con protección de inactividad automática y persistencia de vista al recargar (F5).
+                                    Rol operativo por defecto. Permite crear, editar y eliminar incidentes de RRSS y Comentarios. Dispone del panel de configuración de alertas visuales/sonoras. Cuenta con protección de inactividad automática.
                                 </p>
                             </div>
                         </div>
@@ -60,7 +60,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Administrador CM</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Nivel gerencial. Además de las funciones del Editor, puede acceder a la pestaña de "Gestión de Usuarios" para asignar roles al equipo y habilitar/deshabilitar cuentas. Está sujeto al vigía de cierre de sesión por inactividad.
+                                    Nivel gerencial. Además de las funciones del Editor, puede acceder a la pestaña de "Gestión de Usuarios" para asignar roles al equipo y habilitar/deshabilitar cuentas que no sean de rango IT.
                                 </p>
                             </div>
                         </div>
@@ -72,7 +72,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                             <div className="flex-1">
                                 <h4 className="font-bold theme-text-main text-sm">Administrador IT</h4>
                                 <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                    Control total del sistema. Puede pre-registrar usuarios, eliminar cuentas de forma permanente, monitorear la salud del servidor (cuota de base de datos) y operar de forma exclusiva el ecosistema de copias de seguridad globales.
+                                    Control total del sistema. Puede pre-registrar usuarios, eliminar cuentas, monitorear la salud de Firestore y operar de forma exclusiva las copias de seguridad encriptadas globales. Privilegios intocables.
                                 </p>
                             </div>
                         </div>
@@ -145,7 +145,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                                 <div className="flex-1">
                                     <h4 className="font-bold theme-text-main text-sm">Backups Core Unificado</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        Centro exclusivo de IT para compilar y descargar respaldos globales de la plataforma. Su motor inverso inyecta inteligentemente registros borrados (Hackeos, RRSS, Comentarios) omitiendo duplicaciones.
+                                        Centro exclusivo de IT para compilar y descargar respaldos globales de la plataforma con cifrado criptográfico AES-256. Su motor inverso inyecta inteligentemente registros borrados omitiendo duplicaciones.
                                     </p>
                                 </div>
                             </div>
@@ -157,7 +157,7 @@ export const AyudaView = ({ isAdmin }: any) => {
                                 <div className="flex-1">
                                     <h4 className="font-bold theme-text-main text-sm">Cierre por Inactividad & UX</h4>
                                     <p className="text-xs theme-text-muted mt-1 leading-relaxed">
-                                        Vigía que detecta el abandono de la app por 1 minuto, iniciando un conteo límite de 5 minutos antes de destruir la sesión. El sistema conserva su vista de trabajo si actualiza la página mediante F5.
+                                        Vigía que detecta el abandono de la app por 10 minutos para proteger la terminal. El sistema conserva tu vista de trabajo actual incluso si actualizas la página mediante F5.
                                     </p>
                                 </div>
                             </div>

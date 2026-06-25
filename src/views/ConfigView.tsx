@@ -4,30 +4,55 @@ import {
     ShieldCheck, Megaphone, MessageSquare, 
     Server, Trash2, Cpu, AlertTriangle, CheckCircle2 
 } from 'lucide-react';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { db, appId } from '../firebase/config';
 
 export const ConfigView = ({ 
-    isDarkMode, toggleTheme, userRole, userPrefs, updateUserPrefs, showToast,
-    incidents, rrssIncidents, comments, notifications, deleteNotification
+    isDarkMode, toggleTheme, userRole, userPrefs, updateUserPrefs, showToast
 }: any) => {
 
     const [cacheSize, setCacheSize] = useState('0.00');
     const [isPurging, setIsPurging] = useState(false);
 
+    // 🔄 ESTADOS GLOBALES PARA EL MONITOR IT
+    const [globalOperativeCount, setGlobalOperativeCount] = useState<number | null>(null);
+    const [globalTracesCount, setGlobalTracesCount] = useState<number | null>(null);
+
     const prefs = userPrefs || { sound: true, security: true, rrss: true, comments: true };
 
+    const cleanRole = userRole?.toUpperCase()?.trim() || '';
+    const isITAdmin = cleanRole === 'ADMIN_IT';
+    const isCMUser = cleanRole === 'ADMIN_CM' || cleanRole === 'EDITOR_CM';
+
     // ==========================================
-    // CÁLCULOS ANALÍTICOS Y LÍMITES REALES
+    // CÁLCULOS ANALÍTICOS GLOBALES (DIRECTO DEL SERVIDOR)
     // ==========================================
-    const totalIncidents = (incidents?.length || 0) + (rrssIncidents?.length || 0) + (comments?.length || 0);
-    const totalTraces = notifications?.length || 0;
-    const totalDocs = totalIncidents + totalTraces;
-    
-    // Estimación de peso en KB (1.5 KB promedio por documento en Firestore)
+    useEffect(() => {
+        if (isITAdmin) {
+            const fetchGlobalServerStats = async () => {
+                try {
+                    // Consultamos la verdad cruda de Google Firestore, saltándonos los filtros de React
+                    const [hackeos, rrss, coms, notifs] = await Promise.all([
+                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'incidents')),
+                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents')),
+                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'comments')),
+                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'))
+                    ]);
+                    
+                    setGlobalOperativeCount(hackeos.size + rrss.size + coms.size);
+                    setGlobalTracesCount(notifs.size);
+                } catch (error) {
+                    console.error("Error al consultar el servidor:", error);
+                }
+            };
+            fetchGlobalServerStats();
+        }
+    }, [isITAdmin]);
+
+    const totalDocs = (globalOperativeCount || 0) + (globalTracesCount || 0);
     const estimatedKB = (totalDocs * 1.5).toFixed(2);
     
-    // ⚠️ LÍMITE OPERATIVO SEGURO PARA EL PLAN SPARK (GRATUITO)
-    // El plan da 1GB (infinito para texto), pero solo 50,000 LECTURAS DIARIAS.
-    // Fijamos la meta visual en 10,000 docs. Si pasan de ahí, corren riesgo de agotar las lecturas diarias.
+    // Límite operativo para plan gratuito (10,000 documentos recomendados)
     const SAFE_DOC_LIMIT = 10000;
     const usagePercent = Math.min((totalDocs / SAFE_DOC_LIMIT) * 100, 100).toFixed(1);
 
@@ -51,18 +76,25 @@ export const ConfigView = ({
         showToast('Memoria caché local liberada correctamente.');
     };
 
+    // 🛑 PURGA GLOBAL ABSOLUTA (Destruye todas las notificaciones en el servidor)
     const handlePurgeTraces = async () => {
-        if (totalTraces === 0) {
+        if (globalTracesCount === 0) {
             showToast('El servidor ya está limpio. No hay rastros para purgar.');
             return;
         }
         setIsPurging(true);
-        showToast('Iniciando purga de rastros en el servidor...');
+        showToast('Iniciando purga global de rastros en el servidor...');
+        
         try {
-            for (const notif of notifications) {
-                if (deleteNotification) await deleteNotification(notif.id);
-            }
-            showToast('Limpieza profunda completada con éxito.');
+            const notifQuery = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'));
+            const deletePromises = notifQuery.docs.map(document => 
+                deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', document.id))
+            );
+            
+            await Promise.all(deletePromises);
+            
+            showToast('Limpieza profunda del servidor completada con éxito.');
+            setGlobalTracesCount(0); // Actualizamos la interfaz al instante
         } catch (error) {
             showToast('Ocurrió un error al purgar los datos.', true);
         } finally {
@@ -113,10 +145,6 @@ export const ConfigView = ({
             <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-sm ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
         </button>
     );
-
-    const cleanRole = userRole?.toUpperCase()?.trim() || '';
-    const isITAdmin = cleanRole === 'ADMIN_IT';
-    const isCMUser = cleanRole === 'ADMIN_CM' || cleanRole === 'EDITOR_CM';
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 fade-in pb-10">
@@ -219,14 +247,13 @@ export const ConfigView = ({
                                     <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2">
                                         <Server className="w-4 h-4 text-emerald-500" /> Motor Analítico y Salud DB
                                     </h3>
-                                    <p className="text-xs theme-text-muted mt-1">Monitoreo de almacenamiento de la cuota de Firebase.</p>
+                                    <p className="text-xs theme-text-muted mt-1">Monitoreo absoluto del servidor global de Firestore.</p>
                                 </div>
                                 <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
                                     <CheckCircle2 className="w-4 h-4" /> Servidor Estable
                                 </div>
                             </div>
 
-                            {/* BARRA DE PROGRESO RESTAURADA (LÍMITE SEGURO DE LECTURAS) */}
                             <div className="mb-8">
                                 <div className="flex justify-between items-end mb-2">
                                     <p className="text-sm font-bold theme-text-main">Cuota Segura de Lecturas Diarias</p>
@@ -243,14 +270,15 @@ export const ConfigView = ({
                                 <p className="text-[10px] theme-text-muted mt-2 text-right">El porcentaje advierte sobre el riesgo de saturar el límite de 50,000 lecturas/día del Plan Spark.</p>
                             </div>
 
-                            {/* TARJETAS DE CONTEO EXACTO */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                                 <div className="p-4 theme-bg-low border theme-border rounded-xl shadow-sm">
                                     <div className="flex items-center gap-2 mb-1">
                                         <ShieldCheck className="w-4 h-4 text-emerald-500" />
                                         <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">Registros Operativos</p>
                                     </div>
-                                    <p className="text-2xl font-black theme-text-main">{totalIncidents}</p>
+                                    <p className="text-2xl font-black theme-text-main">
+                                        {globalOperativeCount !== null ? globalOperativeCount : <span className="animate-pulse text-gray-400">...</span>}
+                                    </p>
                                     <p className="text-[10px] text-emerald-500 font-bold mt-1">Estimado en base: {estimatedKB} KB</p>
                                 </div>
 
@@ -259,12 +287,13 @@ export const ConfigView = ({
                                         <AlertTriangle className="w-4 h-4 text-orange-500" />
                                         <p className="text-xs font-bold text-orange-500/80 uppercase tracking-wider">Rastros del Sistema</p>
                                     </div>
-                                    <p className="text-2xl font-black theme-text-main">{totalTraces}</p>
+                                    <p className="text-2xl font-black theme-text-main text-orange-600 dark:text-orange-400">
+                                        {globalTracesCount !== null ? globalTracesCount : <span className="animate-pulse text-orange-400/50">...</span>}
+                                    </p>
                                     <p className="text-[10px] text-orange-500 font-bold mt-1">Notificaciones • Volátiles</p>
                                 </div>
                             </div>
 
-                            {/* BOTONERA DE MANTENIMIENTO */}
                             <div className="mt-auto space-y-4 pt-4 border-t theme-border">
                                 <h4 className="text-xs font-bold theme-text-muted uppercase tracking-widest mb-3">Herramientas de Limpieza</h4>
                                 
@@ -288,18 +317,18 @@ export const ConfigView = ({
                                     <div className="flex items-center gap-3 w-full sm:w-auto">
                                         <div className="p-2 bg-red-500/10 rounded-lg text-red-500"><Trash2 className="w-5 h-5"/></div>
                                         <div>
-                                            <p className="text-sm font-bold theme-text-main text-red-500 dark:text-red-400">Purgar Rastros de Base de Datos</p>
+                                            <p className="text-sm font-bold theme-text-main text-red-500 dark:text-red-400">Purgar Servidor Global</p>
                                             <p className="text-[11px] text-red-500/70 dark:text-red-400/70 max-w-xs leading-tight mt-0.5">
-                                                Elimina definitivamente las alertas antiguas y notificaciones. Los incidentes operativos están blindados.
+                                                Elimina definitivamente las alertas y notificaciones de todos los usuarios de la base de datos.
                                             </p>
                                         </div>
                                     </div>
                                     <button 
                                         onClick={handlePurgeTraces}
-                                        disabled={isPurging || totalTraces === 0}
+                                        disabled={isPurging || globalTracesCount === 0 || globalTracesCount === null}
                                         className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-500 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {isPurging ? 'Purgando...' : 'Vaciar Servidor'}
+                                        {isPurging ? 'Purgando Servidor...' : 'Vaciar Servidor'}
                                     </button>
                                 </div>
                             </div>

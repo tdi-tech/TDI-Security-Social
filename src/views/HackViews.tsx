@@ -5,7 +5,7 @@ import {
     RefreshCw, Globe, Clock, MessageSquare, ListChecks, AlertTriangle, 
     Save, X, Edit3, Trash2, Search, ChevronDown, ChevronRight, ChevronLeft
 } from 'lucide-react';
-import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
 
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
@@ -122,25 +122,42 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
     );
 };
 
-export const HistorialView = ({ incidents, showToast, setSelectedIncidentId, setDetailModalOpen, isAdmin }: any) => {
+export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModalOpen, isAdmin }: any) => {
+    
+    // 🔄 ESTADOS LOCALES PARA LAZY LOADING
+    const [incidents, setIncidents] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterYear, setFilterYear] = useState('Todos');
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
 
-    // ESTADOS DEL MODAL DE EXPORTACIÓN
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-    const [exportType, setExportType] = useState('all'); // all | year | month
+    const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
+
+    // 🔄 EFECTO DE CARGA INDEPENDIENTE
+    useEffect(() => {
+        setIsLoading(true);
+        const incidentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'incidents');
+        const unsub = onSnapshot(incidentsRef, (snapshot) => {
+            const data: any[] = [];
+            snapshot.forEach((doc) => data.push(doc.data()));
+            data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+            setIncidents(data);
+            setTimeout(() => setIsLoading(false), 600); // 600ms de gracia para que se luzca la animación del skeleton
+        });
+        return () => unsub();
+    }, []);
 
     const availableYears = useMemo(() => {
         const years = new Set(incidents.map((i: any) => i.fecha ? i.fecha.split('-')[0] : null).filter(Boolean));
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
     }, [incidents]);
 
-    // OBTENER MESES DISPONIBLES EN BASE AL AÑO SELECCIONADO PARA EXPORTAR
     const availableMonthsForExport = useMemo(() => {
         if (!exportYear) return [];
         const months = new Set(
@@ -191,7 +208,6 @@ export const HistorialView = ({ incidents, showToast, setSelectedIncidentId, set
 
     const toggleSection = (key: string) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
 
-    // LÓGICA DE EXPORTACIÓN INTELIGENTE
     const handleExecuteExport = () => {
         let dataToExport = incidents;
         let filenameSuffix = 'Todo';
@@ -246,7 +262,29 @@ export const HistorialView = ({ incidents, showToast, setSelectedIncidentId, set
                     </div>
                 </div>
 
-                {filteredIncidents.length === 0 ? (
+                {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 fade-in">
+                        {[1, 2, 3, 4, 5, 6].map(card => (
+                            <div key={card} className="p-5 theme-bg-container rounded-xl border theme-border shadow-sm h-44 animate-pulse flex flex-col">
+                                <div className="flex items-start gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-700 flex-shrink-0"></div>
+                                    <div className="flex-1 space-y-2 py-1">
+                                        <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
+                                        <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 mt-2">
+                                    <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+                                    <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
+                                </div>
+                                <div className="mt-auto pt-3 border-t theme-border flex gap-2">
+                                    <div className="h-6 w-16 bg-gray-300 dark:bg-gray-700 rounded-md"></div>
+                                    <div className="h-6 w-20 bg-gray-300 dark:bg-gray-700 rounded-md"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : filteredIncidents.length === 0 ? (
                     <div className="text-center py-12 theme-bg-container rounded-2xl border theme-border"><ShieldAlert className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No se encontraron incidentes con los criterios actuales.</p></div>
                 ) : (
                     <div className="space-y-4">
@@ -377,7 +415,6 @@ export const HistorialView = ({ incidents, showToast, setSelectedIncidentId, set
 };
 
 export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, showToast, setConfirmModal }: any) => {
-    // ... Código intacto de Checklist
     const completedCount = checklistData.filter(i => checklistState[i.id]).length;
     const percent = Math.round((completedCount / checklistData.length) * 100) || 0;
 
@@ -444,7 +481,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
 };
 
 export const DetailModal = ({ isOpen, onClose, incident, isAdmin, onToggleStatus, onEdit, onDelete }: any) => {
-    // ... Código intacto del Modal
     if (!isOpen || !incident) return null;
     return (
         <>
@@ -482,7 +518,6 @@ export const DetailModal = ({ isOpen, onClose, incident, isAdmin, onToggleStatus
 };
 
 export const EditIncidentModal = ({ isOpen, onClose, incident, onUpdate }: any) => {
-    // ... Código intacto de Edición
     const [vector, setVector] = useState('Desconocido');
     const [otroVector, setOtroVector] = useState('');
 

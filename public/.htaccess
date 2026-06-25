@@ -1,0 +1,32 @@
+# ----------------------------------------------------------------------
+# BLINDAJE DE CABECERAS HTTP (Security Headers)
+# ----------------------------------------------------------------------
+
+<IfModule mod_headers.c>
+    # Prevenir ataques Clickjacking (Embebido en iframes maliciosos)
+    Header always set X-Frame-Options "DENY"
+
+    # Forzar al navegador a respetar el tipo de archivo (MIME sniffing)
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Habilitar filtro Cross-Site Scripting (XSS)
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Forzar conexión HTTPS estricta (HSTS)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # Política de Seguridad de Contenido (CSP) - Permite conexiones a Firebase y Google
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com;"
+</IfModule>
+
+# ----------------------------------------------------------------------
+# REGLAS DE ENRUTAMIENTO PARA REACT (VITE) EN HOSTINGER
+# ----------------------------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^index\.html$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+</IfModule>

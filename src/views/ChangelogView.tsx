@@ -6,46 +6,55 @@ import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layou
 // ==========================================
 const changelogData = [
     {
-        version: 'v3.2.0',
+        version: 'v3.3.0',
         date: 'Junio 2026',
         tag: 'Última Versión',
-        title: 'Seguridad Global, Centro de Respaldos Core & Persistencia UX',
+        title: 'Security Core, Zero-Trust & Criptografía',
         changes: [
-            { type: 'security', text: 'Vigía de Inactividad Global: Implementación de un doble temporizador en segundo plano que detecta la inactividad del usuario (1 minuto de gracia), lanza un aviso visual en reversa de 5 minutos y ejecuta el cierre forzado de sesión.' },
-            { type: 'feature', text: 'Centro de Respaldos Core (Módulo Backups): Nueva vista exclusiva para el Administrador IT capaz de compilar un JSON unificado del sistema e inyectar copias de seguridad de emergencia restaurando reportes caídos (Hackeos, RRSS, Comentarios) sin duplicar datos vivos.' },
+            { type: 'title', text: 'Arquitectura Cero-Confianza (Zero-Trust)' },
+            { type: 'security', text: 'Firebase Security Rules (Backend): Migración total del control de roles (RBAC) al servidor. La validación de privilegios ya no recae en React, haciendo imposible que atacantes fuercen comandos modificando el cliente.' },
+            { type: 'security', text: 'Cierre de Brechas de Exposición (Anónimos): Los usuarios no autenticados ahora son bloqueados a nivel servidor para visualizar notificaciones, configuraciones, listas de usuarios y cualquier nodo crítico de la base de datos.' },
+            { type: 'security', text: 'Protección Absoluta de Fundadores: Se erradicó el arreglo de correos codificados (hardcodeados) en el frontend. La gestión de jerarquías intocables y rangos IT ahora es dinámica.' },
+            { type: 'security', text: 'Vigía de Inactividad Global: Implementación de un doble temporizador en segundo plano que detecta la inactividad del usuario (10 minutos), lanzando un cierre forzado de sesión por seguridad.' },
+            { type: 'divider' },
+            { type: 'title', text: 'Optimizaciones y Criptografía' },
+            { type: 'security', text: 'Backups Cifrados AES-256: El módulo de Copias de Seguridad ahora implementa la librería crypto-js. Los archivos JSON exportados están totalmente encriptados y requieren contraseña de administrador para descifrarse e inyectarse.' },
+            { type: 'feature', text: 'Centro de Respaldos Core Inteligente: Nuevo motor capaz de leer backups cifrados y restaurar de emergencia los reportes eliminados (Hackeos, RRSS, Comentarios) sin duplicar datos vivos.' },
+            { type: 'feature', text: 'Lazy Loading y Optimización de Ancho de Banda: Refactorización profunda. Los historiales ahora solo solicitan la descarga de datos al backend cuando el usuario ingresa a la vista explícitamente.' },
+            { type: 'ui', text: 'Skeletons de Carga UX: Sustitución de pantallas parpadeantes por una animación elegante de "Skeletons" (tarjetas en gris) que mejoran la experiencia durante la consulta en tiempo real a Firebase.' }
+        ]
+    },
+    {
+        version: 'v3.2.0',
+        date: 'Junio 2026',
+        tag: 'Estable',
+        title: 'Persistencia de Usuario & Configuración Avanzada',
+        changes: [
             { type: 'feature', text: 'Persistencia de Navegación por Recarga: Inyección de estados basados en localStorage para retener la vista actual al presionar F5 o refrescar el navegador, mitigando redirecciones accidentales al Dashboard.' },
             { type: 'security', text: 'Protección de Privacidad de Cambios: El Changelog queda blindado exclusivamente detrás del inicio de sesión (RBAC), impidiendo el acceso a usuarios no identificados o con rol de Lector.' },
-            { type: 'divider' },
-            { type: 'title', text: 'Salud del Servidor & Preferencias' },
-            { type: 'security', text: 'Monitor Analítico y Salud DB: Nuevo panel exclusivo para Administrador IT con métricas de consumo de Firebase, estimación de cuota y herramientas de purgado (limpieza de caché local y vaciado de rastros obsoletos del servidor).' },
+            { type: 'security', text: 'Monitor Analítico y Salud DB: Nuevo panel exclusivo para Administrador IT con métricas de consumo de Firebase, estimación de cuota y herramientas de purgado local.' },
             { type: 'feature', text: 'Preferencias de Usuario en la Nube: Panel interactivo para activar/desactivar alertas sonoras y notificaciones por módulo específico (Hackeos, RRSS, Comentarios), sincronizado con Firestore.' },
-            { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento y con un tono tenue.' },
-            { type: 'ui', text: 'Rediseño de Configuración: Arquitectura en columnas dinámicas (Grid) para acomodar la gestión de preferencias y el monitoreo IT.' },
-            { type: 'divider' },
-            { type: 'title', text: 'Exportación y Reportes' },
+            { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento.' },
             { type: 'feature', text: 'Modal Inteligente de Exportación CSV: Permite descargar todo el historial, filtrar por Año específico o por "Año + Mes".' },
             { type: 'feature', text: 'Exportación aplanada para Comentarios: Desglose avanzado (1 fila = 1 comentario) para análisis dinámicos en Excel sin anidaciones rotas.' },
             { type: 'feature', text: 'Reporte Ejecutivo en PDF: Exportación nativa y optimizada para impresión directo desde las métricas del Dashboard.' },
-            { type: 'ui', text: 'Mejora UX/UI en modales de detalle: Reemplazo de bloques de texto masivos por "Action Cards" limpias para descarga de anexos y reportes.' }
+            { type: 'ui', text: 'Rediseño de Configuración y UX: Arquitectura en columnas dinámicas para preferencias. Mejora visual en modales de detalle con "Action Cards".' }
         ]
     },
     {
         version: 'v3.1.0',
-        date: 'Junio 2026',
+        date: 'Mayo 2026',
         tag: 'Estable',
         title: 'Dashboard Dinámico, Seguridad & SaaS Plus',
         changes: [
             { type: 'feature', text: 'Dashboard rediseñado con navegación por pestañas (Seguridad, RRSS, Comentarios).' },
             { type: 'feature', text: 'Gráficas SVG nativas y animadas en tiempo real (Donut Chart, Barras Horizontales y Progress Bars).' },
-            { type: 'security', text: 'Buscador inteligente con candado de seguridad: oculta la identidad de los autores a los usuarios con rol de Lector.' },
             { type: 'ui', text: 'Historiales avanzados con acordeones anidados colapsables por Año y Mes.' },
             { type: 'feature', text: 'Paginación modular independiente (30 tarjetas por mes) para optimizar el rendimiento.' },
             { type: 'ui', text: 'Super Badges de alto contraste visual para clasificar el Sentiment (Negativo/Neutral) desde la vista general.' },
             { type: 'feature', text: 'Modales de "Vista Rápida" (Preview) inyectados directamente en el Dashboard.' },
-            { type: 'divider' },
-            { type: 'title', text: 'Funcionalidades Plus (SaaS)' },
             { type: 'feature', text: 'Centro de Notificaciones en tiempo real: Campana interactiva con insignias numéricas, panel filtrable por leídas/no leídas y enlaces directos al incidente.' },
-            { type: 'security', text: 'Gestión de Usuarios RBAC: Panel de control dedicado para Administradores, pre-registro manual de cuentas, bloqueo de accesos y asignación de roles (Administrador IT, Administrador CM y Editor CM).' }
+            { type: 'security', text: 'Gestión de Usuarios RBAC: Panel de control dedicado para Administradores, pre-registro manual de cuentas, bloqueo de accesos y asignación de roles jerárquicos.' }
         ]
     },
     {
@@ -191,7 +200,7 @@ export const ChangelogView = () => {
 
             <div className="text-center pt-8 pb-4">
                 <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">
-                    Innova Management &copy; 2026
+                    Innova Management &copy; {new Date().getFullYear()}
                 </p>
             </div>
         </div>

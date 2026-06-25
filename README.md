@@ -2,7 +2,7 @@
 
 **Plataforma Integral SaaS para la Gestión de Seguridad, Cumplimiento y Control Operativo de Incidencias.**
 
-Innova Management es una herramienta interna tipo SaaS (Software as a Service) diseñada para centralizar la documentación, el monitoreo y la mitigación de crisis digitales. La plataforma divide su operación de manera estratégica para dar soporte técnico al área de IT y control de reputación a los equipos de Community Managers, asegurando un historial inmutable y auditable bajo estrictos protocolos de confidencialidad corporativa.
+Innova Management es una herramienta interna tipo SaaS (Software as a Service) diseñada para centralizar la documentación, el monitoreo y la mitigación de crisis digitales. La plataforma opera bajo una estricta **arquitectura Zero-Trust (Cero Confianza)**, dividiendo su operación de manera estratégica para dar soporte técnico al área de IT y control de reputación a los equipos de Community Managers, asegurando un historial inmutable y auditable bajo estrictos protocolos de confidencialidad corporativa.
 
 ---
 
@@ -40,34 +40,36 @@ npm run dev
 
 ## Arquitectura Modular y Características Principales
 
-La plataforma ha sido estruturada visual y operativamente en bloques funcionales, centralizados en un panel de control avanzado:
+La plataforma ha sido estructurada visual y operativamente en bloques funcionales, centralizados en un panel de control avanzado:
 
-### Panel de Control (Dashboard) y Preferencias
+### Panel de Control (Dashboard) y UX Avanzada
 * **Métricas Consolidadas:** Gráficas SVG interactivas que muestran índices de resolución, picos de ataques y análisis de sentimiento en tiempo real.
-* **Notificaciones en Tiempo Real:** Campana de alertas inteligente con motor de audio nativo (Web Audio API) y panel de preferencias en la nube para silenciar módulos específicos.
+* **Notificaciones Dinámicas:** Campana de alertas inteligente con motor de audio nativo (Web Audio API) y panel de preferencias en la nube para silenciar módulos específicos.
 * **Persistencia de Navegación UX:** Integración de estados basados en `localStorage` coordinados entre la aplicación y el Sidebar para evitar redirecciones accidentales al Dashboard al presionar F5 o refrescar la página.
+* **Optimización Lazy Loading y Skeletons:** Los datos de los historiales solo se consultan al servidor cuando el usuario ingresa a la vista explícitamente, ahorrando ancho de banda. Las transiciones de carga se suavizan mediante animaciones de esqueletos (Skeletons) en pantalla.
 
 ### 1. Seguridad IT y Cumplimiento (Compliance)
 * **Log de Auditoría Inmutable:** Registro estricto de todas las acciones del sistema (creación, edición y eliminación de datos) reservado exclusivamente para el Administrador IT.
 * **Reporte de Hackeos y Checklist:** Documentación estructurada de vectores de ataque y sala de crisis global con sincronización en tiempo real para tareas de contención.
-* **Vigía de Inactividad Global:** Monitoreo en segundo plano que detecta el abandono de la plataforma por 1 minuto, abriendo un modal en cuenta regresiva (5 minutos) antes de destruir la sesión por seguridad.
-* **Centro de Respaldos Core Unificado:** Módulo independiente y exclusivo para el Administrador IT que compila un JSON general de todo el ecosistema (Hackeos, RRSS, Comentarios) y ejecuta inyecciones de restauración inteligentes omitiendo duplicaciones.
+* **Vigía de Inactividad Global:** Monitoreo en segundo plano que detecta el abandono de la plataforma por 10 minutos, ejecutando la destrucción automática de la sesión por seguridad.
+* **Centro de Respaldos Cifrados (Core):** Módulo independiente y exclusivo para el Administrador IT que compila un JSON general de todo el ecosistema y lo **encripta mediante criptografía AES-256**. Su motor inverso inyecta inteligentemente registros borrados omitiendo duplicaciones, previa validación de la contraseña de descifrado.
 
 ### 2. Reputación y Crisis RRSS
 * **Gestión de Contingencias:** Herramienta enfocada en la detección de picos inusuales de alertas en canales digitales oficiales.
-* **Reportes WYSIWYG:** Editor de texto enriquecido integrado para redactar bitácoras oficiales detalladas.
+* **Reportes WYSIWYG:** Editor de texto enriquecido nativo integrado para redactar bitácoras oficiales y detalladas del incidente.
 
 ### 3. Interacciones y Comentarios
-* **Trazabilidad de Quejas:** Registro de ataques focalizados organizados por campus y tipo de contenido (Orgánico/Pautado), permitiendo evaluar la efectividad de las respuestas de los Community Managers.
+* **Trazabilidad de Quejas:** Registro de ataques focalizados organizados por campus y tipo de contenido (Orgánico/Pautado), permitiendo evaluar la efectividad de las respuestas del equipo mediante análisis de sentimiento (Sentiment).
 
 ---
 
-## Seguridad, Roles y Motor de Exportación
+## Seguridad Perimetral, Roles y Exportación
 
-* **Control de Accesos Basado en Roles (RBAC):** Sistema robusto con 4 niveles de jerarquía (Lector, Editor CM, Administrador CM y Administrador IT).
-* **Privacidad por Defecto y Registro Protegido:** Los usuarios en Modo Lector poseen acceso restringido. La identidad del personal que reporta se enmascara automáticamente. El módulo de registro de cambios (Changelog) queda blindado únicamente para personal autenticado.
+* **Arquitectura Zero-Trust (Backend Rules):** Toda validación de roles y permisos se ejecuta directamente en el servidor (Firebase Security Rules). La plataforma bloquea automáticamente a usuarios anónimos y rechaza cualquier transacción no autorizada desde el cliente.
+* **Control de Accesos Basado en Roles (RBAC):** Sistema dinámico sin credenciales expuestas en el código fuente. Maneja 4 niveles de jerarquía (Lector, Editor CM, Administrador CM y Administrador IT) con protección automática para los superusuarios fundadores.
+* **Privacidad por Defecto:** Los usuarios en Modo Lector poseen acceso restringido. La identidad del personal que reporta se enmascara automáticamente y el registro de cambios queda blindado.
 * **Exportación Inteligente Universal:**
-  * **CSV Dinámico:** Descarga masiva de historiales filtrables por "Año" o "Año + Mes", optimizados para cruces de datos en Excel.
+  * **CSV Dinámico:** Descarga masiva de historiales filtrables por "Año" o "Año + Mes", optimizados para cruces de datos en Excel (incluyendo aplanamiento de comentarios).
   * **Documentos Word (.docx):** Generación nativa basada en XML para descargar reportes individuales con texto enriquecido.
   * **Reportes Ejecutivos PDF:** Sistema de impresión limpio y formateado (blanco y negro) directo desde las métricas del Dashboard.
 
@@ -77,9 +79,10 @@ La plataforma ha sido estruturada visual y operativamente en bloques funcionales
 
 * **Core:** React 18 + TypeScript
 * **Build Tool:** Vite
-* **Estilos y UX/UI:** Tailwind CSS (Arquitectura de componentes modulares con Dark/Light Mode)
+* **Estilos y UX/UI:** Tailwind CSS (Arquitectura modular con Dark/Light Mode automático)
+* **Criptografía:** `crypto-js` (Cifrado AES-256)
 * **Audio y Gráficos:** Web Audio API nativa + SVG escalable
-* **Backend y Base de Datos:** Firebase (Firestore DB y Google Workspace Authentication)
+* **Backend y Base de Datos:** Google Firebase (Firestore DB, Security Rules y Workspace Authentication)
 
 ---
 
