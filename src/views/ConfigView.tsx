@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Settings, Moon, Sun, Bell, Volume2, VolumeX, 
     ShieldCheck, Megaphone, MessageSquare, 
-    Server, Trash2, Cpu, AlertTriangle, CheckCircle2 
+    Server, Trash2, Cpu, AlertTriangle, CheckCircle2, X
 } from 'lucide-react';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
@@ -18,6 +18,9 @@ export const ConfigView = ({
     const [globalOperativeCount, setGlobalOperativeCount] = useState<number | null>(null);
     const [globalTracesCount, setGlobalTracesCount] = useState<number | null>(null);
 
+    // 🔒 ESTADO PARA EL MODAL DE CONFIRMACIÓN DIRECTA
+    const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
+
     const prefs = userPrefs || { sound: true, security: true, rrss: true, comments: true };
 
     const cleanRole = userRole?.toUpperCase()?.trim() || '';
@@ -27,24 +30,26 @@ export const ConfigView = ({
     // ==========================================
     // CÁLCULOS ANALÍTICOS GLOBALES (DIRECTO DEL SERVIDOR)
     // ==========================================
+    const fetchGlobalServerStats = async () => {
+        if (!isITAdmin) return;
+        try {
+            const [hackeos, rrss, coms, notifs, logsAudit] = await Promise.all([
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'incidents')),
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents')),
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'comments')),
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications')),
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'))
+            ]);
+            
+            setGlobalOperativeCount(hackeos.size + rrss.size + coms.size);
+            setGlobalTracesCount(notifs.size + logsAudit.size);
+        } catch (error) {
+            console.error("Error al consultar el servidor:", error);
+        }
+    };
+
     useEffect(() => {
         if (isITAdmin) {
-            const fetchGlobalServerStats = async () => {
-                try {
-                    // Consultamos la verdad cruda de Google Firestore, saltándonos los filtros de React
-                    const [hackeos, rrss, coms, notifs] = await Promise.all([
-                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'incidents')),
-                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents')),
-                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'comments')),
-                        getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'))
-                    ]);
-                    
-                    setGlobalOperativeCount(hackeos.size + rrss.size + coms.size);
-                    setGlobalTracesCount(notifs.size);
-                } catch (error) {
-                    console.error("Error al consultar el servidor:", error);
-                }
-            };
             fetchGlobalServerStats();
         }
     }, [isITAdmin]);
@@ -52,7 +57,6 @@ export const ConfigView = ({
     const totalDocs = (globalOperativeCount || 0) + (globalTracesCount || 0);
     const estimatedKB = (totalDocs * 1.5).toFixed(2);
     
-    // Límite operativo para plan gratuito (10,000 documentos recomendados)
     const SAFE_DOC_LIMIT = 10000;
     const usagePercent = Math.min((totalDocs / SAFE_DOC_LIMIT) * 100, 100).toFixed(1);
 
@@ -76,27 +80,34 @@ export const ConfigView = ({
         showToast('Memoria caché local liberada correctamente.');
     };
 
-    // 🛑 PURGA GLOBAL ABSOLUTA (Destruye todas las notificaciones en el servidor)
+    // 🛑 PURGA GLOBAL ABSOLUTA (Limpia simultáneamente notifications y auditLogs)
     const handlePurgeTraces = async () => {
-        if (globalTracesCount === 0) {
-            showToast('El servidor ya está limpio. No hay rastros para purgar.');
-            return;
-        }
+        setIsPurgeModalOpen(false);
         setIsPurging(true);
-        showToast('Iniciando purga global de rastros en el servidor...');
+        showToast('Iniciando purga global de rastros y logs de auditoría...');
         
         try {
-            const notifQuery = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'));
-            const deletePromises = notifQuery.docs.map(document => 
-                deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', document.id))
-            );
+            const [notifQuery, auditQuery] = await Promise.all([
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications')),
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'))
+            ]);
+
+            const deletePromises: Promise<void>[] = [];
+
+            notifQuery.docs.forEach(document => {
+                deletePromises.push(deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', document.id)));
+            });
+
+            auditQuery.docs.forEach(document => {
+                deletePromises.push(deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auditLogs', document.id)));
+            });
             
             await Promise.all(deletePromises);
             
-            showToast('Limpieza profunda del servidor completada con éxito.');
-            setGlobalTracesCount(0); // Actualizamos la interfaz al instante
+            showToast('Limpieza profunda completada. Notificaciones y Radar de Intrusos vaciados.');
+            await fetchGlobalServerStats();
         } catch (error) {
-            showToast('Ocurrió un error al purgar los datos.', true);
+            showToast('Ocurrió un error al purgar los datos del servidor.', true);
         } finally {
             setIsPurging(false);
         }
@@ -161,7 +172,7 @@ export const ConfigView = ({
 
             <div className={isITAdmin ? "grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch" : "grid grid-cols-1 gap-6"}>
                 
-                {/* COLUMNA IZQUIERDA: INTERFAZ Y NOTIFICACIONES */}
+                {/* COLUMNA IZQUIERDA */}
                 <div className={isITAdmin ? "lg:col-span-1 flex flex-col gap-6" : "w-full flex flex-col gap-6"}>
                     <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
                         <h3 className="text-sm font-bold theme-text-main mb-4 uppercase tracking-wider flex items-center gap-2">
@@ -206,7 +217,7 @@ export const ConfigView = ({
                                     <div className="flex items-center gap-3">
                                         <ShieldCheck className="w-4 h-4 text-red-500" />
                                         <div>
-                                            <p className="text-sm font-bold theme-text-main">Seguridad IT</p>
+                                            <p className="text-sm font-bold theme-text-main">Security Core</p>
                                             <p className="text-xs theme-text-muted">Alertas de Hackeos</p>
                                         </div>
                                     </div>
@@ -237,10 +248,9 @@ export const ConfigView = ({
                     )}
                 </div>
 
-                {/* COLUMNA DERECHA EXCLUSIVA: MONITOR DE SALUD DE LA BASE DE DATOS */}
+                {/* COLUMNA DERECHA: MONITOR IT */}
                 {isITAdmin && (
                     <div className="lg:col-span-2 flex flex-col gap-6 fade-in">
-                        
                         <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm flex flex-col h-full">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                 <div>
@@ -267,7 +277,6 @@ export const ConfigView = ({
                                         <div className="absolute top-0 right-0 bottom-0 left-0 bg-white/20 animate-pulse"></div>
                                     </div>
                                 </div>
-                                <p className="text-[10px] theme-text-muted mt-2 text-right">El porcentaje advierte sobre el riesgo de saturar el límite de 50,000 lecturas/día del Plan Spark.</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -290,7 +299,7 @@ export const ConfigView = ({
                                     <p className="text-2xl font-black theme-text-main text-orange-600 dark:text-orange-400">
                                         {globalTracesCount !== null ? globalTracesCount : <span className="animate-pulse text-orange-400/50">...</span>}
                                     </p>
-                                    <p className="text-[10px] text-orange-500 font-bold mt-1">Notificaciones • Volátiles</p>
+                                    <p className="text-[10px] text-orange-500 font-bold mt-1">Campana + Radar de Intrusos</p>
                                 </div>
                             </div>
 
@@ -319,12 +328,18 @@ export const ConfigView = ({
                                         <div>
                                             <p className="text-sm font-bold theme-text-main text-red-500 dark:text-red-400">Purgar Servidor Global</p>
                                             <p className="text-[11px] text-red-500/70 dark:text-red-400/70 max-w-xs leading-tight mt-0.5">
-                                                Elimina definitivamente las alertas y notificaciones de todos los usuarios de la base de datos.
+                                                Elimina notificaciones y logs del Radar de Intrusos. No afecta historiales esenciales.
                                             </p>
                                         </div>
                                     </div>
                                     <button 
-                                        onClick={handlePurgeTraces}
+                                        onClick={() => {
+                                            if (globalTracesCount === 0 || globalTracesCount === null) {
+                                                showToast('El servidor ya está limpio. No hay rastros para purgar.');
+                                                return;
+                                            }
+                                            setIsPurgeModalOpen(true);
+                                        }}
                                         disabled={isPurging || globalTracesCount === 0 || globalTracesCount === null}
                                         className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-500 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
@@ -332,11 +347,62 @@ export const ConfigView = ({
                                     </button>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* 🛡️ MODAL DE CONFIRMACIÓN DE ACCIÓN (SIN CONTRASEÑA) */}
+            {isPurgeModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
+                    <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
+                        
+                        <div className="p-4 border-b theme-border flex justify-between items-center bg-red-500/5">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-500/20 text-red-500 rounded-lg">
+                                    <Trash2 className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold theme-text-main">Confirmar Purga</h3>
+                                    <p className="text-[10px] theme-text-muted font-medium uppercase tracking-wider">Acción Irreversible</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setIsPurgeModalOpen(false)} 
+                                className="p-1.5 theme-text-muted hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5"/>
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-3">
+                                <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">
+                                    ¿Estás seguro de que deseas vaciar por completo las notificaciones operativas y todos los registros forenses del **Radar de Intrusos**? Los expedientes de hackeos, redes sociales y comentarios permanecerán intactos.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t theme-border bg-black/5 dark:bg-white/5 flex gap-3 justify-end">
+                            <button 
+                                onClick={() => setIsPurgeModalOpen(false)}
+                                className="px-4 py-2 text-sm font-bold theme-text-main border theme-border rounded-xl hover:theme-bg-low transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handlePurgeTraces}
+                                className="px-4 py-2 text-sm font-bold bg-red-600 text-white rounded-xl hover:bg-red-500 transition-colors shadow-sm"
+                            >
+                                Vaciar Servidor
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

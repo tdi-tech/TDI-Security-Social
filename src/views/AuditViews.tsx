@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, addDoc } from 'firebase/firestore';
 import { db, appId, auth, getNetworkContext } from '../firebase/config';
 import { 
-  ShieldAlert, 
-  Download, 
-  Activity, 
-  Clock, 
-  User, 
-  Globe, 
-  MapPin, 
-  ShieldCheck, 
-  AlertOctagon,
-  Laptop
+  ShieldAlert, Download, Activity, Clock, User, Globe, MapPin, ShieldCheck, AlertOctagon, Laptop
 } from 'lucide-react';
 
 interface AuditLog {
@@ -27,45 +18,48 @@ interface AuditLog {
   accion: string;
 }
 
+/**
+ * 🔒 FUNCIÓN EXCLUSIVA DE AUDITORÍA CORE (SIEM)
+ * Alimenta la colección inmutable de auditLogs sin tocar las notificaciones del feed general.
+ */
+export async function logAuditEvent(actionDescription: string) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+
+  try {
+    const net = await getNetworkContext();
+    const now = new Date();
+    // Margen de seguridad temporal (13 días y 23 horas) para evitar rechazos por desfase de reloj local
+    const expireDate = new Date(now.getTime() + (13 * 24 * 60 * 60 * 1000) + (23 * 60 * 60 * 1000));
+
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'), {
+      ip: net.ip || "127.0.0.1",
+      pais: net.country || "Local/Proxy",
+      fecha: now,
+      expireAt: expireDate,
+      uid: currentUser.uid,
+      email: currentUser.email || "anonymous-email",
+      provider: currentUser.providerData[0]?.providerId || "google.com",
+      userAgent: navigator.userAgent || "unknown-agent",
+      accion: actionDescription
+    });
+    console.log("🛡️ Log de seguridad inmutable asentado en auditLogs.");
+  } catch (err) {
+    console.error("Fallo crítico al asentar registro en auditLogs:", err);
+  }
+}
+
+/**
+ * 🛡️ INTERCEPTOR PERIMETRAL DE OPERACIONES FIRESTORE
+ * Envuelve las llamadas del cliente web y gatilla una alerta forense si el servidor arroja un 403.
+ */
 export async function safeFirestoreOperation(operationFn: () => Promise<void>, actionName: string) {
   try {
     await operationFn();
   } catch (error: any) {
     if (error.code === 'permission-denied') {
-      const currentUser = auth.currentUser;
-      
-      // Si el usuario no está autenticado, no podemos cumplir 'request.resource.data.uid == request.auth.uid'
-      if (!currentUser) {
-        throw error;
-      }
-
-      try {
-        const net = await getNetworkContext();
-        
-        const now = new Date();
-        // 🛡️ CONTROL DE DESFASE DE RELOJ (Margen Seguro):
-        // Calculamos 13 días con 23 horas en lugar de 14 días exactos.
-        // Esto previene que Google Cloud rechace el log si tu reloj local está adelantado al de sus servidores.
-        const expireDate = new Date(now.getTime() + (13 * 24 * 60 * 60 * 1000) + (23 * 60 * 60 * 1000));
-
-        // 🛡️ ALINEACIÓN TOTAL CON LAS REGLAS DE TIERRADEIDEAS (firestore.rules):
-        // El documento se envía con los tipos de datos exactos exigidos por el backend.
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'), {
-          ip: net.ip || "127.0.0.1",
-          pais: net.country || "Local/Proxy",
-          fecha: now,
-          expireAt: expireDate,
-          uid: currentUser.uid, // Estrictamente idéntico a request.auth.uid exigido por las reglas
-          email: currentUser.email || "anonymous-email",
-          provider: currentUser.providerData[0]?.providerId || "google.com",
-          userAgent: navigator.userAgent || "unknown-agent",
-          accion: `Bloqueo Perimetral 403: ${actionName}`
-        });
-        
-        console.log("🛡️ Radar de Intrusos: Bloqueo de seguridad registrado en la nube con éxito.");
-      } catch (logError) {
-        console.error('Fallo crítico al registrar el log de auditoría en el backend:', logError);
-      }
+      // Registrar de forma automática el intento de intrusión/violación RBAC
+      await logAuditEvent(`Bloqueo Perimetral 403: Intento no autorizado de ${actionName}`);
     }
     throw error;
   }
@@ -94,7 +88,7 @@ export const AuditViews: React.FC = () => {
         
         setLogs(logsData);
       } catch (error) {
-        console.error('Error de lectura en el radar de auditoría:', error);
+        console.error('Error de lectura en la colección auditLogs:', error);
       } finally {
         setLoading(false);
       }
@@ -105,9 +99,11 @@ export const AuditViews: React.FC = () => {
 
   const exportToCSV = () => {
     if (logs.length === 0) return;
+    
+    // Registrar en auditoría la descarga forense
+    logAuditEvent("Exportación de registros forenses del Radar de Intrusos a CSV");
 
     const headers = ['Fecha y Hora', 'Usuario / Correo', 'UID del Atacante', 'Acción Detectada', 'Dirección IP', 'País Origen', 'Proveedor', 'UserAgent'];
-    
     const rows = logs.map(log => [
       log.fecha ? log.fecha.toLocaleString() : 'N/A',
       log.email,
@@ -119,11 +115,7 @@ export const AuditViews: React.FC = () => {
       `"${log.userAgent.replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -146,13 +138,10 @@ export const AuditViews: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 fade-in pb-10 mt-2">
-      
-      {/* 🛡️ TARJETA HEADER */}
       <div className="theme-bg-container p-6 sm:p-8 rounded-2xl border theme-border shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
           <ShieldAlert className="w-48 h-48" />
         </div>
-        
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-2">
@@ -160,10 +149,9 @@ export const AuditViews: React.FC = () => {
             </p>
             <h2 className="text-3xl font-black theme-text-main mb-2">Radar de Intrusos</h2>
             <p className="theme-text-muted text-sm max-w-xl leading-relaxed">
-              Monitoreo inmutable de bloqueos (403) a nivel servidor. Google Cloud destruye automáticamente el rastro a los 14 días mediante políticas de retención (TTL).
+              Monitoreo inmutable de bloqueos (403) e hitos críticos del sistema. Google Cloud destruye automáticamente el rastro a los 14 días mediante políticas de retención (TTL).
             </p>
           </div>
-          
           <button 
             onClick={exportToCSV}
             disabled={logs.length === 0}
@@ -173,36 +161,23 @@ export const AuditViews: React.FC = () => {
               : 'bg-red-500 text-white hover:bg-red-600 hover:-translate-y-0.5 hover:shadow-md'
             }`}
           >
-            <Download className="w-4 h-4" /> 
-            Exportar CSV
+            <Download className="w-4 h-4" /> Exportar CSV
           </button>
         </div>
       </div>
 
-      {/* 📊 CONTENEDOR DE LA TABLA */}
       <div className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-black/5 dark:bg-white/5 border-b theme-border">
               <tr>
-                <th className="px-5 py-4 font-bold theme-text-main">
-                  <div className="flex items-center gap-2"><Clock className="w-4 h-4 opacity-70"/> Fecha y Hora</div>
-                </th>
-                <th className="px-5 py-4 font-bold theme-text-main">
-                  <div className="flex items-center gap-2"><User className="w-4 h-4 opacity-70"/> Identidad / Correo</div>
-                </th>
-                <th className="px-5 py-4 font-bold theme-text-main">
-                  <div className="flex items-center gap-2"><AlertOctagon className="w-4 h-4 opacity-70"/> Evento Bloqueado</div>
-                </th>
-                <th className="px-5 py-4 font-bold theme-text-main">
-                  <div className="flex items-center gap-2"><Globe className="w-4 h-4 opacity-70"/> Origen de Red</div>
-                </th>
-                <th className="px-5 py-4 font-bold theme-text-main">
-                  <div className="flex items-center gap-2"><MapPin className="w-4 h-4 opacity-70"/> País</div>
-                </th>
+                <th className="px-5 py-4 font-bold theme-text-main"><div className="flex items-center gap-2"><Clock className="w-4 h-4 opacity-70"/> Fecha y Hora</div></th>
+                <th className="px-5 py-4 font-bold theme-text-main"><div className="flex items-center gap-2"><User className="w-4 h-4 opacity-70"/> Identidad / Correo</div></th>
+                <th className="px-5 py-4 font-bold theme-text-main"><div className="flex items-center gap-2"><AlertOctagon className="w-4 h-4 opacity-70"/> Evento Registrado</div></th>
+                <th className="px-5 py-4 font-bold theme-text-main"><div className="flex items-center gap-2"><Globe className="w-4 h-4 opacity-70"/> Origen de Red</div></th>
+                <th className="px-5 py-4 font-bold theme-text-main"><div className="flex items-center gap-2"><MapPin className="w-4 h-4 opacity-70"/> País</div></th>
               </tr>
             </thead>
-            
             <tbody className="divide-y theme-divide">
               {logs.length === 0 ? (
                 <tr>
@@ -213,7 +188,7 @@ export const AuditViews: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-lg font-bold theme-text-main">Perímetro Asegurado</p>
-                        <p className="text-sm theme-text-muted mt-1">No se han registrado intentos de intrusión en las últimas 2 semanas.</p>
+                        <p className="text-sm theme-text-muted mt-1">No se han registrado incidentes ni violaciones de políticas en el bloque actual.</p>
                       </div>
                     </div>
                   </td>
@@ -221,29 +196,23 @@ export const AuditViews: React.FC = () => {
               ) : (
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
-                    <td className="px-5 py-4 theme-text-main font-medium">
-                      {log.fecha ? log.fecha.toLocaleString() : 'Fecha no válida'}
-                    </td>
+                    <td className="px-5 py-4 theme-text-main font-medium">{log.fecha ? log.fecha.toLocaleString() : 'Fecha no válida'}</td>
                     <td className="px-5 py-4">
                       <p className="theme-text-main font-bold">{log.email}</p>
-                      <p className="text-[10px] theme-text-muted font-mono mt-0.5 truncate max-w-[150px]" title={log.uid}>
-                        {log.uid}
-                      </p>
+                      <p className="text-[10px] theme-text-muted font-mono mt-0.5 truncate max-w-[150px]" title={log.uid}>{log.uid}</p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">
+                      <span className={`inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm ${
+                        log.accion.includes('403') 
+                        ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                        : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                      }`}>
                         <Laptop className="w-3.5 h-3.5" />
                         {log.accion}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
-                      <span className="font-mono text-xs font-semibold bg-[var(--surface)] border theme-border theme-text-main px-3 py-1.5 rounded-lg shadow-inner">
-                        {log.ip}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 theme-text-main font-medium">
-                      {log.pais}
-                    </td>
+                    <td className="px-5 py-4"><span className="font-mono text-xs font-semibold bg-[var(--surface)] border theme-border theme-text-main px-3 py-1.5 rounded-lg shadow-inner">{log.ip}</span></td>
+                    <td className="px-5 py-4 theme-text-main font-medium">{log.pais}</td>
                   </tr>
                 ))
               )}

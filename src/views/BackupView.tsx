@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock } from 'lucide-react';
+import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock, Eye, EyeOff } from 'lucide-react';
 import CryptoJS from 'crypto-js';
 import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../firebase/config';
+// 🛡️ INTEGRACIÓN DEL RADAR PERIMETRAL DE AUDITORÍA
+import { logAuditEvent } from './AuditViews';
 
 export const BackupView = ({ showToast }: any) => {
     const [uploading, setUploading] = useState(false);
     const [backupInfo, setBackupInfo] = useState<any>(null);
+    
+    // 🔑 CONTRASEÑAS Y VISUALIZACIÓN DINÁMICA CON EL ICONO DEL OJO
     const [exportPassword, setExportPassword] = useState('');
+    const [showExportPassword, setShowExportPassword] = useState(false);
+    
     const [importPassword, setImportPassword] = useState('');
+    const [showImportPassword, setShowImportPassword] = useState(false);
+    
     const [encryptedFileContent, setEncryptedFileContent] = useState<string | null>(null);
 
     // 🔄 LAZY LOADING: Estados independientes para el centro de respaldos
@@ -32,7 +40,7 @@ export const BackupView = ({ showToast }: any) => {
     // ==========================================
     // 1. EXPORTACIÓN TOTAL UNIFICADA (CON CIFRADO AES)
     // ==========================================
-    const handleExportAll = () => {
+    const handleExportAll = async () => {
         if (!exportPassword || exportPassword.length < 6) {
             showToast('La contraseña debe tener al menos 6 caracteres.', true);
             return;
@@ -67,7 +75,11 @@ export const BackupView = ({ showToast }: any) => {
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
             
+            // 🛡️ ASENTAMIENTO FORENSE EN AUDITLOGS
+            await logAuditEvent("Exportación y cifrado AES-256 de base de datos completa (Backup Core)");
+
             setExportPassword('');
+            setShowExportPassword(false);
             showToast('Copia de seguridad encriptada y generada con éxito');
         } catch (error) {
             showToast('Error al compilar y cifrar el respaldo', true);
@@ -119,6 +131,7 @@ export const BackupView = ({ showToast }: any) => {
             setBackupInfo(parsedData);
             setEncryptedFileContent(null);
             setImportPassword('');
+            setShowImportPassword(false);
             showToast('Archivo descifrado correctamente. Listo para restaurar.');
         } catch (error) {
             showToast('Contraseña incorrecta o archivo corrupto.', true);
@@ -158,6 +171,9 @@ export const BackupView = ({ showToast }: any) => {
                 }
             }
 
+            // 🛡️ ASENTAMIENTO FORENSE EN AUDITLOGS
+            await logAuditEvent(`Restauración de emergencia exitosa. Inyectados: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios`);
+
             showToast(`Restauración exitosa: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios`);
             setBackupInfo(null);
             
@@ -190,8 +206,22 @@ export const BackupView = ({ showToast }: any) => {
                     </div>
                     <div className="space-y-3 pt-2">
                         <div className="relative">
-                            <Key className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                            <input type="password" placeholder="Crear contraseña de respaldo..." value={exportPassword} onChange={(e) => setExportPassword(e.target.value)} className="w-full pl-9 p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)] text-sm" />
+                            <Key className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+                            <input 
+                                type={showExportPassword ? "text" : "password"} 
+                                placeholder="Crear contraseña de respaldo..." 
+                                value={exportPassword} 
+                                onChange={(e) => setExportPassword(e.target.value)} 
+                                className="w-full pl-9 pr-11 p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)] text-sm font-medium" 
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowExportPassword(!showExportPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:theme-text-main transition-colors rounded-lg"
+                                title={showExportPassword ? "Ocultar clave" : "Mostrar clave"}
+                            >
+                                {showExportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                         </div>
                         <button onClick={handleExportAll} disabled={!exportPassword} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white font-bold text-sm rounded-xl hover:brightness-110 shadow-sm transition-all disabled:opacity-50">
                             <Download className="w-4 h-4" /> Exportar Copia Segura
@@ -217,9 +247,25 @@ export const BackupView = ({ showToast }: any) => {
                     ) : (
                         <div className="space-y-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl fade-in">
                             <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">Archivo cifrado detectado. Ingrese clave:</p>
-                            <div className="flex gap-2">
-                                <input type="password" placeholder="Contraseña..." value={importPassword} onChange={(e) => setImportPassword(e.target.value)} className="flex-1 p-2 rounded-lg bg-white dark:bg-black/20 border border-amber-500/30 theme-text-main outline-none text-sm" />
-                                <button onClick={handleDecrypt} className="px-3 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition-colors">Abrir</button>
+                            <div className="flex gap-2 relative">
+                                <div className="relative flex-1">
+                                    <input 
+                                        type={showImportPassword ? "text" : "password"} 
+                                        placeholder="Contraseña..." 
+                                        value={importPassword} 
+                                        onChange={(e) => setImportPassword(e.target.value)} 
+                                        className="w-full pl-3 pr-11 py-2 rounded-lg bg-white dark:bg-black/20 border border-amber-500/30 theme-text-main outline-none text-sm font-medium" 
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowImportPassword(!showImportPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:theme-text-main transition-colors rounded"
+                                        title={showImportPassword ? "Ocultar clave" : "Mostrar clave"}
+                                    >
+                                        {showImportPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                    </button>
+                                </div>
+                                <button onClick={handleDecrypt} className="px-4 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition-colors text-sm">Abrir</button>
                             </div>
                         </div>
                     )}

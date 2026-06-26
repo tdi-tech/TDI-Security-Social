@@ -190,7 +190,7 @@ export default function App() {
 
             <main className="flex-1 print:block flex flex-col h-full print:h-auto relative overflow-x-hidden print:overflow-visible w-full bg-[var(--surface)]">
 
-                <header className="h-16 border-b theme-border theme-bg-container flex items-center justify-between px-4 sm:px-6 no-print shadow-sm z-10">
+                <header className="h-16 border-b theme-border theme-bg-container flex items-center justify-between px-4 sm:px-6 no-print shadow-sm z-50 relative">
                     <div className="flex items-center gap-2 sm:gap-3">
                         <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 -ml-2 theme-text-muted hover:theme-text-main rounded-lg"><Menu className="w-6 h-6"/></button>
                         <div className="flex items-center">{renderHeaderTitle()}</div>

@@ -47,35 +47,6 @@ service cloud.firestore {
 
     match /artifacts/{appId}/public/data {
 
-      match /auditLogs/{logId} {
-        allow create: if request.auth != null
-          && request.resource.data.keys().hasOnly([
-            'ip',
-            'pais',
-            'fecha',
-            'uid',
-            'email',
-            'provider',
-            'userAgent',
-            'accion',
-            'expireAt'
-          ])
-          && request.resource.data.ip is string
-          && request.resource.data.pais is string
-          && request.resource.data.fecha is timestamp
-          && request.resource.data.expireAt is timestamp
-          && request.resource.data.uid is string
-          && request.resource.data.provider is string
-          && request.resource.data.accion is string
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.expireAt > request.time
-          && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
-
-        allow read: if isITAdmin(appId);
-
-        allow update, delete: if false;
-      }
-
       match /users/{userEmail} {
         allow read: if isITAdmin(appId)
           || isCMAdmin(appId)
@@ -84,12 +55,19 @@ service cloud.firestore {
             && request.auth.token.email == userEmail
           );
 
-        allow create: if isITAdmin(appId)
-          || (
-            isCMAdmin(appId)
-            && request.resource.data.role != 'ADMIN_IT'
-            && request.resource.data.isProtected != true
-          );
+        allow create: if (
+          isAuthenticated()
+          && request.auth.token.email == userEmail
+          && request.resource.data.role == 'READER'
+          && request.resource.data.disabled == false
+          && request.resource.data.isProtected == false
+        )
+        || isITAdmin(appId)
+        || (
+          isCMAdmin(appId)
+          && request.resource.data.role != 'ADMIN_IT'
+          && request.resource.data.isProtected != true
+        );
 
         allow update: if (
           isAuthenticated()
@@ -129,9 +107,41 @@ service cloud.firestore {
         allow update, delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
-      match /notifications/{notifId} {
-        allow read, create, update: if userExists(appId);
+      match /notifications/{notificationId} {
+        allow read: if isAnySignedIn();
+        allow create, update: if userExists(appId);
         allow delete: if isITAdmin(appId);
+      }
+
+      match /auditLogs/{logId} {
+        allow create: if request.auth != null
+          && request.resource.data.keys().hasOnly([
+            'ip',
+            'pais',
+            'fecha',
+            'uid',
+            'email',
+            'provider',
+            'userAgent',
+            'accion',
+            'expireAt'
+          ])
+          && request.resource.data.ip is string
+          && request.resource.data.pais is string
+          && request.resource.data.fecha is timestamp
+          && request.resource.data.expireAt is timestamp
+          && request.resource.data.uid is string
+          && request.resource.data.provider is string
+          && request.resource.data.accion is string
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.expireAt > request.time
+          && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
+
+        allow read: if isITAdmin(appId);
+
+        // Inalterable, con purga controlada por ADMIN_IT.
+        allow delete: if isITAdmin(appId);
+        allow update: if false;
       }
 
       match /appState/{docId} {
