@@ -59,7 +59,7 @@ export default function App() {
         showToast, setLoginModalOpen, setConfirmModal
     });
 
-    const navigate = (view: string) => {
+    const navigate = async (view: string) => {
         const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups', 'auditoria'];
         const loggedInViews = [...adminViews, 'changelog'];
         
@@ -70,6 +70,10 @@ export default function App() {
         }
 
         if ((view === 'backups' || view === 'auditoria') && userRole !== 'ADMIN_IT') {
+            // 🚨 SENSOR: Registro de intento de acceso a rutas prohibidas
+            const { logAuditEvent } = await import('./views/AuditViews');
+            await logAuditEvent(`Violación de Políticas (RBAC): Intento de forzar acceso a vista restringida (/${view})`);
+            
             showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
             return;
         }

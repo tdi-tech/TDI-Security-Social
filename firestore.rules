@@ -116,15 +116,8 @@ service cloud.firestore {
       match /auditLogs/{logId} {
         allow create: if request.auth != null
           && request.resource.data.keys().hasOnly([
-            'ip',
-            'pais',
-            'fecha',
-            'uid',
-            'email',
-            'provider',
-            'userAgent',
-            'accion',
-            'expireAt'
+            'ip', 'pais', 'fecha', 'uid', 'email',
+            'provider', 'userAgent', 'accion', 'expireAt'
           ])
           && request.resource.data.ip is string
           && request.resource.data.pais is string

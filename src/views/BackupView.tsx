@@ -58,10 +58,8 @@ export const BackupView = ({ showToast }: any) => {
             };
 
             const jsonString = JSON.stringify(backupData);
-            // Cifrado AES con la contraseña ingresada
             const encryptedData = CryptoJS.AES.encrypt(jsonString, exportPassword).toString();
             
-            // Creamos un wrapper para indicar que el archivo está protegido
             const finalWrapper = {
                 protected: true,
                 payload: encryptedData
@@ -75,8 +73,7 @@ export const BackupView = ({ showToast }: any) => {
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
             
-            // 🛡️ ASENTAMIENTO FORENSE EN AUDITLOGS
-            await logAuditEvent("Exportación y cifrado AES-256 de base de datos completa (Backup Core)");
+            // ELIMINADO: El log de auditoría por exportación exitosa (Falso Positivo)
 
             setExportPassword('');
             setShowExportPassword(false);
@@ -99,26 +96,28 @@ export const BackupView = ({ showToast }: any) => {
                 const parsedData = JSON.parse(event.target?.result as string);
                 
                 if (parsedData.protected && parsedData.payload) {
-                    // El archivo es un backup cifrado v2.1, lo guardamos para pedir la contraseña
                     setEncryptedFileContent(parsedData.payload);
                     setBackupInfo(null);
                     showToast('Archivo protegido cargado. Ingrese la contraseña de descifrado.');
                 } else if (parsedData.modules && parsedData.version) {
-                    // Es un backup antiguo sin cifrar (v2.0)
                     showToast('Advertencia: Está cargando un respaldo obsoleto sin cifrado.', true);
                     setBackupInfo(parsedData);
                     setEncryptedFileContent(null);
                 } else {
+                    // 🚨 SENSOR 1: Archivo inválido
+                    await logAuditEvent("Alerta de Integridad: Intento de cargar un archivo de respaldo con formato inválido o desconocido");
                     showToast('El archivo no corresponde a un formato válido de Innova', true);
                 }
             } catch (err) {
+                // 🚨 SENSOR 2: Archivo manipulado / Corrupto
+                await logAuditEvent("Fallo de Integridad: Intento de cargar un archivo de respaldo corrupto, manipulado o con JSON roto");
                 showToast('Error al leer el archivo. Estructura corrupta.', true);
             }
         };
         reader.readAsText(file);
     };
 
-    const handleDecrypt = () => {
+    const handleDecrypt = async () => {
         if (!encryptedFileContent || !importPassword) return;
         
         try {
@@ -134,6 +133,8 @@ export const BackupView = ({ showToast }: any) => {
             setShowImportPassword(false);
             showToast('Archivo descifrado correctamente. Listo para restaurar.');
         } catch (error) {
+            // 🚨 SENSOR 3: Ataque de contraseña o descifrado fallido
+            await logAuditEvent("Alerta de Criptografía: Intento fallido de descifrado de backup (Contraseña incorrecta o payload destruido)");
             showToast('Contraseña incorrecta o archivo corrupto.', true);
         }
     };
@@ -171,13 +172,11 @@ export const BackupView = ({ showToast }: any) => {
                 }
             }
 
-            // 🛡️ ASENTAMIENTO FORENSE EN AUDITLOGS
-            await logAuditEvent(`Restauración de emergencia exitosa. Inyectados: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios`);
+            // ELIMINADO: El log de auditoría por restauración exitosa (Falso Positivo)
 
             showToast(`Restauración exitosa: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios`);
             setBackupInfo(null);
             
-            // Recargamos para que el Lazy Loading refleje los cambios inyectados
             setTimeout(() => window.location.reload(), 1500);
         } catch (error) {
             showToast('Error crítico durante la reinyección de datos', true);

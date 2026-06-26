@@ -99,9 +99,6 @@ export const AuditViews: React.FC = () => {
 
   const exportToCSV = () => {
     if (logs.length === 0) return;
-    
-    // Registrar en auditoría la descarga forense
-    logAuditEvent("Exportación de registros forenses del Radar de Intrusos a CSV");
 
     const headers = ['Fecha y Hora', 'Usuario / Correo', 'UID del Atacante', 'Acción Detectada', 'Dirección IP', 'País Origen', 'Proveedor', 'UserAgent'];
     const rows = logs.map(log => [

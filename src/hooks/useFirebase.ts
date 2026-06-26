@@ -8,7 +8,7 @@ import {
     collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, arrayUnion, getDoc
 } from "firebase/firestore";
 // 🛡️ IMPORTACIÓN DEL RADAR PERIMETRAL
-import { safeFirestoreOperation } from '../views/AuditViews';
+import { safeFirestoreOperation, logAuditEvent } from '../views/AuditViews';
 
 export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
 
@@ -20,9 +20,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         return localStorage.getItem('auth_hint') === 'admin' ? 'Conectando...' : 'Desconectado de Firebase';
     });
 
-    // 🛑 SEGURIDAD APLICADA: Colecciones masivas purgadas del hook global.
-    // Exportamos variables vacías para que la interfaz (App.tsx) no se rompa,
-    // garantizando que el Lazy Loading de las vistas funcione al 100%.
     const isLoading = false;
     const incidents: any[] = [];
     const rrssIncidents: any[] = [];
@@ -34,6 +31,14 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const prefsRef = useRef(userPrefs);
     
     useEffect(() => { prefsRef.current = userPrefs; }, [userPrefs]);
+
+    // 🛡️ SENSOR DE SEGURIDAD FRONTEND: DETECTOR DE INYECCIÓN (XSS/SQLi)
+    const detectMaliciousPayload = (data: any): boolean => {
+        if (!data) return false;
+        const str = JSON.stringify(data).toLowerCase();
+        const patterns = ['<script>', 'javascript:', 'onerror=', 'onload=', 'drop table', 'union select', '../../'];
+        return patterns.some(pattern => str.includes(pattern));
+    };
 
     const playNotificationSound = () => {
         try {
@@ -149,7 +154,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         return () => { if (unsubSelf) unsubSelf(); if (unsubAllUsers) unsubAllUsers(); };
     }, [user]);
 
-    // 🔄 LECTURA DE DATOS MENORES (Checklist y Notificaciones)
     useEffect(() => {
         const checklistRef = collection(db, 'artifacts', appId, 'public', 'data', 'appState');
         const unsubChecklist = onSnapshot(checklistRef, (snapshot) => {
@@ -198,17 +202,31 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
         try {
             const result = await signInWithPopup(auth, provider);
             const loggedInEmail = result.user.email || '';
+            
+            // 🚨 SENSOR: Bloqueo por dominio y registro de intrusión
             if (!loggedInEmail.endsWith('@tierradeideas.mx')) {
                 localStorage.setItem('auth_hint', 'lector');
+                await logAuditEvent(`Intento de acceso denegado por dominio no autorizado (${loggedInEmail})`);
                 await signOut(auth);
                 showToast('Acceso denegado. Usa un correo @tierradeideas.mx', true);
                 return;
             }
+            
             localStorage.setItem('auth_hint', 'admin');
+            localStorage.setItem('failed_logins', '0'); // Resetear intentos al entrar
             setLoginModalOpen(false);
             showToast(`Bienvenido, ${result.user.displayName}`);
         } catch (error: any) {
-            if (error.code !== 'auth/popup-closed-by-user') showToast('Error al iniciar sesión', true);
+            if (error.code !== 'auth/popup-closed-by-user') {
+                // 🚨 SENSOR: Fuerza bruta
+                const attempts = parseInt(localStorage.getItem('failed_logins') || '0') + 1;
+                localStorage.setItem('failed_logins', attempts.toString());
+                
+                if (attempts >= 3) {
+                    await logAuditEvent(`Posible ataque de fuerza bruta/bots: Múltiples intentos fallidos de inicio de sesión detectados`);
+                }
+                showToast('Error al iniciar sesión', true);
+            }
         }
     };
 
@@ -314,6 +332,12 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const updateIncident = async (id: string, updatedData: any) => {
+        // 🚨 SENSOR: XSS / SQLi
+        if (detectMaliciousPayload(updatedData)) {
+            await logAuditEvent(`Bloqueo de Seguridad: Intento de Inyección XSS/SQL detectado en payload (Hackeos)`);
+            showToast('Bloqueo de seguridad: Caracteres prohibidos detectados.', true);
+            return;
+        }
         try {
             await safeFirestoreOperation(async () => {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id), updatedData, { merge: true });
@@ -344,6 +368,12 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const updateRrssIncident = async (id: string, updatedData: any) => {
+        // 🚨 SENSOR: XSS / SQLi
+        if (detectMaliciousPayload(updatedData)) {
+            await logAuditEvent(`Bloqueo de Seguridad: Intento de Inyección XSS/SQL detectado en payload (RRSS)`);
+            showToast('Bloqueo de seguridad: Caracteres prohibidos detectados.', true);
+            return;
+        }
         try {
             await safeFirestoreOperation(async () => {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id), updatedData, { merge: true });
@@ -373,6 +403,12 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const updateComment = async (id: string, updatedData: any) => {
+        // 🚨 SENSOR: XSS / SQLi
+        if (detectMaliciousPayload(updatedData)) {
+            await logAuditEvent(`Bloqueo de Seguridad: Intento de Inyección XSS/SQL detectado en payload (Comentarios)`);
+            showToast('Bloqueo de seguridad: Caracteres prohibidos detectados.', true);
+            return;
+        }
         try {
             await safeFirestoreOperation(async () => {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id), updatedData, { merge: true });
