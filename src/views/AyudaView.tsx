@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
     HelpCircle, ChevronDown, ChevronRight, ShieldAlert, 
     Database, Users, FileText, AlertTriangle, MessageSquareWarning, 
-    Info, Lock
+    Info, Lock, Settings
 } from 'lucide-react';
 
 const helpTopics = [
@@ -59,10 +59,25 @@ const helpTopics = [
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <p>El sistema protege la información basándose en el rol asignado a tu cuenta:</p>
                 <ul className="list-disc pl-5 space-y-2 mt-2 theme-text-muted">
-                    <li><strong className="theme-text-main">ADMIN_IT:</strong> Control total. Acceso a Backups, Auditoría Avanzada y gestión de cualquier usuario.</li>
-                    <li><strong className="theme-text-main">ADMIN_CM:</strong> Administrador de comunicación. Puede gestionar usuarios operativos y reportes de RRSS/Comentarios.</li>
-                    <li><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Permite crear y editar incidentes, pero no eliminarlos ni gestionar otros usuarios.</li>
-                    <li><strong className="theme-text-main">Lector:</strong> (Usuarios sin rol específico o no autenticados) Solo pueden visualizar protocolos públicos y glosarios.</li>
+                    <li><strong className="theme-text-main">ADMIN_IT:</strong> Control total. Acceso a Backups, Auditoría Avanzada y gestión absoluta de cualquier usuario y módulo.</li>
+                    <li><strong className="theme-text-main">ADMIN_CM:</strong> Administrador de comunicación. Acceso total para crear, editar y borrar incidentes de Hackeos, RRSS y Comentarios. Puede pre-registrar y deshabilitar usuarios operativos (no puede eliminar cuentas definitivamente ni otorgar roles IT).</li>
+                    <li><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Permite crear, editar y borrar incidentes de Hackeos, RRSS y Comentarios. No tiene acceso a la gestión de usuarios.</li>
+                    <li><strong className="theme-text-main">Lector:</strong> (Usuarios sin rol o no autenticados) Solo pueden visualizar el Dashboard, protocolos y glosarios. No pueden crear, editar ni borrar ningún registro.</li>
+                </ul>
+            </div>
+        )
+    },
+    {
+        id: 'configuracion',
+        title: 'Panel de Configuración',
+        icon: <Settings className="w-5 h-5 text-slate-500" />,
+        content: (
+            <div className="space-y-3 theme-text-main text-sm leading-relaxed">
+                <p>Las opciones del panel de configuración se adaptan a tu nivel de acceso:</p>
+                <ul className="list-disc pl-5 space-y-2 mt-2 theme-text-muted">
+                    <li><strong className="theme-text-main">ADMIN_IT:</strong> Control total. Acceso a cambios de interfaz, preferencias de notificación, monitoreo en tiempo real de la salud del servidor (Firestore) y purga global de rastros.</li>
+                    <li><strong className="theme-text-main">Equipo CM (Admin/Editor):</strong> Tienen control sobre su propio Tema Visual (Claro/Oscuro) y pueden encender o apagar las alertas sonoras y notificaciones operativas de los módulos.</li>
+                    <li><strong className="theme-text-main">Lector:</strong> Su panel se limita exclusivamente a personalizar el Tema Visual (Claro/Oscuro) para mayor comodidad de lectura.</li>
                 </ul>
             </div>
         )
@@ -74,7 +89,7 @@ const helpTopics = [
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <p>
-                    Exclusivo para el rol <strong>ADMIN_IT</strong>. Permite exportar toda la base de datos a un archivo JSON cifrado localmente.
+                    Exclusivo para el rol <strong>ADMIN_IT</strong>. Permite exportar toda la base de datos a un archivo JSON cifrado localmente (AES-256).
                 </p>
                 <p>
                     Al restaurar una copia de seguridad, el sistema valida las firmas criptográficas e inyecta únicamente los registros que falten en el servidor, evitando duplicidades. Es fundamental guardar la contraseña de encriptación, ya que sin ella el respaldo es irrecuperable.
@@ -89,10 +104,10 @@ const helpTopics = [
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <p>
-                    Módulo de seguridad forense exclusivo para <strong>ADMIN_IT</strong>. Funciona como un <em>Firewall Backend</em>.
+                    Módulo de seguridad forense (SIEM) exclusivo para <strong>ADMIN_IT</strong>. Funciona de manera completamente silenciosa sin interrumpir la operación normal.
                 </p>
                 <ul className="list-disc pl-5 space-y-2 mt-2 theme-text-muted">
-                    <li><strong>¿Cómo funciona?</strong> Si un usuario o atacante intenta realizar una acción para la que no tiene permisos (ej. borrar un fundador, escalar privilegios), el servidor bloquea la acción (Error 403) y registra silenciosamente la IP, país y correo del infractor.</li>
+                    <li><strong>¿Qué detecta?</strong> Fuerza bruta, inyecciones de código (XSS/SQLi), ingresos con correos no autorizados, invasión de rutas (escalada de privilegios) y bloqueos nativos del servidor.</li>
                     <li><strong>Retención (TTL):</strong> Los registros son inmutables (no se pueden borrar manualmente). Google Cloud los elimina automáticamente a los 14 días exactos.</li>
                     <li><strong>Exportación:</strong> Permite descargar un reporte CSV detallado para auditorías de ciberseguridad.</li>
                 </ul>
@@ -110,7 +125,6 @@ export const AyudaView = ({ isAdmin }: { isAdmin: boolean }) => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            {/* Header de la vista */}
             <div className="theme-bg-container p-6 sm:p-8 rounded-2xl border theme-border shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                     <HelpCircle className="w-48 h-48" />
@@ -121,15 +135,13 @@ export const AyudaView = ({ isAdmin }: { isAdmin: boolean }) => {
                     </p>
                     <h2 className="text-3xl font-black theme-text-main mb-2">Ayuda y Documentación</h2>
                     <p className="theme-text-muted text-sm max-w-xl">
-                        Encuentra respuestas a preguntas frecuentes y aprende a utilizar los módulos avanzados de Innova Management.
+                        Encuentra respuestas a preguntas frecuentes y conoce los lineamientos operativos de la matriz de accesos.
                     </p>
                 </div>
             </div>
 
-            {/* Acordeones de Ayuda */}
             <div className="space-y-4">
                 {helpTopics.map((topic) => {
-                    // Ocultar módulos ultra-sensibles si no es administrador general
                     if ((topic.id === 'backups' || topic.id === 'auditoria') && !isAdmin) return null;
 
                     const isExpanded = expandedSection === topic.id;

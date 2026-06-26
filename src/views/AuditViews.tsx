@@ -18,10 +18,6 @@ interface AuditLog {
   accion: string;
 }
 
-/**
- * 🔒 FUNCIÓN EXCLUSIVA DE AUDITORÍA CORE (SIEM)
- * Alimenta la colección inmutable de auditLogs sin tocar las notificaciones del feed general.
- */
 export async function logAuditEvent(actionDescription: string) {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
@@ -29,7 +25,6 @@ export async function logAuditEvent(actionDescription: string) {
   try {
     const net = await getNetworkContext();
     const now = new Date();
-    // Margen de seguridad temporal (13 días y 23 horas) para evitar rechazos por desfase de reloj local
     const expireDate = new Date(now.getTime() + (13 * 24 * 60 * 60 * 1000) + (23 * 60 * 60 * 1000));
 
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'), {
@@ -49,17 +44,13 @@ export async function logAuditEvent(actionDescription: string) {
   }
 }
 
-/**
- * 🛡️ INTERCEPTOR PERIMETRAL DE OPERACIONES FIRESTORE
- * Envuelve las llamadas del cliente web y gatilla una alerta forense si el servidor arroja un 403.
- */
 export async function safeFirestoreOperation(operationFn: () => Promise<void>, actionName: string) {
   try {
     await operationFn();
   } catch (error: any) {
     if (error.code === 'permission-denied') {
-      // Registrar de forma automática el intento de intrusión/violación RBAC
-      await logAuditEvent(`Bloqueo Perimetral 403: Intento no autorizado de ${actionName}`);
+      // 🚨 SENSOR CORREGIDO: Mensaje corto
+      await logAuditEvent(`Bloqueo 403: Operación denegada (${actionName})`);
     }
     throw error;
   }

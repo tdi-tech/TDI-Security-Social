@@ -10,7 +10,6 @@ export const BackupView = ({ showToast }: any) => {
     const [uploading, setUploading] = useState(false);
     const [backupInfo, setBackupInfo] = useState<any>(null);
     
-    // 🔑 CONTRASEÑAS Y VISUALIZACIÓN DINÁMICA CON EL ICONO DEL OJO
     const [exportPassword, setExportPassword] = useState('');
     const [showExportPassword, setShowExportPassword] = useState(false);
     
@@ -19,7 +18,6 @@ export const BackupView = ({ showToast }: any) => {
     
     const [encryptedFileContent, setEncryptedFileContent] = useState<string | null>(null);
 
-    // 🔄 LAZY LOADING: Estados independientes para el centro de respaldos
     const [incidents, setIncidents] = useState<any[]>([]);
     const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
     const [comments, setComments] = useState<any[]>([]);
@@ -37,9 +35,6 @@ export const BackupView = ({ showToast }: any) => {
         return () => { unsubIncidents(); unsubRrss(); unsubComments(); };
     }, []);
 
-    // ==========================================
-    // 1. EXPORTACIÓN TOTAL UNIFICADA (CON CIFRADO AES)
-    // ==========================================
     const handleExportAll = async () => {
         if (!exportPassword || exportPassword.length < 6) {
             showToast('La contraseña debe tener al menos 6 caracteres.', true);
@@ -73,8 +68,6 @@ export const BackupView = ({ showToast }: any) => {
             downloadAnchorNode.click();
             downloadAnchorNode.remove();
             
-            // ELIMINADO: El log de auditoría por exportación exitosa (Falso Positivo)
-
             setExportPassword('');
             setShowExportPassword(false);
             showToast('Copia de seguridad encriptada y generada con éxito');
@@ -83,9 +76,6 @@ export const BackupView = ({ showToast }: any) => {
         }
     };
 
-    // ==========================================
-    // 2. PROCESAMIENTO Y DESCIFRADO
-    // ==========================================
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -104,13 +94,13 @@ export const BackupView = ({ showToast }: any) => {
                     setBackupInfo(parsedData);
                     setEncryptedFileContent(null);
                 } else {
-                    // 🚨 SENSOR 1: Archivo inválido
-                    await logAuditEvent("Alerta de Integridad: Intento de cargar un archivo de respaldo con formato inválido o desconocido");
+                    // 🚨 SENSOR CORREGIDO: Mensaje corto
+                    await logAuditEvent("Alerta de Integridad: Formato inválido");
                     showToast('El archivo no corresponde a un formato válido de Innova', true);
                 }
             } catch (err) {
-                // 🚨 SENSOR 2: Archivo manipulado / Corrupto
-                await logAuditEvent("Fallo de Integridad: Intento de cargar un archivo de respaldo corrupto, manipulado o con JSON roto");
+                // 🚨 SENSOR CORREGIDO: Mensaje corto
+                await logAuditEvent("Fallo de Integridad: Archivo corrupto o manipulado");
                 showToast('Error al leer el archivo. Estructura corrupta.', true);
             }
         };
@@ -133,15 +123,12 @@ export const BackupView = ({ showToast }: any) => {
             setShowImportPassword(false);
             showToast('Archivo descifrado correctamente. Listo para restaurar.');
         } catch (error) {
-            // 🚨 SENSOR 3: Ataque de contraseña o descifrado fallido
-            await logAuditEvent("Alerta de Criptografía: Intento fallido de descifrado de backup (Contraseña incorrecta o payload destruido)");
+            // 🚨 SENSOR CORREGIDO: Mensaje corto
+            await logAuditEvent("Alerta Criptográfica: Fallo de descifrado");
             showToast('Contraseña incorrecta o archivo corrupto.', true);
         }
     };
 
-    // ==========================================
-    // 3. RESTAURACIÓN EN LA NUBE
-    // ==========================================
     const handleExecuteRestore = async () => {
         if (!backupInfo) return;
         setUploading(true);
@@ -171,8 +158,6 @@ export const BackupView = ({ showToast }: any) => {
                     if (!exists) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', item.id), item); restoredComments++; }
                 }
             }
-
-            // ELIMINADO: El log de auditoría por restauración exitosa (Falso Positivo)
 
             showToast(`Restauración exitosa: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios`);
             setBackupInfo(null);

@@ -7,7 +7,6 @@ import {
 import {
     collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, arrayUnion, getDoc
 } from "firebase/firestore";
-// 🛡️ IMPORTACIÓN DEL RADAR PERIMETRAL
 import { safeFirestoreOperation, logAuditEvent } from '../views/AuditViews';
 
 export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
@@ -32,7 +31,6 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     
     useEffect(() => { prefsRef.current = userPrefs; }, [userPrefs]);
 
-    // 🛡️ SENSOR DE SEGURIDAD FRONTEND: DETECTOR DE INYECCIÓN (XSS/SQLi)
     const detectMaliciousPayload = (data: any): boolean => {
         if (!data) return false;
         const str = JSON.stringify(data).toLowerCase();
@@ -117,9 +115,10 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
 
     useEffect(() => {
         let unsubSelf: any = null;
-        let unsubAllUsers: any = null;
 
         if (user && !user.isAnonymous) {
+            if (user.email && !user.email.endsWith('@tierradeideas.mx')) return;
+
             const selfRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.email);
 
             unsubSelf = onSnapshot(selfRef, async (snap) => {
@@ -142,19 +141,35 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                     });
                     setUserRole('EDITOR_CM');
                 }
-            });
-
-            const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-            unsubAllUsers = onSnapshot(usersRef, (snap) => {
-                const uList: any[] = [];
-                snap.forEach(d => uList.push(d.data()));
-                setAppUsers(uList);
-            }, (error) => {});
+            }, () => {});
         }
-        return () => { if (unsubSelf) unsubSelf(); if (unsubAllUsers) unsubAllUsers(); };
+        return () => { if (unsubSelf) unsubSelf(); };
     }, [user]);
 
+    // 🔄 LECTURA EXCLUSIVA DE USUARIOS (Gatillada únicamente para IT y CM_ADMIN)
     useEffect(() => {
+        if (!user || user.isAnonymous) return;
+        
+        // El EDITOR_CM o READER no tienen permiso de lectura en las reglas, evitamos abrir el canal para no generar errores
+        if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
+            setAppUsers([]);
+            return;
+        }
+
+        const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+        const unsubAllUsers = onSnapshot(usersRef, (snap) => {
+            const uList: any[] = [];
+            snap.forEach(d => uList.push(d.data()));
+            setAppUsers(uList);
+        }, () => {});
+
+        return () => unsubAllUsers();
+    }, [user, userRole]);
+
+    useEffect(() => {
+        if (!user) return;
+        if (!user.isAnonymous && user.email && !user.email.endsWith('@tierradeideas.mx')) return;
+
         const checklistRef = collection(db, 'artifacts', appId, 'public', 'data', 'appState');
         const unsubChecklist = onSnapshot(checklistRef, (snapshot) => {
             let found = false;
@@ -164,9 +179,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                 }
             });
             if (!found) setChecklistState({});
-        });
-
-        if (!user) return () => unsubChecklist();
+        }, () => {});
 
         const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
         const unsubNotif = onSnapshot(notifRef, (snapshot) => {
@@ -191,7 +204,7 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
                     }
                 }
             });
-        }, (error) => {});
+        }, () => {});
 
         return () => { unsubChecklist(); unsubNotif(); };
     }, [user]);
@@ -203,27 +216,25 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             const result = await signInWithPopup(auth, provider);
             const loggedInEmail = result.user.email || '';
             
-            // 🚨 SENSOR: Bloqueo por dominio y registro de intrusión
             if (!loggedInEmail.endsWith('@tierradeideas.mx')) {
                 localStorage.setItem('auth_hint', 'lector');
-                await logAuditEvent(`Intento de acceso denegado por dominio no autorizado (${loggedInEmail})`);
+                await logAuditEvent(`Alerta de Perímetro: Intento de acceso denegado`);
                 await signOut(auth);
                 showToast('Acceso denegado. Usa un correo @tierradeideas.mx', true);
                 return;
             }
             
             localStorage.setItem('auth_hint', 'admin');
-            localStorage.setItem('failed_logins', '0'); // Resetear intentos al entrar
+            localStorage.setItem('failed_logins', '0'); 
             setLoginModalOpen(false);
             showToast(`Bienvenido, ${result.user.displayName}`);
         } catch (error: any) {
             if (error.code !== 'auth/popup-closed-by-user') {
-                // 🚨 SENSOR: Fuerza bruta
                 const attempts = parseInt(localStorage.getItem('failed_logins') || '0') + 1;
                 localStorage.setItem('failed_logins', attempts.toString());
                 
                 if (attempts >= 3) {
-                    await logAuditEvent(`Posible ataque de fuerza bruta/bots: Múltiples intentos fallidos de inicio de sesión detectados`);
+                    await logAuditEvent(`Fuerza Bruta: Múltiples intentos fallidos`);
                 }
                 showToast('Error al iniciar sesión', true);
             }
@@ -332,9 +343,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const updateIncident = async (id: string, updatedData: any) => {
-        // 🚨 SENSOR: XSS / SQLi
         if (detectMaliciousPayload(updatedData)) {
-            await logAuditEvent(`Bloqueo de Seguridad: Intento de Inyección XSS/SQL detectado en payload (Hackeos)`);
+            await logAuditEvent(`Bloqueo de Seguridad: Inyección XSS/SQL (Hackeos)`);
             showToast('Bloqueo de seguridad: Caracteres prohibidos detectados.', true);
             return;
         }
@@ -368,9 +378,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const updateRrssIncident = async (id: string, updatedData: any) => {
-        // 🚨 SENSOR: XSS / SQLi
         if (detectMaliciousPayload(updatedData)) {
-            await logAuditEvent(`Bloqueo de Seguridad: Intento de Inyección XSS/SQL detectado en payload (RRSS)`);
+            await logAuditEvent(`Bloqueo de Seguridad: Inyección XSS/SQL (RRSS)`);
             showToast('Bloqueo de seguridad: Caracteres prohibidos detectados.', true);
             return;
         }
@@ -403,9 +412,8 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const updateComment = async (id: string, updatedData: any) => {
-        // 🚨 SENSOR: XSS / SQLi
         if (detectMaliciousPayload(updatedData)) {
-            await logAuditEvent(`Bloqueo de Seguridad: Intento de Inyección XSS/SQL detectado en payload (Comentarios)`);
+            await logAuditEvent(`Bloqueo de Seguridad: Inyección XSS/SQL (Comentarios)`);
             showToast('Bloqueo de seguridad: Caracteres prohibidos detectados.', true);
             return;
         }

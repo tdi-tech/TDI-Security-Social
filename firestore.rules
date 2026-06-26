@@ -83,17 +83,18 @@ service cloud.firestore {
           isCMAdmin(appId)
           && resource.data.get('isProtected', false) != true
           && resource.data.role != 'ADMIN_IT'
-          && request.resource.data.role != 'ADMIN_IT'
-          && request.resource.data.isProtected != true
+          // 🚨 CANDADO: El ADMIN_CM solo puede modificar estados (disabled), jamás alterar roles de cuentas existentes
+          && request.resource.data.role == resource.data.role
         );
 
         allow delete: if isITAdmin(appId)
           && resource.data.get('isProtected', false) != true;
       }
 
+      // ✅ CORREGIDO: Todo el equipo CM puede crear, editar y borrar del historial de Hackeos
       match /incidents/{incidentId} {
         allow read: if isAnySignedIn();
-        allow create, update, delete: if isITAdmin(appId);
+        allow create, update, delete: if isCMTeam(appId);
       }
 
       match /rrss_incidents/{incidentId} {
@@ -101,10 +102,10 @@ service cloud.firestore {
         allow create, update, delete: if isCMTeam(appId);
       }
 
+      // ✅ CORREGIDO: Todo el equipo CM puede interactuar por completo con comentarios
       match /comments/{commentId} {
         allow read: if isAnySignedIn();
-        allow create: if isCMTeam(appId);
-        allow update, delete: if isITAdmin(appId) || isCMAdmin(appId);
+        allow create, update, delete: if isCMTeam(appId);
       }
 
       match /notifications/{notificationId} {
@@ -131,8 +132,6 @@ service cloud.firestore {
           && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
 
         allow read: if isITAdmin(appId);
-
-        // Inalterable, con purga controlada por ADMIN_IT.
         allow delete: if isITAdmin(appId);
         allow update: if false;
       }

@@ -70,11 +70,15 @@ export default function App() {
         }
 
         if ((view === 'backups' || view === 'auditoria') && userRole !== 'ADMIN_IT') {
-            // 🚨 SENSOR: Registro de intento de acceso a rutas prohibidas
             const { logAuditEvent } = await import('./views/AuditViews');
-            await logAuditEvent(`Violación de Políticas (RBAC): Intento de forzar acceso a vista restringida (/${view})`);
-            
+            await logAuditEvent(`Violación RBAC: Acceso restringido (/${view})`);
             showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
+            return;
+        }
+
+        // 🚨 CANDADO CORRECTO: El EDITOR_CM tiene prohibido el acceso a la gestión de usuarios
+        if (view === 'gestion-usuarios' && userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
+            showToast('Acceso denegado. Tu rol no cuenta con permisos para gestionar usuarios.', true);
             return;
         }
 
@@ -351,7 +355,7 @@ export default function App() {
                                 <div className={`p-2 rounded-lg ${previewModal.type === 'rrss' ? 'bg-orange-500/20 text-orange-500' : 'bg-blue-500/20 text-blue-500'}`}>
                                     {previewModal.type === 'rrss' ? <Megaphone className="w-5 h-5"/> : <MessageSquare className="w-5 h-5"/>}
                                 </div>
-                                <div><h3 className="font-bold theme-text-main">Vista Rápida</h3><p className="text-[10px] theme-text-muted font-medium uppercase tracking-wider">{previewModal.type === 'rrss' ? 'Incidencia RRSS' : 'Comentarios'}</p></div>
+                                <div><h3 className="font-bold theme-text-main">Vista Rápida</h3><p className="text-[10px] theme-text-muted font-medium uppercase tracking-wider">{previewModal.type === 'rrss' ? 'Crisis RRSS' : 'Comentarios'}</p></div>
                             </div>
                             <button onClick={() => setPreviewModal({isOpen: false, type: '', data: null})} className="p-1.5 theme-text-muted hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
                         </div>

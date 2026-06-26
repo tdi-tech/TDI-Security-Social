@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
 import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layout, Zap, Sparkles } from 'lucide-react';
 
-// ==========================================
-// DATOS DEL CHANGELOG (HISTORIAL DE VERSIONES)
-// ==========================================
 const changelogData = [
+    {
+        version: 'v3.4.1',
+        date: 'Junio 2026',
+        tag: 'Última Versión',
+        title: 'Sincronización Operativa y Depuración SIEM',
+        changes: [
+            { type: 'title', text: 'Alineación de Matriz RBAC' },
+            { type: 'feature', text: 'Reconexión Operativa CM: Los roles ADMIN_CM y EDITOR_CM ahora tienen acceso completo para registrar, editar y borrar incidentes en el módulo de Hackeos (Seguridad IT), unificando el flujo de trabajo.' },
+            { type: 'security', text: 'Límites de Gestión CM: El ADMIN_CM ahora puede pre-registrar cuentas y pausarlas (deshabilitarlas), pero el sistema le bloquea estrictamente la capacidad de otorgar roles IT, cambiar roles existentes o borrar usuarios de la base de datos.' },
+            { type: 'security', text: 'Cierre de Rutas EDITOR_CM: Bloqueo estricto del apartado de Gestión de Usuarios para el rol Editor. Si se intenta forzar la ruta, el Radar de Intrusos lo detecta como violación de políticas.' },
+            { type: 'divider' },
+            { type: 'title', text: 'Optimización de Consola y Falsos Positivos' },
+            { type: 'ui', text: 'Depuración de Listeners: Implementación de "atrapa-errores" silenciosos en todos los onSnapshot para evitar mensajes rojos (permission-denied) en la consola durante los tiempos de validación de inicio de sesión de Firebase.' },
+            { type: 'security', text: 'Limpieza del Radar de Intrusos: Se erradicaron los falsos positivos. Las acciones exitosas de exportación CSV y Backups ya no ensucian la Auditoría Avanzada. El panel ahora es 100% exclusivo para detección de amenazas.' }
+        ]
+    },
     {
         version: 'v3.4.0',
         date: 'Junio 2026',
-        tag: 'Última Versión',
+        tag: 'Estable',
         title: 'Radar de Intrusos & Auditoría SIEM',
         changes: [
             { type: 'title', text: 'Módulo de Auditoría Perimetral' },
