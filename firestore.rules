@@ -25,20 +25,12 @@ service cloud.firestore {
       return get(userPath(appId)).data;
     }
 
-    function isSuperAdmin() {
-      return isAuthenticated()
-        && (
-          request.auth.token.email == 'marcosg@tierradeideas.mx'
-          || request.auth.token.email == 'rperez@tierradeideas.mx'
-        );
-    }
-
     function hasRole(appId, role) {
       return userExists(appId) && getUserData(appId).role == role;
     }
 
     function isITAdmin(appId) {
-      return isSuperAdmin() || hasRole(appId, 'ADMIN_IT');
+      return hasRole(appId, 'ADMIN_IT');
     }
 
     function isCMAdmin(appId) {
@@ -56,7 +48,12 @@ service cloud.firestore {
     match /artifacts/{appId}/public/data {
 
       match /users/{userEmail} {
-        allow read: if isITAdmin(appId) || isCMAdmin(appId) || request.auth.token.email == userEmail;
+        allow read: if isITAdmin(appId)
+          || isCMAdmin(appId)
+          || (
+            isAuthenticated()
+            && request.auth.token.email == userEmail
+          );
 
         allow create: if isITAdmin(appId)
           || (
@@ -71,15 +68,20 @@ service cloud.firestore {
           && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny(['role', 'disabled', 'isProtected'])
         )
-        || isITAdmin(appId)
+        || (
+          isITAdmin(appId)
+          && resource.data.get('isProtected', false) != true
+        )
         || (
           isCMAdmin(appId)
+          && resource.data.get('isProtected', false) != true
           && resource.data.role != 'ADMIN_IT'
           && request.resource.data.role != 'ADMIN_IT'
           && request.resource.data.isProtected != true
         );
 
-        allow delete: if isITAdmin(appId);
+        allow delete: if isITAdmin(appId)
+          && resource.data.get('isProtected', false) != true;
       }
 
       match /incidents/{incidentId} {
