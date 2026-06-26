@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Trash2, UserX, UserCheck, Users, Info, Plus, Save, X } from 'lucide-react';
 
 export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser }: any) => {
@@ -6,6 +6,17 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
     const [isAdding, setIsAdding] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [newRole, setNewRole] = useState('EDITOR_CM');
+    // Estado local de carga para el efecto Skeleton (simulado para sincronizar con Firebase)
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        // Simulamos un pequeño delay para asegurar la transición suave del skeleton
+        // ya que onSnapshot a veces responde instantáneamente de la caché local.
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [appUsers]);
 
     const handleAddSubmit = async (e: any) => {
         e.preventDefault();
@@ -24,6 +35,45 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
 
         return (a.displayName || '').localeCompare(b.displayName || '');
     });
+
+    if (isLoading) {
+        return (
+            <div className="max-w-5xl mx-auto space-y-6 fade-in pb-10 animate-pulse">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div className="space-y-3">
+                        <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                        <div className="h-4 w-96 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                    </div>
+                    {userRole === 'ADMIN_IT' && <div className="h-10 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>}
+                </div>
+
+                <div className="h-24 bg-gray-200 dark:bg-gray-800 rounded-xl mb-6"></div>
+
+                <div className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm">
+                    <div className="h-14 bg-black/5 dark:bg-white/5 border-b theme-border"></div>
+                    <div className="divide-y theme-border p-4 space-y-4">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="flex items-center justify-between py-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-800"></div>
+                                    <div className="space-y-2">
+                                        <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                                        <div className="h-3 w-48 bg-gray-200 dark:bg-gray-800 rounded"></div>
+                                    </div>
+                                </div>
+                                <div className="h-10 w-40 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                                <div className="h-6 w-24 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                                <div className="flex gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-800"></div>
+                                    <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-800"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 fade-in pb-10">
