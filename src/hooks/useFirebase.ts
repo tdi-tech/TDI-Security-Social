@@ -7,6 +7,8 @@ import {
 import {
     collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, arrayUnion, getDoc
 } from "firebase/firestore";
+// 🛡️ IMPORTACIÓN DEL RADAR PERIMETRAL
+import { safeFirestoreOperation } from '../views/AuditViews';
 
 export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, setConfirmModal }: any) => {
 
@@ -234,22 +236,34 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     };
 
     const deleteNotification = async (id: string) => {
-        try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id)); }
+        try {
+            await safeFirestoreOperation(async () => {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', id));
+            }, `Eliminar notificación ${id}`);
+        }
         catch (err) { showToast('Acción denegada por el servidor', true); }
     };
 
     const updateUserRole = async (email: string, newRole: string) => {
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { role: newRole }, { merge: true });
+            await safeFirestoreOperation(async () => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { role: newRole }, { merge: true });
+            }, `Modificar rol de ${email} a ${newRole}`);
             showToast('Rol actualizado exitosamente');
-        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
+        } catch (e: any) { 
+            showToast(e.code === 'permission-denied' ? 'Acceso bloqueado: No tienes permisos.' : 'Acción denegada por el servidor de seguridad.', true);
+        }
     };
 
     const toggleUserStatus = async (email: string, currentStatus: boolean) => {
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { disabled: !currentStatus }, { merge: true });
+            await safeFirestoreOperation(async () => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { disabled: !currentStatus }, { merge: true });
+            }, `${!currentStatus ? 'Deshabilitar' : 'Habilitar'} cuenta de ${email}`);
             showToast(!currentStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada');
-        } catch (e) { showToast('Acción denegada por el servidor de seguridad.', true); }
+        } catch (e: any) { 
+            showToast(e.code === 'permission-denied' ? 'Acceso bloqueado: No tienes permisos.' : 'Acción denegada por el servidor de seguridad.', true);
+        }
     };
 
     const deleteUserRecord = (email: string) => {
@@ -257,9 +271,13 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             isOpen: true, title: 'Eliminar Usuario', msg: `¿Seguro que deseas eliminar el acceso de ${email}?`,
             onConfirm: async () => {
                 try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email));
+                    await safeFirestoreOperation(async () => {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email));
+                    }, `Eliminar usuario permanentemente: ${email}`);
                     showToast('Usuario eliminado del sistema');
-                } catch (e) { showToast('Acción denegada por el servidor.', true); }
+                } catch (e: any) { 
+                    showToast(e.code === 'permission-denied' ? 'Bloqueo de seguridad: No puedes eliminar este usuario.' : 'Acción denegada por el servidor.', true); 
+                }
             }
         });
     };
@@ -267,33 +285,44 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
     const addManualUser = async (email: string, role: string) => {
         if (!email.endsWith('@tierradeideas.mx')) return showToast('Solo correos @tierradeideas.mx', true);
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), {
-                email: email.trim().toLowerCase(), displayName: email.split('@')[0], photoURL: '', role: role, disabled: false
-            }, { merge: true });
+            await safeFirestoreOperation(async () => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), {
+                    email: email.trim().toLowerCase(), displayName: email.split('@')[0], photoURL: '', role: role, disabled: false
+                }, { merge: true });
+            }, `Pre-registrar usuario manualmente: ${email}`);
             showToast(`Usuario pre-registrado correctamente.`);
-        } catch (e) { showToast('Acción denegada por el servidor.', true); }
+        } catch (e: any) { 
+            showToast(e.code === 'permission-denied' ? 'Bloqueo: No tienes privilegios.' : 'Acción denegada por el servidor.', true); 
+        }
     };
 
-    // 🛑 SOLUCIÓN AL ERROR QUE MARCASTE: Lee desde Firebase en lugar de la variable local vacía
     const toggleIncidentStatus = async (id: string) => {
         try {
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id);
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) return;
-            const inc = docSnap.data();
-            const newStatus = inc.estado === 'Resuelto' ? 'Abierto' : 'Resuelto';
-            await setDoc(docRef, { ...inc, estado: newStatus });
-            await logAction(`Cambió el estado a ${newStatus}`, 'Hackeos', 'edit', id);
-            showToast(`Estado cambiado a ${newStatus}`);
-        } catch (err) { showToast('Acción denegada', true); }
+            await safeFirestoreOperation(async () => {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id);
+                const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) return;
+                const inc = docSnap.data();
+                const newStatus = inc.estado === 'Resuelto' ? 'Abierto' : 'Resuelto';
+                await setDoc(docRef, { ...inc, estado: newStatus });
+                await logAction(`Cambió el estado a ${newStatus}`, 'Hackeos', 'edit', id);
+            }, `Cambiar estado de incidente de hackeo ID: ${id}`);
+            showToast(`Estado actualizado con éxito`);
+        } catch (err: any) { 
+            showToast(err.code === 'permission-denied' ? 'Permiso denegado por reglas de seguridad.' : 'Acción denegada', true); 
+        }
     };
 
     const updateIncident = async (id: string, updatedData: any) => {
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id), updatedData, { merge: true });
-            await logAction(`Editó un registro de seguridad`, 'Hackeos', 'edit', id);
+            await safeFirestoreOperation(async () => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id), updatedData, { merge: true });
+                await logAction(`Editó un registro de seguridad`, 'Hackeos', 'edit', id);
+            }, `Editar incidente de hackeo ID: ${id}`);
             showToast('Incidente editado correctamente.');
-        } catch (err) { showToast('Acción denegada', true); }
+        } catch (err: any) { 
+            showToast(err.code === 'permission-denied' ? 'Permiso denegado por reglas de seguridad.' : 'Acción denegada', true); 
+        }
     };
 
     const deleteIncident = (id: string) => {
@@ -301,21 +330,29 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             isOpen: true, title: 'Eliminar Incidente', msg: 'Esta acción no se puede deshacer. ¿Seguro?',
             onConfirm: async () => {
                 try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id));
-                    await logAction(`Eliminó de forma permanente un registro`, 'Hackeos', 'delete');
+                    await safeFirestoreOperation(async () => {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'incidents', id));
+                        await logAction(`Eliminó de forma permanente un registro`, 'Hackeos', 'delete');
+                    }, `Eliminar incidente de hackeo ID: ${id}`);
                     showToast('Incidente eliminado');
                     setDetailModalOpen(false);
-                } catch (err) { showToast('Acción denegada', true); }
+                } catch (err: any) { 
+                    showToast(err.code === 'permission-denied' ? 'Bloqueo: No tienes permisos para eliminar.' : 'Acción denegada', true); 
+                }
             }
         });
     };
 
     const updateRrssIncident = async (id: string, updatedData: any) => {
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id), updatedData, { merge: true });
-            await logAction(`Editó un caso de reputación`, 'Incidencia RRSS', 'edit', id);
+            await safeFirestoreOperation(async () => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id), updatedData, { merge: true });
+                await logAction(`Editó un caso de reputación`, 'Incidencia RRSS', 'edit', id);
+            }, `Editar incidente de RRSS ID: ${id}`);
             showToast('Incidente RRSS editado correctamente.');
-        } catch (err) { showToast('Acción denegada', true); }
+        } catch (err: any) { 
+            showToast(err.code === 'permission-denied' ? 'Permiso denegado.' : 'Acción denegada', true); 
+        }
     };
 
     const deleteRrssIncident = (id: string) => {
@@ -323,20 +360,28 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             isOpen: true, title: 'Eliminar Incidente RRSS', msg: 'Eliminará el registro de forma permanente. ¿Seguro?',
             onConfirm: async () => {
                 try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id));
-                    await logAction(`Eliminó permanentemente un caso de crisis`, 'Incidencia RRSS', 'delete');
+                    await safeFirestoreOperation(async () => {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents', id));
+                        await logAction(`Eliminó permanentemente un caso de crisis`, 'Incidencia RRSS', 'delete');
+                    }, `Eliminar incidente RRSS ID: ${id}`);
                     showToast('Registro eliminado exitosamente');
-                } catch (err) { showToast('Acción denegada', true); }
+                } catch (err: any) { 
+                    showToast(err.code === 'permission-denied' ? 'Bloqueo: No tienes permisos de eliminación.' : 'Acción denegada', true); 
+                }
             }
         });
     };
 
     const updateComment = async (id: string, updatedData: any) => {
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id), updatedData, { merge: true });
-            await logAction(`Editó un reporte de comentarios`, 'Comentarios', 'edit', id);
+            await safeFirestoreOperation(async () => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id), updatedData, { merge: true });
+                await logAction(`Editó un reporte de comentarios`, 'Comentarios', 'edit', id);
+            }, `Editar comentario ID: ${id}`);
             showToast('Comentario editado correctamente.');
-        } catch (err) { showToast('Acción denegada', true); }
+        } catch (err: any) { 
+            showToast(err.code === 'permission-denied' ? 'Permiso denegado.' : 'Acción denegada', true); 
+        }
     };
 
     const deleteComment = (id: string) => {
@@ -344,10 +389,14 @@ export const useFirebase = ({ showToast, setLoginModalOpen, setDetailModalOpen, 
             isOpen: true, title: 'Eliminar Reporte', msg: 'Eliminará el reporte de forma permanente. ¿Estás seguro?',
             onConfirm: async () => {
                 try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id));
-                    await logAction(`Eliminó de forma permanente un reporte`, 'Comentarios', 'delete');
+                    await safeFirestoreOperation(async () => {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', id));
+                        await logAction(`Eliminó de forma permanente un reporte`, 'Comentarios', 'delete');
+                    }, `Eliminar comentario ID: ${id}`);
                     showToast('Reporte eliminado exitosamente.');
-                } catch (err) { showToast('Acción denegada', true); }
+                } catch (err: any) { 
+                    showToast(err.code === 'permission-denied' ? 'Bloqueo: Privilegios insuficientes.' : 'Acción denegada', true); 
+                }
             }
         });
     };

@@ -23,6 +23,7 @@ import { NewRRSSIncidentView, HistorialRRSSView } from './views/RRSSViews';
 import { NewCommentView, HistorialCommentView } from './views/CommentViews';
 import { UserManagementView } from './views/UserViews';
 import { BackupView } from './views/BackupView';
+import { AuditViews } from './views/AuditViews';
 
 export default function App() {
     const { isDarkMode, toggleTheme } = useTheme();
@@ -59,7 +60,7 @@ export default function App() {
     });
 
     const navigate = (view: string) => {
-        const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups'];
+        const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups', 'auditoria'];
         const loggedInViews = [...adminViews, 'changelog'];
         
         if (loggedInViews.includes(view) && !isAdmin) {
@@ -68,7 +69,7 @@ export default function App() {
             return;
         }
 
-        if (view === 'backups' && userRole !== 'ADMIN_IT') {
+        if ((view === 'backups' || view === 'auditoria') && userRole !== 'ADMIN_IT') {
             showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
             return;
         }
@@ -106,7 +107,6 @@ export default function App() {
     const unreadNotifications = validNotifications.filter((n: any) => !(n.readBy && n.readBy.includes(user?.uid)));
     const readNotifications = validNotifications.filter((n: any) => (n.readBy && n.readBy.includes(user?.uid)));
 
-    // 🛑 SEGURIDAD AL HACER CLIC EN NOTIFICACIONES: Busca el registro directo en Firestore
     const handleViewIncident = async (n: any) => {
         setNotifMenuOpen(false);
         try {
@@ -121,7 +121,6 @@ export default function App() {
             if (docSnap.exists()) {
                 const data = { id: docSnap.id, ...docSnap.data() };
                 if (colName === 'incidents') {
-                     // Dirigimos al historial general para hackeos
                      navigate('historial');
                      showToast('Apertura rápida. Busca el incidente en la lista superior.');
                 } else if (colName === 'rrss_incidents') {
@@ -161,6 +160,7 @@ export default function App() {
             case 'roles': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Roles</h1>;
             case 'changelog': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Changelog</h1>;
             case 'backups': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Copias de Seguridad Core</h1>;
+            case 'auditoria': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Auditoría Avanzada</h1>;
             case 'config': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Configuración</h1>;
             case 'ayuda': return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight">Ayuda</h1>;
             default: return <h1 className="text-base sm:text-xl font-bold theme-text-main tracking-tight capitalize truncate">{currentView.replace(/-/g, ' ')}</h1>;
@@ -325,6 +325,10 @@ export default function App() {
 
                     {currentView === 'backups' && userRole === 'ADMIN_IT' && (
                         <BackupView showToast={showToast} />
+                    )}
+
+                    {currentView === 'auditoria' && userRole === 'ADMIN_IT' && (
+                        <AuditViews />
                     )}
 
                     {currentView === 'protocolo-rss' && <ProtocoloRRSSView />}

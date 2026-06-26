@@ -6,9 +6,23 @@ import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layou
 // ==========================================
 const changelogData = [
     {
-        version: 'v3.3.0',
+        version: 'v3.4.0',
         date: 'Junio 2026',
         tag: 'Última Versión',
+        title: 'Radar de Intrusos & Auditoría SIEM',
+        changes: [
+            { type: 'title', text: 'Módulo de Auditoría Perimetral' },
+            { type: 'security', text: 'Radar de Intrusos (Firewall Backend): Implementación de un panel de auditoría inmutable que registra automáticamente cualquier intento de violación de reglas de seguridad o acceso denegado (Error 403) a nivel de servidor.' },
+            { type: 'security', text: 'Retención Inmutable y Purga TTL: Los registros de ataques no pueden ser modificados ni eliminados por ningún usuario (ni siquiera Administradores IT). Se autodestruyen física y automáticamente a los 14 días exactos usando políticas nativas Time-To-Live (TTL) de Google Cloud.' },
+            { type: 'feature', text: 'Geolocalización Zero-Trust: Integración en segundo plano con la API de ipInfo para capturar de forma silenciosa la dirección IP real, el País de origen y el UserAgent de cualquier atacante bloqueado por la base de datos.' },
+            { type: 'feature', text: 'Exportación Forense CSV: Nuevo motor de exportación en memoria que permite a los Administradores IT descargar una sábana de datos forenses detallada sin consumir recursos de lectura/escritura en el servidor.' },
+            { type: 'ui', text: 'Interfaz y Control de Acceso Estricto: Visualización del panel de auditoría condicionada exclusivamente al rol ADMIN_IT. Incorpora un diseño de Empty-State corporativo ("Perímetro Asegurado") y Skeletons de carga fluida.' }
+        ]
+    },
+    {
+        version: 'v3.3.0',
+        date: 'Junio 2026',
+        tag: 'Estable',
         title: 'Security Core, Zero-Trust & Criptografía',
         changes: [
             { type: 'title', text: 'Arquitectura Cero-Confianza (Zero-Trust)' },
@@ -32,7 +46,7 @@ const changelogData = [
         changes: [
             { type: 'feature', text: 'Persistencia de Navegación por Recarga: Inyección de estados basados en localStorage para retener la vista actual al presionar F5 o refrescar el navegador, mitigando redirecciones accidentales al Dashboard.' },
             { type: 'security', text: 'Protección de Privacidad de Cambios: El Changelog queda blindado exclusivamente detrás del inicio de sesión (RBAC), impidiendo el acceso a usuarios no identificados o con rol de Lector.' },
-            { type: 'security', text: 'Monitor Analítico y Salud DB: Nuevo panel exclusivo para Administrador IT con métricas de consumo de Firebase, estimación de cuota y herramientas de purgado local.' },
+            { type: 'security', text: 'Monitor Analítico y Salud DB: Nuevo panel exclusivo para Administradores IT con métricas de consumo de Firebase, estimación de cuota y herramientas de purgado local.' },
             { type: 'feature', text: 'Preferencias de Usuario en la Nube: Panel interactivo para activar/desactivar alertas sonoras y notificaciones por módulo específico (Hackeos, RRSS, Comentarios), sincronizado con Firestore.' },
             { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento.' },
             { type: 'feature', text: 'Modal Inteligente de Exportación CSV: Permite descargar todo el historial, filtrar por Año específico o por "Año + Mes".' },

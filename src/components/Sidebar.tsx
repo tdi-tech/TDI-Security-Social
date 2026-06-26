@@ -7,7 +7,6 @@ import {
 
 export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus, userRole }: any) => {
     
-    // 🔄 LÓGICA DE COLORES CORREGIDA
     const isDisconnected = cloudStatus.includes('Desconectado');
     const isError = cloudStatus.includes('Error');
     const isConnecting = cloudStatus.includes('Conectando');
@@ -103,7 +102,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     </div>
                     <div>
                         <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas</h1>
-                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.3</p>
+                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.4</p>
                     </div>
                 </div>
                 
@@ -135,7 +134,14 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
 
                     <NavBtn id="roles" icon={Users} label="Roles" />
                     {isAdmin && <NavBtn id="changelog" icon={History} label="Changelog" />}
-                    {isITAdmin && <NavBtn id="backups" icon={Database} label="Backups Core" />}
+                    
+                    {isITAdmin && (
+                        <>
+                            <NavBtn id="backups" icon={Database} label="Backups Core" />
+                            {/* 🛡️ Auditoría ahora usa la base de diseño de la app */}
+                            <NavBtn id="auditoria" icon={ShieldAlert} label="Auditoría Avanzada" />
+                        </>
+                    )}
                 </nav>
 
                 <div className="p-4 border-t theme-border space-y-2">
@@ -143,7 +149,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                         <p className="text-xs font-bold theme-text-main mb-2">Estado del Sistema</p>
                         <div className="flex items-start gap-2">
                             <div className="relative flex items-center justify-center w-5 h-5 flex-shrink-0 mt-0.5">
-                                {/* 🔄 LOGICA ACTUALIZADA */}
                                 {cloudStatus.includes('Conectado') && !cloudStatus.includes('Desconectado') ? <Cloud className={`w-4 h-4 ${textColor}`} /> : <CloudOff className={`w-4 h-4 ${textColor}`} />}
                                 <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border border-white dark:border-gray-900 ${dotColor}`}></span>
                             </div>

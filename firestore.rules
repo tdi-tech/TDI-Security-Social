@@ -47,6 +47,35 @@ service cloud.firestore {
 
     match /artifacts/{appId}/public/data {
 
+      match /auditLogs/{logId} {
+        allow create: if request.auth != null
+          && request.resource.data.keys().hasOnly([
+            'ip',
+            'pais',
+            'fecha',
+            'uid',
+            'email',
+            'provider',
+            'userAgent',
+            'accion',
+            'expireAt'
+          ])
+          && request.resource.data.ip is string
+          && request.resource.data.pais is string
+          && request.resource.data.fecha is timestamp
+          && request.resource.data.expireAt is timestamp
+          && request.resource.data.uid is string
+          && request.resource.data.provider is string
+          && request.resource.data.accion is string
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.expireAt > request.time
+          && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
+
+        allow read: if isITAdmin(appId);
+
+        allow update, delete: if false;
+      }
+
       match /users/{userEmail} {
         allow read: if isITAdmin(appId)
           || isCMAdmin(appId)
