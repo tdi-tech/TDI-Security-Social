@@ -6,14 +6,10 @@ import {
     Save, X, Edit3, Trash2, Search, ChevronDown, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection, onSnapshot } from 'firebase/firestore';
-import { db, appId } from '../firebase/config';
+import { db, appId } from '../../../services/firebase/config';
+import { getMonthName } from '../../../shared/utils/date';
 
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
-
-const getMonthName = (monthNum: string) => {
-    const months: any = { '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre' };
-    return months[monthNum] || 'Desconocido';
-};
 
 const checklistData = [
     { id: 'c1', icon: Camera, text: 'Evidencia capturada (capturas, logs, URLs)' },
@@ -123,23 +119,18 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
 };
 
 export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModalOpen, isAdmin }: any) => {
-    
-    // 🔄 ESTADOS LOCALES PARA LAZY LOADING
     const [incidents, setIncidents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
     const [searchTerm, setSearchTerm] = useState('');
     const [filterYear, setFilterYear] = useState('Todos');
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
-
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
 
-    // 🔄 EFECTO DE CARGA INDEPENDIENTE
     useEffect(() => {
         setIsLoading(true);
         const incidentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'incidents');
@@ -148,7 +139,7 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
             snapshot.forEach((doc) => data.push(doc.data()));
             data.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
             setIncidents(data);
-            setTimeout(() => setIsLoading(false), 600); // 600ms de gracia para que se luzca la animación del skeleton
+            setTimeout(() => setIsLoading(false), 600);
         });
         return () => unsub();
     }, []);
@@ -352,7 +343,6 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
                 )}
             </div>
 
-            {/* MODAL DE EXPORTACIÓN INTELIGENTE (FUERA DEL CONTENEDOR PRINCIPAL) */}
             {isExportModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
@@ -415,6 +405,7 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
 };
 
 export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, showToast, setConfirmModal }: any) => {
+    // Componente intacto, lógica de checklist aquí...
     const completedCount = checklistData.filter(i => checklistState[i.id]).length;
     const percent = Math.round((completedCount / checklistData.length) * 100) || 0;
 
@@ -442,6 +433,7 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
 
     return (
         <div className="fade-in max-w-4xl mx-auto pb-10 print:pb-0">
+            {/* Contenido HTML de ChecklistView (intacto) */}
             <div className="theme-bg-container p-6 rounded-2xl border theme-border shadow-sm mb-6 print:border-none print:shadow-none print:p-0">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b theme-border pb-4 mb-6 no-print">
                     <div><h2 className="text-xl font-bold theme-text-main flex items-center gap-2"><ListChecks className="w-6 h-6 text-[var(--primary)]" />Checklist de Respuesta Rápida</h2><p className="text-sm theme-text-muted mt-1 ml-8">Pasos estandarizados para contener un incidente activo en tiempo real.</p></div>

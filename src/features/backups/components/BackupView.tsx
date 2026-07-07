@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock, Eye, EyeOff } from 'lucide-react';
 import CryptoJS from 'crypto-js';
 import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
-import { db, appId } from '../firebase/config';
+import { db, appId } from '../../../services/firebase/config';
 // 🛡️ INTEGRACIÓN DEL RADAR PERIMETRAL DE AUDITORÍA
-import { logAuditEvent } from './AuditViews';
+import { logAuditEvent } from "../../../services/firebase/audit.service";
 
 export const BackupView = ({ showToast }: any) => {
     const [uploading, setUploading] = useState(false);

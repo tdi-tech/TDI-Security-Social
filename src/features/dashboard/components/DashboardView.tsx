@@ -5,10 +5,9 @@ import {
     FileText, X, ChevronRight, PieChart, TrendingUp, MapPin, Download
 } from 'lucide-react';
 import { collection, onSnapshot } from 'firebase/firestore';
-// 🛡️ Importamos auth para evaluar el dominio antes de abrir listeners
-import { db, appId, auth } from '../firebase/config'; 
-import { StatCard, ActionBtn } from '../components/UIComponents';
-import { DetailModal, EditIncidentModal } from './HackViews';
+import { db, appId, auth } from '../../../services/firebase/config'; 
+import { StatCard, ActionBtn } from '../../../shared/components/UIComponents';
+import { DetailModal, EditIncidentModal } from '../../incidents/components/HackViews';
 
 export const DashboardView = ({ 
     isAdmin, navigate, showToast, 
@@ -29,7 +28,6 @@ export const DashboardView = ({
     const [editModalOpen, setEditModalOpen] = useState(false);
 
     useEffect(() => {
-        // 🛡️ SENSOR: Evita disparar peticiones si el usuario logueado no pertenece a la empresa
         const u = auth.currentUser;
         if (u && !u.isAnonymous && u.email && !u.email.endsWith('@tierradeideas.mx')) {
             setIsLoading(false);
@@ -40,17 +38,17 @@ export const DashboardView = ({
         const unsub1 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'incidents'), snap => {
             const arr: any[] = []; snap.forEach(d => arr.push({id: d.id, ...d.data()}));
             setIncidents(arr.sort((a,b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
-        }, () => {}); // Catch 100% silencioso
+        }, () => {}); 
 
         const unsub2 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents'), snap => {
             const arr: any[] = []; snap.forEach(d => arr.push({id: d.id, ...d.data()}));
             setRrssIncidents(arr.sort((a,b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
-        }, () => {}); // Catch 100% silencioso
+        }, () => {}); 
 
         const unsub3 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), snap => {
             const arr: any[] = []; snap.forEach(d => arr.push({id: d.id, ...d.data()}));
             setComments(arr.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        }, () => {}); // Catch 100% silencioso
+        }, () => {}); 
         
         const timer = setTimeout(() => setIsLoading(false), 800);
         return () => { unsub1(); unsub2(); unsub3(); clearTimeout(timer); };
@@ -376,7 +374,7 @@ export const DashboardView = ({
                     )}
                 </div>
 
-                {/* MODAL DE VISTA RÁPIDA */}
+                {/* MODAL DE VISTA RÁPIDA (PREVIEW) PARA RRSS Y COMENTARIOS */}
                 {previewModal.isOpen && previewModal.data && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                         <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col">
@@ -413,15 +411,83 @@ export const DashboardView = ({
                                 )}
                             </div>
                             <div className="p-4 border-t theme-border flex gap-3">
-                                <button onClick={() => { setPreviewModal({isOpen: false, type: '', data: null}); navigate(previewModal.type === 'rrss' ? 'historial-rss' : 'historial-comentario'); }} className={`w-full py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:brightness-110 ${previewModal.type === 'rrss' ? 'bg-orange-600' : 'bg-blue-600'}`}>Ver historial completo <ChevronRight className="w-4 h-4"/></button>
+                                <button onClick={() => { setPreviewModal({isOpen: false, type: '', data: null}); navigate(previewModal.type === 'rrss' ? 'historial-rss' : 'historial-comentario'); }} className={`w-full py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:brightness-110 ${previewModal.type === 'rrss' ? 'bg-orange-600' : 'bg-blue-600'}`}>
+                                    Ver historial completo <ChevronRight className="w-4 h-4"/>
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
 
+            {/* MODALES EXCLUSIVOS DEL DASHBOARD (PARA SEGURIDAD/HACKEOS) */}
             <DetailModal isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} incident={selectedHackeo} isAdmin={isAdmin} onToggleStatus={toggleIncidentStatus} onEdit={() => { setDetailModalOpen(false); setEditModalOpen(true); }} onDelete={deleteIncident} />
             <EditIncidentModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} incident={selectedHackeo} onUpdate={updateIncident} />
+
+            {/* VISTA OCULTA DE IMPRESIÓN (RESTAURADA AL 100%) */}
+            <div className="hidden print-report-container p-8 max-w-4xl mx-auto">
+                <div className="border-b-2 border-gray-800 pb-4 mb-8">
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">INNOVA MANAGEMENT</h1>
+                    <h2 className="text-xl font-bold text-gray-600 mt-1 uppercase">Reporte Ejecutivo - {activeTab === 'seguridad' ? 'Seguridad y Accesos' : activeTab === 'rrss' ? 'Reputación RRSS' : 'Comentarios'}</h2>
+                    <p className="text-sm text-gray-500 mt-2 font-medium">Generado el: {new Date().toLocaleDateString()} a las {new Date().toLocaleTimeString()}</p>
+                </div>
+
+                {activeTab === 'seguridad' && (
+                    <div>
+                        <div className="grid grid-cols-4 gap-4 mb-8">
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Registros</p><p className="text-2xl font-black text-gray-900">{hackStats.total}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Abiertos</p><p className="text-2xl font-black text-gray-900">{hackStats.open}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Resueltos</p><p className="text-2xl font-black text-gray-900">{hackStats.resolved}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Impacto Alto</p><p className="text-2xl font-black text-gray-900">{hackStats.critical}</p></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="border border-gray-300 p-6 rounded-lg">
+                                <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Top 3 Vectores de Ataque</h3>
+                                {hackStats.topVectors.map((v, i) => (<div key={i} className="flex justify-between items-center mb-3 text-sm"><span className="font-bold text-gray-700">{v.name}</span><span className="text-gray-500 font-medium">{v.percent}% ({v.count} casos)</span></div>))}
+                            </div>
+                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center">
+                                <h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Plataforma más Vulnerable</h3><p className="text-2xl font-black text-gray-900">{hackStats.topPlatform}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'rrss' && (
+                    <div>
+                        <div className="grid grid-cols-4 gap-4 mb-8">
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Crisis Totales</p><p className="text-2xl font-black text-gray-900">{rrssStats.total}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">En Proceso</p><p className="text-2xl font-black text-gray-900">{rrssStats.open}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Controladas</p><p className="text-2xl font-black text-gray-900">{rrssStats.resolved}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Riesgo Alto</p><p className="text-2xl font-black text-gray-900">{rrssStats.highRisk}</p></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Índice de Resolución Global</h3><p className="text-4xl font-black text-gray-900">{rrssStats.resolutionRate}%</p></div>
+                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Canal más Crítico</h3><p className="text-2xl font-black text-gray-900">{rrssStats.topNetwork}</p></div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'comentarios' && (
+                    <div>
+                        <div className="grid grid-cols-4 gap-4 mb-8">
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Reportes</p><p className="text-2xl font-black text-gray-900">{commentsStats.totalReportes}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Comentarios Indv.</p><p className="text-2xl font-black text-gray-900">{commentsStats.totalIndividuales}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Orgánico</p><p className="text-2xl font-black text-gray-900">{commentsStats.organic}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Pautado</p><p className="text-2xl font-black text-gray-900">{commentsStats.paid}</p></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="border border-gray-300 p-6 rounded-lg">
+                                <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Análisis de Sentimiento</h3>
+                                <div className="flex justify-between items-center text-sm"><span className="font-bold text-gray-700">Comentarios Negativos</span><span className="text-gray-900 font-black text-lg">{commentsStats.negativo}</span></div>
+                                <div className="flex justify-between items-center mt-2 text-sm"><span className="font-bold text-gray-700">Comentarios Neutrales</span><span className="text-gray-900 font-black text-lg">{commentsStats.neutral}</span></div>
+                            </div>
+                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Campus con más Alertas</h3><p className="text-2xl font-black text-gray-900">{commentsStats.topCampus}</p></div>
+                        </div>
+                    </div>
+                )}
+                
+                <div className="mt-12 text-center text-[10px] text-gray-400 font-medium">DOCUMENTO DE USO INTERNO - CONFIDENCIAL</div>
+            </div>
         </>
     );
 };

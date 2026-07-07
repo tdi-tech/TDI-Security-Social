@@ -5,7 +5,7 @@ import {
     Server, Trash2, Cpu, AlertTriangle, CheckCircle2, X
 } from 'lucide-react';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db, appId } from '../firebase/config';
+import { db, appId } from '../../../services/firebase/config';
 
 export const ConfigView = ({ 
     isDarkMode, toggleTheme, userRole, userPrefs, updateUserPrefs, showToast

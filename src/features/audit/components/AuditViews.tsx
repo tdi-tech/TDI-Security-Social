@@ -1,60 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, addDoc } from 'firebase/firestore';
-import { db, appId, auth, getNetworkContext } from '../firebase/config';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db, appId } from '../../../services/firebase/config';
 import { 
   ShieldAlert, Download, Activity, Clock, User, Globe, MapPin, ShieldCheck, AlertOctagon, Laptop
 } from 'lucide-react';
 
-interface AuditLog {
-  id?: string;
-  ip: string;
-  pais: string;
-  fecha: Date;
-  expireAt: Date;
-  uid: string;
-  email: string;
-  provider: string;
-  userAgent: string;
-  accion: string;
-}
-
-export async function logAuditEvent(actionDescription: string) {
-  const currentUser = auth.currentUser;
-  if (!currentUser) return;
-
-  try {
-    const net = await getNetworkContext();
-    const now = new Date();
-    const expireDate = new Date(now.getTime() + (13 * 24 * 60 * 60 * 1000) + (23 * 60 * 60 * 1000));
-
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'), {
-      ip: net.ip || "127.0.0.1",
-      pais: net.country || "Local/Proxy",
-      fecha: now,
-      expireAt: expireDate,
-      uid: currentUser.uid,
-      email: currentUser.email || "anonymous-email",
-      provider: currentUser.providerData[0]?.providerId || "google.com",
-      userAgent: navigator.userAgent || "unknown-agent",
-      accion: actionDescription
-    });
-    console.log("🛡️ Log de seguridad inmutable asentado en auditLogs.");
-  } catch (err) {
-    console.error("Fallo crítico al asentar registro en auditLogs:", err);
-  }
-}
-
-export async function safeFirestoreOperation(operationFn: () => Promise<void>, actionName: string) {
-  try {
-    await operationFn();
-  } catch (error: any) {
-    if (error.code === 'permission-denied') {
-      // 🚨 SENSOR CORREGIDO: Mensaje corto
-      await logAuditEvent(`Bloqueo 403: Operación denegada (${actionName})`);
-    }
-    throw error;
-  }
-}
+// Tipado fuerte usando la arquitectura
+import type { AuditLog } from '../../../shared/types/models';
 
 export const AuditViews: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);

@@ -5,15 +5,11 @@ import {
     Frown, Meh, Search, ChevronDown, ChevronRight, ChevronLeft 
 } from 'lucide-react';
 import { collection, addDoc, onSnapshot } from 'firebase/firestore';
-import { db, appId } from '../firebase/config';
+import { db, appId } from '../../../services/firebase/config';
+import { getMonthName } from '../../../shared/utils/date';
 
 const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
 const radioLabelStyles = "flex items-center gap-2 text-sm font-medium theme-text-main cursor-pointer";
-
-const getMonthName = (monthNum: string) => {
-    const months: any = { '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril', '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto', '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre' };
-    return months[monthNum] || 'Desconocido';
-};
 
 const renderSentimentBadge = (sentiment: string) => {
     if (!sentiment) return null;
@@ -119,28 +115,22 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }
 };
 
 export const HistorialCommentView = ({ showToast, isAdmin, updateComment, deleteComment }: any) => {
-    
-    // 🔄 ESTADOS LOCALES PARA LAZY LOADING
     const [comments, setComments] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
     const [selectedComment, setSelectedComment] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [editData, setEditData] = useState<any>(null);
-
     const [searchTerm, setSearchTerm] = useState('');
     const [filterYear, setFilterYear] = useState('Todos');
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
-
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
 
-    // 🔄 EFECTO DE CARGA INDEPENDIENTE
     useEffect(() => {
         setIsLoading(true);
         const commentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'comments');
@@ -149,7 +139,7 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
             snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
             data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setComments(data);
-            setTimeout(() => setIsLoading(false), 600); // 600ms de gracia para que se luzca la animación
+            setTimeout(() => setIsLoading(false), 600);
         });
         return () => unsub();
     }, []);
