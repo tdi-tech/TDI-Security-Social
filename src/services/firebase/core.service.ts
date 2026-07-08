@@ -1,28 +1,30 @@
-import { doc, setDoc, addDoc, collection, arrayUnion, deleteDoc } from "firebase/firestore";
-import { db, appId, auth } from './config';
+import { setDoc, addDoc, arrayUnion, deleteDoc } from "firebase/firestore";
+import { getCollectionRef, getDocRef } from '../firestore/collections.service';
+import { safeFirestoreOperation } from './audit.service';
+import type { CollectionName } from '../../shared/types/models';
 
-export const detectMaliciousPayload = (data: any): boolean => {
+export const detectMaliciousPayload = (data: Record<string, unknown>): boolean => {
     if (!data) return false;
     const str = JSON.stringify(data).toLowerCase();
     const patterns = ['<script>', 'javascript:', 'onerror=', 'onload=', 'drop table', 'union select', '../../'];
     return patterns.some(pattern => str.includes(pattern));
 };
 
-export const updateDocument = async (collectionName: string, docId: string, data: any, actionName: string) => {
+export const updateDocument = async (collectionName: CollectionName, docId: string, data: Record<string, unknown>, actionName: string): Promise<void> => {
     return safeFirestoreOperation(async () => {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId), data, { merge: true });
+        await setDoc(getDocRef(collectionName, docId), data, { merge: true });
     }, actionName);
 };
 
-export const deleteDocument = async (collectionName: string, docId: string, actionName: string) => {
+export const deleteDocument = async (collectionName: CollectionName, docId: string, actionName: string): Promise<void> => {
     return safeFirestoreOperation(async () => {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId));
+        await deleteDoc(getDocRef(collectionName, docId));
     }, actionName);
 };
 
-export const pushNotification = async (userId: string, userName: string, userPhoto: string, actionText: string, moduleName: string, actionType: string, incidentId: string = '') => {
+export const pushNotification = async (userId: string, userName: string, userPhoto: string, actionText: string, moduleName: string, actionType: string, incidentId: string = ''): Promise<void> => {
     try {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
+        await addDoc(getCollectionRef('notifications'), {
             userId, 
             userName: userName || 'Administrador', 
             userPhoto: userPhoto || '',
@@ -39,9 +41,9 @@ export const pushNotification = async (userId: string, userName: string, userPho
     }
 };
 
-export const markNotificationRead = async (notifId: string, userId: string) => {
+export const markNotificationRead = async (notifId: string, userId: string): Promise<void> => {
     try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notifications', notifId), { 
+        await setDoc(getDocRef('notifications', notifId), { 
             readBy: arrayUnion(userId) 
         }, { merge: true });
     } catch (error) {

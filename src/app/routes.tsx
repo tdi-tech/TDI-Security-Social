@@ -1,11 +1,7 @@
 import React from 'react';
-
-// 📦 Shared Components (Vistas estáticas, informativas y globales)
 import { StaticProtocoloView, RolesView, GlosarioView, ProtocoloRRSSView } from '../shared/components/StaticViews';
 import { AyudaView } from '../shared/components/AyudaView';
 import { ChangelogView } from '../shared/components/ChangelogView';
-
-// 🚀 Features (Módulos de Dominio)
 import { DashboardView } from '../features/dashboard/components/DashboardView'; 
 import { ConfigView } from '../features/settings/components/ConfigView';
 import { HistorialView, ChecklistView, NewIncidentView } from '../features/incidents/components/HackViews';
@@ -15,26 +11,39 @@ import { UserManagementView } from '../features/users/components/UserViews';
 import { BackupView } from '../features/backups/components/BackupView';
 import { AuditViews } from '../features/audit/components/AuditViews';
 
-export const AppRouter = ({ currentView, props }: any) => {
-    switch (currentView) {
-        case 'dashboard': return <DashboardView {...props} />;
-        case 'protocolo': return <StaticProtocoloView />;
-        case 'nuevo': return <NewIncidentView {...props} />;
-        case 'historial': return <HistorialView {...props} />;
-        case 'checklist': return <ChecklistView {...props} />;
-        case 'roles': return <RolesView />;
-        case 'changelog': return <ChangelogView />;
-        case 'glosario': return <GlosarioView />;
-        case 'ayuda': return <AyudaView isAdmin={props.isAdmin} />;
-        case 'config': return <ConfigView {...props} />;
-        case 'gestion-usuarios': return <UserManagementView {...props} />;
-        case 'backups': return props.userRole === 'ADMIN_IT' ? <BackupView showToast={props.showToast} /> : null;
-        case 'auditoria': return props.userRole === 'ADMIN_IT' ? <AuditViews /> : null;
-        case 'protocolo-rss': return <ProtocoloRRSSView />;
-        case 'nuevo-rss': return <NewRRSSIncidentView {...props} />;
-        case 'historial-rss': return <HistorialRRSSView {...props} />;
-        case 'nuevo-comentario': return <NewCommentView {...props} />;
-        case 'historial-comentario': return <HistorialCommentView {...props} />;
-        default: return <DashboardView {...props} />;
-    }
+type AccessLevel = 'PUBLIC' | 'LOGGED_IN' | 'ADMIN_IT' | 'ADMIN_CM_IT';
+
+interface RouteConfig {
+    component: React.FC<any>;
+    access: AccessLevel;
+}
+
+export const ROUTES: Record<string, RouteConfig> = {
+    'dashboard': { component: DashboardView, access: 'PUBLIC' },
+    'protocolo': { component: StaticProtocoloView, access: 'PUBLIC' },
+    'historial': { component: HistorialView, access: 'PUBLIC' },
+    'glosario': { component: GlosarioView, access: 'PUBLIC' },
+    'roles': { component: RolesView, access: 'PUBLIC' },
+    'ayuda': { component: AyudaView, access: 'PUBLIC' },
+    'config': { component: ConfigView, access: 'PUBLIC' },
+    'protocolo-rss': { component: ProtocoloRRSSView, access: 'PUBLIC' },
+    'historial-rss': { component: HistorialRRSSView, access: 'PUBLIC' },
+    'historial-comentario': { component: HistorialCommentView, access: 'PUBLIC' },
+    
+    'changelog': { component: ChangelogView, access: 'LOGGED_IN' },
+    'nuevo': { component: NewIncidentView, access: 'LOGGED_IN' },
+    'checklist': { component: ChecklistView, access: 'LOGGED_IN' },
+    'nuevo-rss': { component: NewRRSSIncidentView, access: 'LOGGED_IN' },
+    'nuevo-comentario': { component: NewCommentView, access: 'LOGGED_IN' },
+    
+    'gestion-usuarios': { component: UserManagementView, access: 'ADMIN_CM_IT' },
+    
+    'backups': { component: BackupView, access: 'ADMIN_IT' },
+    'auditoria': { component: AuditViews, access: 'ADMIN_IT' },
+};
+
+export const AppRouter = ({ currentView, props }: { currentView: string, props: any }) => {
+    const route = ROUTES[currentView] || ROUTES['dashboard'];
+    const Component = route.component;
+    return <Component {...props} />;
 };

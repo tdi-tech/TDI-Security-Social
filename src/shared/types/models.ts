@@ -1,5 +1,28 @@
 export type UserRole = 'ADMIN_IT' | 'ADMIN_CM' | 'EDITOR_CM' | 'READER' | '';
 
+// 🔒 TIPADO ESTRICTO DE INFRAESTRUCTURA
+export type CollectionName = 'incidents' | 'rrss_incidents' | 'comments' | 'notifications' | 'auditLogs' | 'users' | 'appState';
+
+// 🛡️ TIPADOS GLOBALES DE UI
+export interface ToastState {
+    msg: string;
+    isError: boolean;
+}
+
+export interface ConfirmModalState {
+    isOpen: boolean;
+    title: string;
+    msg: string;
+    onConfirm: () => void;
+}
+
+export interface PreviewModalState {
+    isOpen: boolean;
+    type: 'rrss' | 'comment' | '';
+    data: any; 
+}
+
+// 📦 MODELOS DE DATOS
 export interface UserSession {
     uid: string;
     email: string | null;

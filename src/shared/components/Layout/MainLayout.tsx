@@ -1,19 +1,16 @@
 import React from 'react';
-import { Menu, CheckCircle2, XCircle, Sun, Moon, LogOut, Bell, Trash2, Eye, Users, ChevronRight, X, Megaphone, MessageSquare, Lock } from 'lucide-react';
+import { Menu, Sun, Moon, LogOut, Bell, Trash2, Eye, Users, CheckCircle2, Lock } from 'lucide-react';
 import { Sidebar } from '../Sidebar';
-import { LoginModal, ConfirmModal } from '../Modals';
 import { Inactivity } from '../Inactivity';
 
 export const MainLayout = ({
     children, isDarkMode, toggleTheme, currentView, navigate, 
     sidebarOpen, setSidebarOpen, profileMenuOpen, setProfileMenuOpen,
     notifMenuOpen, setNotifMenuOpen, notifTab, setNotifTab,
-    toast, loginModalOpen, setLoginModalOpen, confirmModal, setConfirmModal,
-    previewModal, setPreviewModal,
     user, isAdmin, userRole, cloudStatus, displayRoleName,
     unreadNotifications, readNotifications, validNotifications,
     markAsRead, hideNotification, handleViewIncident,
-    loginWithGoogle, logoutAdmin
+    openLoginModal, logoutAdmin
 }: any) => {
 
     const renderHeaderTitle = () => {
@@ -47,17 +44,7 @@ export const MainLayout = ({
 
     return (
         <div className={`h-screen print:h-auto print:block flex relative font-sans transition-colors duration-300 ${isAdmin ? 'is-admin' : ''}`}>
-            
             {((user && user.email) || isAdmin) && <Inactivity onLogout={logoutAdmin} />}
-
-            <div className="fixed top-5 right-5 z-[70] flex flex-col gap-2 no-print">
-                {toast && (
-                    <div className={`p-4 rounded-xl shadow-lg flex items-center gap-3 transition-all ${toast.isError ? 'bg-[var(--error)] text-white' : 'theme-bg-container theme-border border theme-text-main'}`}>
-                        {toast.isError ? <XCircle className="w-5 h-5"/> : <CheckCircle2 className={`w-5 h-5 text-[var(--success)]`}/>}
-                        <p className="text-sm font-medium">{toast.msg}</p>
-                    </div>
-                )}
-            </div>
 
             <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} currentView={currentView} navigate={navigate} isAdmin={isAdmin} cloudStatus={cloudStatus} userRole={userRole} />
 
@@ -140,63 +127,16 @@ export const MainLayout = ({
                                 </div>
                             </div>
                         ) : (
-                            <button onClick={() => setLoginModalOpen(true)} className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5 bg-[var(--primary)] text-white hover:brightness-110"><Lock className="w-3.5 h-3.5"/><span className="hidden xs:inline sm:inline">Entrar</span></button>
+                            <button onClick={openLoginModal} className="px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5 bg-[var(--primary)] text-white hover:brightness-110"><Lock className="w-3.5 h-3.5"/><span className="hidden xs:inline sm:inline">Entrar</span></button>
                         )}
                     </div>
                 </header>
 
                 <div id="main-content" className="flex-1 print:block overflow-y-auto print:overflow-visible p-4 sm:p-8 print:p-0 w-full">
-                    {/* Renderizamos las vistas inyectadas por el Enrutador */}
                     {children}
                 </div>
             </main>
-
-            {/* PREVIEW MODAL (VISTA RÁPIDA DE NOTIFICACIONES) */}
-            {previewModal.isOpen && previewModal.data && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
-                    <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col">
-                        <div className={`p-4 border-b theme-border flex justify-between items-center ${previewModal.type === 'rrss' ? 'bg-orange-500/5' : 'bg-blue-500/5'}`}>
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${previewModal.type === 'rrss' ? 'bg-orange-500/20 text-orange-500' : 'bg-blue-500/20 text-blue-500'}`}>
-                                    {previewModal.type === 'rrss' ? <Megaphone className="w-5 h-5"/> : <MessageSquare className="w-5 h-5"/>}
-                                </div>
-                                <div><h3 className="font-bold theme-text-main">Vista Rápida</h3><p className="text-[10px] theme-text-muted font-medium uppercase tracking-wider">{previewModal.type === 'rrss' ? 'Crisis RRSS' : 'Comentarios'}</p></div>
-                            </div>
-                            <button onClick={() => setPreviewModal({isOpen: false, type: '', data: null})} className="p-1.5 theme-text-muted hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            {previewModal.type === 'rrss' ? (
-                                <>
-                                    <div className="flex justify-between items-start">
-                                        <div><p className="text-xs theme-text-muted font-bold mb-1">Medio Afectado</p><p className="text-lg font-bold theme-text-main text-orange-500">{previewModal.data.medio}</p></div>
-                                        <span className={`px-2 py-1 text-[10px] font-bold rounded-md uppercase ${previewModal.data.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{previewModal.data.estado}</span>
-                                    </div>
-                                    <div className="p-3 theme-bg-low rounded-xl border theme-border"><p className="text-sm theme-text-main font-medium"><span className="font-bold">{previewModal.data.usuario}:</span> {previewModal.data.descripcion}</p></div>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div><span className="text-xs theme-text-muted block mb-0.5">Riesgo</span><span className="font-bold theme-text-main">{previewModal.data.riesgo}</span></div>
-                                        <div><span className="text-xs theme-text-muted block mb-0.5">Campus</span><span className="font-bold theme-text-main">{previewModal.data.campus}</span></div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="flex justify-between items-start">
-                                        <div><p className="text-xs theme-text-muted font-bold mb-1">Periodo del Reporte</p><p className="text-base font-bold theme-text-main text-blue-500">{previewModal.data.fechaInicio} <span className="text-sm font-medium theme-text-muted">al</span> {previewModal.data.fechaFin}</p></div>
-                                        <span className="px-2 py-1 text-[10px] font-bold rounded-md uppercase bg-blue-500/10 text-blue-500">{previewModal.data.contenido}</span>
-                                    </div>
-                                    <div className="p-3 theme-bg-low rounded-xl border theme-border"><p className="text-sm theme-text-main font-medium">Contiene <span className="font-bold text-blue-500">{previewModal.data.comentariosList?.length || 1}</span> comentario(s) registrado(s).</p></div>
-                                </>
-                            )}
-                        </div>
-                        <div className="p-4 border-t theme-border flex gap-3">
-                            <button onClick={() => { setPreviewModal({isOpen: false, type: '', data: null}); navigate(previewModal.type === 'rrss' ? 'historial-rss' : 'historial-comentario'); }} className={`w-full py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:brightness-110 ${previewModal.type === 'rrss' ? 'bg-orange-600' : 'bg-blue-600'}`}>Ver historial completo <ChevronRight className="w-4 h-4"/></button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <div id="print-header" className="hidden text-black font-bold text-2xl">Reporte: Innova Management</div>
-            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={loginWithGoogle} />
-            <ConfirmModal isOpen={confirmModal.isOpen} title={confirmModal.title} msg={confirmModal.msg} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} onConfirm={() => { confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }} />
         </div>
     );
 };

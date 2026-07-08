@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { getDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../services/firebase/config';
 
-// 🔌 Hooks de Dominio y UI (Rutas actualizadas a FSD)
 import { useTheme } from './providers/ThemeProvider';
+import { useToast } from './providers/ToastProvider';
+import { useModals } from './providers/ModalProvider';
 import { useAuthSession } from '../features/auth/hooks/useAuthSession';
 import { useGlobalEvents } from '../features/notifications/hooks/useGlobalEvents';
 import { useUsersManager } from '../features/users/hooks/useUsersManager';
@@ -11,79 +12,47 @@ import { useIncidents } from '../features/incidents/hooks/useIncidents';
 import { useRRSS } from '../features/rrss/hooks/useRRSS';
 import { useComments } from '../features/comments/hooks/useComments';
 
-// 🏗️ Arquitectura Core
-import { AppRouter } from './routes';
+import { AppRouter, ROUTES } from './routes';
 import { MainLayout } from '../shared/components/Layout/MainLayout';
+import { LoginModal } from '../shared/components/Modals';
 
-export default function App() {
+const AppContent = () => {
     const { isDarkMode, toggleTheme } = useTheme();
+    const { showToast } = useToast();
+    const { openConfirmModal, openPreviewModal, onNavigateRef } = useModals();
 
-    // 1️⃣ ESTADOS UI GLOBALES
     const [currentView, setCurrentView] = useState(() => localStorage.getItem('innova_current_view') || 'dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false); 
     const [notifMenuOpen, setNotifMenuOpen] = useState(false);
     const [notifTab, setNotifTab] = useState('unread');
-    const [toast, setToast] = useState<any>(null);
     const [loginModalOpen, setLoginModalOpen] = useState(false);
-    const [confirmModal, setConfirmModal] = useState<any>({ isOpen: false, title: '', msg: '', onConfirm: null });
-    const [previewModal, setPreviewModal] = useState<{isOpen: boolean, type: string, data: any}>({isOpen: false, type: '', data: null});
 
-    // 2️⃣ FUNCIONES DE SOPORTE UI
-    const showToast = (msg: string, isError = false) => {
-        setToast({ msg, isError });
-        setTimeout(() => setToast(null), 4000);
-    };
+    const { user, isAdmin, userRole, cloudStatus, loginWithGoogle, logoutAdmin, userPrefs, updateUserPrefs, prefsRef } = useAuthSession(showToast, setLoginModalOpen);
+    const { checklistState, setChecklistState, notifications, logAction, markAsRead, hideNotification } = useGlobalEvents(user, prefsRef, showToast);
+    const { appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser } = useUsersManager(user, userRole, showToast, openConfirmModal);
+    
+    const dummySetDetailModalOpen = () => {}; 
+    const { toggleIncidentStatus, updateIncident, deleteIncident } = useIncidents(showToast, openConfirmModal, dummySetDetailModalOpen, logAction);
+    const { updateRrssIncident, deleteRrssIncident } = useRRSS(showToast, openConfirmModal, logAction);
+    const { updateComment, deleteComment } = useComments(showToast, openConfirmModal, logAction);
 
-    const dummySetDetailModalOpen = () => {}; // Los componentes manejan su propio modal de detalle
-
-    // 3️⃣ INYECCIÓN DE DEPENDENCIAS (Feature Hooks)
-    const { 
-        user, isAdmin, userRole, cloudStatus, loginWithGoogle, logoutAdmin, userPrefs, updateUserPrefs, prefsRef 
-    } = useAuthSession(showToast, setLoginModalOpen);
-    
-    const { 
-        checklistState, setChecklistState, notifications, logAction, markAsRead, hideNotification, deleteNotification 
-    } = useGlobalEvents(user, prefsRef, showToast);
-    
-    const { 
-        appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser 
-    } = useUsersManager(user, userRole, showToast, setConfirmModal);
-    
-    // 4️⃣ DOMINIOS CRUD SEPARADOS
-    const { 
-        toggleIncidentStatus, updateIncident, deleteIncident 
-    } = useIncidents(showToast, setConfirmModal, dummySetDetailModalOpen, logAction);
-    
-    const { 
-        updateRrssIncident, deleteRrssIncident 
-    } = useRRSS(showToast, setConfirmModal, logAction);
-    
-    const { 
-        updateComment, deleteComment 
-    } = useComments(showToast, setConfirmModal, logAction);
-
-    // 🛡️ MOTOR DE ENRUTAMIENTO Y RBAC (Control de Acceso Basado en Roles)
+    // 🛡️ GUARDIA DE RUTAS REAL (RBAC)
     const navigate = async (view: string) => {
-        const adminViews = ['nuevo', 'checklist', 'nuevo-rss', 'nuevo-comentario', 'gestion-usuarios', 'backups', 'auditoria'];
-        const loggedInViews = [...adminViews, 'changelog'];
-        
-        if (loggedInViews.includes(view) && !isAdmin) {
-            showToast('Debes iniciar sesión para acceder a esta sección.', true);
-            setLoginModalOpen(true);
-            return;
-        }
+        const route = ROUTES[view] || ROUTES['dashboard'];
+        const access = route.access;
 
-        if ((view === 'backups' || view === 'auditoria') && userRole !== 'ADMIN_IT') {
+        if (access === 'LOGGED_IN' && !isAdmin) {
+            showToast('Debes iniciar sesión para acceder a esta sección.', true);
+            return setLoginModalOpen(true);
+        }
+        if (access === 'ADMIN_IT' && userRole !== 'ADMIN_IT') {
             const { logAuditEvent } = await import('../services/firebase/audit.service');
             await logAuditEvent(`Violación RBAC: Acceso restringido (/${view})`);
-            showToast('Acceso denegado. Este módulo es exclusivo para el Administrador de IT.', true);
-            return;
+            return showToast('Acceso denegado. Exclusivo para Administrador de IT.', true);
         }
-
-        if (view === 'gestion-usuarios' && userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
-            showToast('Acceso denegado. Tu rol no cuenta con permisos para gestionar usuarios.', true);
-            return;
+        if (access === 'ADMIN_CM_IT' && userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
+            return showToast('Acceso denegado. Tu rol no tiene permisos.', true);
         }
 
         setCurrentView(view); 
@@ -91,18 +60,17 @@ export default function App() {
         setSidebarOpen(false);
     };
 
+    // Conectamos el ref de navegación del ModalProvider con la función real
+    useEffect(() => { onNavigateRef.current = navigate; }, [navigate]);
+
     useEffect(() => {
         if (cloudStatus === 'Conectando...') return;
-        if (!user && !isAdmin) {
-            const publicViews = ['dashboard', 'protocolo', 'historial', 'glosario', 'protocolo-rss', 'historial-rss', 'historial-comentario', 'roles', 'config', 'ayuda'];
-            if (!publicViews.includes(currentView)) {
-                setCurrentView('dashboard');
-                localStorage.setItem('innova_current_view', 'dashboard');
-            }
+        if (!user && !isAdmin && ROUTES[currentView]?.access !== 'PUBLIC') {
+            setCurrentView('dashboard');
+            localStorage.setItem('innova_current_view', 'dashboard');
         }
     }, [user, isAdmin, currentView, cloudStatus]);
 
-    // 🔔 Lógica de Notificaciones
     useEffect(() => {
         const handleClickOutside = (e: any) => {
             if (!e.target.closest('.notif-container')) setNotifMenuOpen(false);
@@ -119,22 +87,21 @@ export default function App() {
     const handleViewIncident = async (n: any) => {
         setNotifMenuOpen(false);
         try {
-            let colName = n.module === 'Hackeos' ? 'incidents' : n.module === 'Incidencia RRSS' ? 'rrss_incidents' : n.module === 'Comentarios' ? 'comments' : '';
+            let colName: any = n.module === 'Hackeos' ? 'incidents' : n.module === 'Incidencia RRSS' ? 'rrss_incidents' : n.module === 'Comentarios' ? 'comments' : '';
             if (!colName) return;
             const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, n.incidentId));
             
             if (docSnap.exists()) {
                 const data = { id: docSnap.id, ...docSnap.data() };
-                if (colName === 'incidents') { navigate('historial'); showToast('Apertura rápida. Busca el incidente en la lista superior.'); } 
-                else if (colName === 'rrss_incidents') setPreviewModal({isOpen: true, type: 'rrss', data});
-                else setPreviewModal({isOpen: true, type: 'comment', data});
-            } else { showToast('El registro ya no existe o fue eliminado', true); }
-        } catch(e) { showToast('Error al obtener el registro del servidor', true); }
+                if (colName === 'incidents') { navigate('historial'); showToast('Apertura rápida. Busca en la lista.'); } 
+                else if (colName === 'rrss_incidents') openPreviewModal('rrss', data);
+                else openPreviewModal('comment', data);
+            } else showToast('El registro fue eliminado', true);
+        } catch(e) { showToast('Error al conectar con servidor', true); }
     };
 
     const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' : userRole === 'ADMIN_CM' ? 'Administrador CM' : userRole === 'EDITOR_CM' ? 'Editor CM' : 'Administrador';
 
-    // 📦 Propiedades empaquetadas para las vistas (Routing)
     const viewProps = {
         isAdmin, user, userRole, showToast, navigate, logAction, appUsers, checklistState, setChecklistState,
         updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser, isDarkMode, toggleTheme, userPrefs, updateUserPrefs,
@@ -146,13 +113,15 @@ export default function App() {
             isDarkMode={isDarkMode} toggleTheme={toggleTheme} currentView={currentView} navigate={navigate}
             sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} profileMenuOpen={profileMenuOpen} setProfileMenuOpen={setProfileMenuOpen}
             notifMenuOpen={notifMenuOpen} setNotifMenuOpen={setNotifMenuOpen} notifTab={notifTab} setNotifTab={setNotifTab}
-            toast={toast} loginModalOpen={loginModalOpen} setLoginModalOpen={setLoginModalOpen} confirmModal={confirmModal} setConfirmModal={setConfirmModal}
-            previewModal={previewModal} setPreviewModal={setPreviewModal} user={user} isAdmin={isAdmin} userRole={userRole} cloudStatus={cloudStatus} displayRoleName={displayRoleName}
+            user={user} isAdmin={isAdmin} userRole={userRole} cloudStatus={cloudStatus} displayRoleName={displayRoleName}
             unreadNotifications={unreadNotifications} readNotifications={readNotifications} validNotifications={validNotifications}
             markAsRead={markAsRead} hideNotification={hideNotification} handleViewIncident={handleViewIncident}
-            loginWithGoogle={loginWithGoogle} logoutAdmin={logoutAdmin}
+            openLoginModal={() => setLoginModalOpen(true)} logoutAdmin={logoutAdmin}
         >
             <AppRouter currentView={currentView} props={viewProps} />
+            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={loginWithGoogle} />
         </MainLayout>
     );
-}
+};
+
+export default AppContent;
