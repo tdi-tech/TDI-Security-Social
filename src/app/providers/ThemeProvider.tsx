@@ -1,48 +1,52 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
-// Tipamos el Contexto
 interface ThemeContextType {
     isDarkMode: boolean;
     toggleTheme: () => void;
 }
 
-// Creamos el Contexto
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Creamos el Provider (Este componente envolverá a la app)
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-    const [isDarkMode, setIsDarkMode] = useState(true);
-
-    useEffect(() => {
+    // 🚨 FIX REACT DOCTOR: Inicialización síncrona perezosa en lugar de useEffect para evitar salto de UI
+    const [isDarkMode, setIsDarkMode] = useState(() => {
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'light') {
-            setIsDarkMode(false);
             document.documentElement.classList.remove('dark');
+            return false;
         } else {
-            setIsDarkMode(true);
             document.documentElement.classList.add('dark');
+            return true;
         }
+    });
+
+    const toggleTheme = React.useCallback(() => {
+        setIsDarkMode((prev) => {
+            const newValue = !prev;
+            if (newValue) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+            return newValue;
+        });
     }, []);
 
-    const toggleTheme = () => {
-        setIsDarkMode(!isDarkMode);
-        if (isDarkMode) {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        } else {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        }
-    };
+    // 🚨 FIX REACT DOCTOR: useMemo para estabilizar el contexto
+    const contextValue = useMemo(() => ({
+        isDarkMode,
+        toggleTheme
+    }), [isDarkMode, toggleTheme]);
 
     return (
-        <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+        <ThemeContext.Provider value={contextValue}>
             {children}
         </ThemeContext.Provider>
     );
 };
 
-// Exportamos el Custom Hook desde aquí para consumirlo fácilmente en cualquier parte
 export const useTheme = (): ThemeContextType => {
     const context = useContext(ThemeContext);
     if (context === undefined) {

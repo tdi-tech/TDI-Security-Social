@@ -1,126 +1,132 @@
-import React, { useState } from 'react';
-import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layout, Zap, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layout, Zap, Sparkles, RefreshCw } from 'lucide-react';
 
 const changelogData = [
     {
-        version: 'v3.4.1',
+        id: 'cl-v3-4-1',
+        version: 'Versión 3.4.1',
         date: 'Junio 2026',
         tag: 'Última Versión',
-        title: 'Sincronización Operativa y Depuración SIEM',
+        title: 'Optimización de Canales Operativos y Filtros de Monitoreo',
         changes: [
-            { type: 'title', text: 'Alineación de Matriz RBAC' },
-            { type: 'feature', text: 'Reconexión Operativa CM: Los roles ADMIN_CM y EDITOR_CM ahora tienen acceso completo para registrar, editar y borrar incidentes en el módulo de Hackeos (Seguridad IT), unificando el flujo de trabajo.' },
-            { type: 'security', text: 'Límites de Gestión CM: El ADMIN_CM ahora puede pre-registrar cuentas y pausarlas (deshabilitarlas), pero el sistema le bloquea estrictamente la capacidad de otorgar roles IT, cambiar roles existentes o borrar usuarios de la base de datos.' },
-            { type: 'security', text: 'Cierre de Rutas EDITOR_CM: Bloqueo estricto del apartado de Gestión de Usuarios para el rol Editor. Si se intenta forzar la ruta, el Radar de Intrusos lo detecta como violación de políticas.' },
-            { type: 'divider' },
-            { type: 'title', text: 'Optimización de Consola y Falsos Positivos' },
-            { type: 'ui', text: 'Depuración de Listeners: Implementación de "atrapa-errores" silenciosos en todos los onSnapshot para evitar mensajes rojos (permission-denied) en la consola durante los tiempos de validación de inicio de sesión de Firebase.' },
-            { type: 'security', text: 'Limpieza del Radar de Intrusos: Se erradicaron los falsos positivos. Las acciones exitosas de exportación CSV y Backups ya no ensucian la Auditoría Avanzada. El panel ahora es 100% exclusivo para detección de amenazas.' }
+            { id: 'ch-341-1', type: 'title', text: 'Unificación de Criterios y Permisos Corporativos' },
+            { id: 'ch-341-2', type: 'feature', text: 'Unificación Operativa: Los equipos de coordinación y edición de contenidos ahora cuentan con acceso completo para documentar, actualizar y gestionar incidencias de seguridad de forma centralizada.' },
+            { id: 'ch-341-3', type: 'security', text: 'Jerarquía de Privilegios: El equipo de administración de contenidos ahora puede pre-registrar colaboradores y pausar accesos temporales, manteniendo bloqueada la asignación de roles técnicos avanzados por seguridad del sistema.' },
+            { id: 'ch-341-4', type: 'security', text: 'Blindaje de Áreas Críticas: Restricción absoluta del módulo de Gestión de Cuentas para roles operativos; cualquier intento de acceso no autorizado es registrado automáticamente en las bitácoras.' },
+            { id: 'ch-341-5', type: 'divider', text: '' },
+            { id: 'ch-341-6', type: 'title', text: 'Estabilidad de Consola y Depuración de Alertas' },
+            { id: 'ch-341-7', type: 'ui', text: 'Optimización de Procesos: Implementación de controladores silenciosos en la carga de datos para suprimir alertas innecesarias durante la validación de perfiles corporativos.' },
+            { id: 'ch-341-8', type: 'security', text: 'Depuración Forense: Se optimizó el Radar de Intrusos para omitir alertas normales de exportación de sábanas de datos o respaldos, dejándolo exclusivo para la detección de anomalías.' }
         ]
     },
     {
-        version: 'v3.4.0',
+        id: 'cl-v3-4-0',
+        version: 'Versión 3.4.0',
         date: 'Junio 2026',
         tag: 'Estable',
-        title: 'Radar de Intrusos & Auditoría SIEM',
+        title: 'Radar de Intrusos & Auditoría Centralizada',
         changes: [
-            { type: 'title', text: 'Módulo de Auditoría Perimetral' },
-            { type: 'security', text: 'Radar de Intrusos (Firewall Backend): Implementación de un panel de auditoría inmutable que registra automáticamente cualquier intento de violación de reglas de seguridad o acceso denegado (Error 403) a nivel de servidor.' },
-            { type: 'security', text: 'Retención Inmutable y Purga TTL: Los registros de ataques no pueden ser modificados ni eliminados por ningún usuario (ni siquiera Administradores IT). Se autodestruyen física y automáticamente a los 14 días exactos usando políticas nativas Time-To-Live (TTL) de Google Cloud.' },
-            { type: 'feature', text: 'Geolocalización Zero-Trust: Integración en segundo plano con la API de ipInfo para capturar de forma silenciosa la dirección IP real, el País de origen y el UserAgent de cualquier atacante bloqueado por la base de datos.' },
-            { type: 'feature', text: 'Exportación Forense CSV: Nuevo motor de exportación en memoria que permite a los Administradores IT descargar una sábana de datos forenses detallada sin consumir recursos de lectura/escritura en el servidor.' },
-            { type: 'ui', text: 'Interfaz y Control de Acceso Estricto: Visualización del panel de auditoría condicionada exclusivamente al rol ADMIN_IT. Incorpora un diseño de Empty-State corporativo ("Perímetro Asegurado") y Skeletons de carga fluida.' }
+            { id: 'ch-340-1', type: 'title', text: 'Monitoreo Perimetral Automático' },
+            { id: 'ch-340-2', type: 'security', text: 'Radar de Intrusos: Incorporación de una bitácora inmutable en el servidor que registra al instante cualquier intento de acceso no autorizado o violación a las políticas corporativas.' },
+            { id: 'ch-340-3', type: 'security', text: 'Retención y Autodestrucción Segura: Los registros de auditoría avanzada no pueden ser editados ni borrados por ningún usuario. Se eliminan físicamente de forma automática a los 14 días mediante políticas automáticas del servidor.' },
+            { id: 'ch-340-4', type: 'feature', text: 'Trazabilidad y Auditoría de Conexiones: Captura automatizada y discreta de la procedencia geográfica, proveedor y agente de navegación en accesos bloqueados para análisis forense de TI.' },
+            { id: 'ch-340-5', type: 'feature', text: 'Descargas Forenses CSV: Nuevo motor de exportación local en memoria que permite generar sábanas de datos analíticos sin elevar los consumos de cuota del servidor.' },
+            { id: 'ch-340-6', type: 'ui', text: 'Consola Blindada de TI: Interfaz de supervisión de amenazas exclusiva para el perfil directivo de sistemas, equipada con pantallas de carga fluida y estados visuales limpios.' }
         ]
     },
     {
-        version: 'v3.3.0',
+        id: 'cl-v3-3-0',
+        version: 'Versión 3.3.0',
         date: 'Junio 2026',
         tag: 'Estable',
-        title: 'Security Core, Zero-Trust & Criptografía',
+        title: 'Políticas de Cero Confianza y Protección de Datos',
         changes: [
-            { type: 'title', text: 'Arquitectura Cero-Confianza (Zero-Trust)' },
-            { type: 'security', text: 'Firebase Security Rules (Backend): Migración total del control de roles (RBAC) al servidor. La validación de privilegios ya no recae en React, haciendo imposible que atacantes fuercen comandos modificando el cliente.' },
-            { type: 'security', text: 'Cierre de Brechas de Exposición (Anónimos): Los usuarios no autenticados ahora son bloqueados a nivel servidor para visualizar notificaciones, configuraciones, listas de usuarios y cualquier nodo crítico de la base de datos.' },
-            { type: 'security', text: 'Protección Absoluta de Fundadores: Se erradicó el arreglo de correos codificados (hardcodeados) en el frontend. La gestión de jerarquías intocables y rangos IT ahora es dinámica.' },
-            { type: 'security', text: 'Vigía de Inactividad Global: Implementación de un doble temporizador en segundo plano que detecta la inactividad del usuario (10 minutos), lanzando un cierre forzado de sesión por seguridad.' },
-            { type: 'divider' },
-            { type: 'title', text: 'Optimizaciones y Criptografía' },
-            { type: 'security', text: 'Backups Cifrados AES-256: El módulo de Copias de Seguridad ahora implementa la librería crypto-js. Los archivos JSON exportados están totalmente encriptados y requieren contraseña de administrador para descifrarse e inyectarse.' },
-            { type: 'feature', text: 'Centro de Respaldos Core Inteligente: Nuevo motor capaz de leer backups cifrados y restaurar de emergencia los reportes eliminados (Hackeos, RRSS, Comentarios) sin duplicar datos vivos.' },
-            { type: 'feature', text: 'Lazy Loading y Optimización de Ancho de Banda: Refactorización profunda. Los historiales ahora solo solicitan la descarga de datos al backend cuando el usuario ingresa a la vista explícitamente.' },
-            { type: 'ui', text: 'Skeletons de Carga UX: Sustitución de pantallas parpadeantes por una animación elegante de "Skeletons" (tarjetas en gris) que mejoran la experiencia durante la consulta en tiempo real a Firebase.' }
+            { id: 'ch-330-1', type: 'title', text: 'Políticas de Seguridad de Cero Confianza' },
+            { id: 'ch-330-2', type: 'security', text: 'Validación Centralizada: Todo el control de accesos y roles institucionales se procesa directamente en el servidor central, impidiendo manipulaciones externas desde el navegador.' },
+            { id: 'ch-330-3', type: 'security', text: 'Protección de Brechas Informativas: Bloqueo perimetral estricto a usuarios no identificados para la visualización de paneles operativos, alertas de incidentes y listas corporativas.' },
+            { id: 'ch-330-4', type: 'security', text: 'Resguardo de Cuentas Fundacionales: Las credenciales y rangos clave de la organización se encuentran protegidos a nivel de infraestructura para evitar cualquier modificación accidental.' },
+            { id: 'ch-330-5', type: 'security', text: 'Vigía Preventivo de Sesión: Lanzamiento de un temporizador automático que concluye de forma segura la sesión tras detectar inactividad prolongada en la estación de trabajo.' },
+            { id: 'ch-330-6', type: 'divider', text: '' },
+            { id: 'ch-330-7', type: 'title', text: 'Cifrado Corporativo y Eficiencia de Red' },
+            { id: 'ch-330-8', type: 'security', text: 'Respaldos de Datos Blindados: El módulo de copias de seguridad genera archivos descargables con cifrado avanzado que exigen una llave maestra para su lectura o inyección.' },
+            { id: 'ch-330-9', type: 'feature', text: 'Centro de Restauración Inteligente: Capacidad de recuperar de emergencia expedientes históricos específicos sin generar duplicidad de datos activos en la nube.' },
+            { id: 'ch-330-10', type: 'feature', text: 'Carga Bajo Demanda de Información: Refactorización del flujo de datos; las sábanas de información histórica se descargan únicamente cuando el usuario consulta la sección de forma explícita.' },
+            { id: 'ch-330-11', type: 'ui', text: 'Estructuras Visuales de Espera: Implementación de componentes de carga fluidos que eliminan parpadeos y mejoran la experiencia de usuario mientras se consulta al servidor.' }
         ]
     },
     {
-        version: 'v3.2.0',
+        id: 'cl-v3-2-0',
+        version: 'Versión 3.2.0',
         date: 'Junio 2026',
         tag: 'Estable',
-        title: 'Persistencia de Usuario & Configuración Avanzada',
+        title: 'Persistencia de Navegación y Preferencias en la Nube',
         changes: [
-            { type: 'feature', text: 'Persistencia de Navegación por Recarga: Inyección de estados basados en localStorage para retener la vista actual al presionar F5 o refrescar el navegador, mitigando redirecciones accidentales al Dashboard.' },
-            { type: 'security', text: 'Protección de Privacidad de Cambios: El Changelog queda blindado exclusivamente detrás del inicio de sesión (RBAC), impidiendo el acceso a usuarios no identificados o con rol de Lector.' },
-            { type: 'security', text: 'Monitor Analítico y Salud DB: Nuevo panel exclusivo para Administradores IT con métricas de consumo de Firebase, estimación de cuota y herramientas de purgado local.' },
-            { type: 'feature', text: 'Preferencias de Usuario en la Nube: Panel interactivo para activar/desactivar alertas sonoras y notificaciones por módulo específico (Hackeos, RRSS, Comentarios), sincronizado con Firestore.' },
-            { type: 'feature', text: 'Sintetizador de Audio Nativo: Alertas sonoras de notificaciones generadas al vuelo mediante Web Audio API (sin archivos mp3 externos), optimizando el rendimiento.' },
-            { type: 'feature', text: 'Modal Inteligente de Exportación CSV: Permite descargar todo el historial, filtrar por Año específico o por "Año + Mes".' },
-            { type: 'feature', text: 'Exportación aplanada para Comentarios: Desglose avanzado (1 fila = 1 comentario) para análisis dinámicos en Excel sin anidaciones rotas.' },
-            { type: 'feature', text: 'Reporte Ejecutivo en PDF: Exportación nativa y optimizada para impresión directo desde las métricas del Dashboard.' },
-            { type: 'ui', text: 'Rediseño de Configuración y UX: Arquitectura en columnas dinámicas para preferencias. Mejora visual en modales de detalle con "Action Cards".' }
+            { id: 'ch-320-1', type: 'feature', text: 'Retención de Ubicación Operativa: El sistema memoriza la sección de trabajo activa en caso de recargas accidentales del navegador, eliminando desvíos al menú inicial.' },
+            { id: 'ch-320-2', type: 'security', text: 'Privacidad de Bitácoras Avanzadas: El historial de actualizaciones de la plataforma queda resguardado exclusivamente para personal identificado con credenciales operativas.' },
+            { id: 'ch-320-3', type: 'security', text: 'Monitor de Salud Tecnológica: Nueva consola ejecutiva de TI para supervisar cuotas de servicio, volumen de registros y herramientas de depuración local.' },
+            { id: 'ch-320-4', type: 'feature', text: 'Preferencias de Notificación en la Nube: Panel interactivo para personalizar las alertas de audio y visuales por cada canal de atención (Seguridad, Redes, Comentarios), sincronizado con Firestore.' },
+            { id: 'ch-320-5', type: 'feature', text: 'Alertas Auditivas de Alta Velocidad: Sistema de sonido procesado de forma nativa por el navegador para agilizar los tiempos de respuesta ante emergencias.' },
+            { id: 'ch-320-6', type: 'feature', text: 'Filtros Avanzados de Descarga: Capacidad de extraer reportes globales o segmentados por años o meses específicos mediante un selector predictivo.' },
+            { id: 'ch-320-7', type: 'feature', text: 'Exportación aplanada para Comentarios: Desglose avanzado (1 fila = 1 comentario) para análisis dinámicos en Excel sin anidaciones rotas.' },
+            { id: 'ch-320-8', type: 'feature', text: 'Reporte Ejecutivo en PDF: Exportación nativa y optimizada para impresión directo desde las métricas del Dashboard.' },
+            { id: 'ch-320-9', type: 'ui', text: 'Rediseño de Configuración y UX: Arquitectura en columnas dinámicas para preferencias. Mejora visual en modales de detalle con "Action Cards".' }
         ]
     },
     {
-        version: 'v3.1.0',
+        id: 'cl-v3-1-0',
+        version: 'Versión 3.1.0',
         date: 'Mayo 2026',
         tag: 'Estable',
-        title: 'Dashboard Dinámico, Seguridad & SaaS Plus',
+        title: 'Tablero Ejecutivo Inteligente y Central de Alertas',
         changes: [
-            { type: 'feature', text: 'Dashboard rediseñado con navegación por pestañas (Seguridad, RRSS, Comentarios).' },
-            { type: 'feature', text: 'Gráficas SVG nativas y animadas en tiempo real (Donut Chart, Barras Horizontales y Progress Bars).' },
-            { type: 'ui', text: 'Historiales avanzados con acordeones anidados colapsables por Año y Mes.' },
-            { type: 'feature', text: 'Paginación modular independiente (30 tarjetas por mes) para optimizar el rendimiento.' },
-            { type: 'ui', text: 'Super Badges de alto contraste visual para clasificar el Sentiment (Negativo/Neutral) desde la vista general.' },
-            { type: 'feature', text: 'Modales de "Vista Rápida" (Preview) inyectados directamente en el Dashboard.' },
-            { type: 'feature', text: 'Centro de Notificaciones en tiempo real: Campana interactiva con insignias numéricas, panel filtrable por leídas/no leídas y enlaces directos al incidente.' },
-            { type: 'security', text: 'Gestión de Usuarios RBAC: Panel de control dedicado para Administradores, pre-registro manual de cuentas, bloqueo de accesos y asignación de roles jerárquicos.' }
+            { id: 'ch-310-1', type: 'feature', text: 'Rediseño Absoluto del Dashboard: Organización modular mediante pestañas independientes para clasificar la información (Seguridad, Redes y Comentarios).' },
+            { id: 'ch-310-2', type: 'feature', text: 'Métricas Visuales de Alto Nivel: Integración de gráficas analíticas automatizadas (Donut Charts, barras de progreso y tendencias de impacto) construidas de forma nativa.' },
+            { id: 'ch-310-3', type: 'ui', text: 'Estructuración Cronológica: Menús e historiales organizados mediante paneles colapsables ordenados por año y mes para agilizar las búsquedas.' },
+            { id: 'ch-310-4', type: 'feature', text: 'Paginación Modular del Servidor: Segmentación fija de registros por pantalla (30 elementos) para mantener el software veloz y reducir el consumo de ancho de banda.' },
+            { id: 'ch-310-5', type: 'ui', text: 'Indicadores Visuales Operativos: Distintivos de color de alto contraste para identificar de un vistazo las tendencias de opinión o niveles de riesgo en los reportes.' },
+            { id: 'ch-310-6', type: 'feature', text: 'Paneles de Apertura Rápida: Implementación de vistas previas emergentes dentro del tablero para consultar incidentes sin salir de la pantalla de análisis principal.' },
+            { id: 'ch-310-7', type: 'feature', text: 'Central de Notificaciones en Tiempo Real: Campana interactiva con alertas visuales inmediatas, filtros de lectura y enlaces directos al expediente del caso.' },
+            { id: 'ch-310-8', type: 'security', text: 'Consola de Control de Acceso: Módulo directivo para autorizar perfiles de ingreso, dar de alta cuentas corporativas de forma manual y pausar usuarios temporalmente.' }
         ]
     },
     {
-        version: 'v3.0.0',
+        id: 'cl-v3-0-0',
+        version: 'Versión 3.0.0',
         date: 'Mayo 2026',
         tag: 'Estable',
-        title: 'Reportes Enriquecidos & Exportación Nativa',
+        title: 'Gestión Documental Avanzada y Reportes Formales',
         changes: [
-            { type: 'feature', text: 'Integración de Editor WYSIWYG nativo (Texto enriquecido) sin dependencias externas pesadas.' },
-            { type: 'feature', text: 'Motor de exportación universal a formato Microsoft Word (.docx) basado en XML estructurado.' },
-            { type: 'ui', text: 'Rediseño de los formularios de captura a 2 columnas para optimizar el espacio en pantallas anchas.' },
-            { type: 'feature', text: 'Selector de "Sentiment" añadido a los reportes de interacción.' },
-            { type: 'ui', text: 'Corrección de renderizado en dropdowns para perfecta compatibilidad con Dark/Light Mode.' }
+            { id: 'ch-300-1', type: 'feature', text: 'Edición Documental Profesional: Incorporación de una herramienta nativa para redactar y dar formato a bitácoras ejecutivas detalladas de manera fluida.' },
+            { id: 'ch-300-2', type: 'feature', text: 'Generación Nativa de Archivos Word: Motor de exportación universal que genera de manera automática documentos oficiales (.docx) listos para intercambio institucional.' },
+            { id: 'ch-300-3', type: 'ui', text: 'Optimización de Espacio en Pantalla: Rediseño visual de los formularios de captura a dos columnas para acelerar la inserción de datos y reducir la fatiga operativa.' },
+            { id: 'ch-300-4', type: 'feature', text: 'Métricas de Contexto Operativo: Inclusión de parámetros analíticos para evaluar el ambiente general y planteles específicos involucrados en cada reporte.' }
         ]
     },
     {
-        version: 'v2.0.0',
+        id: 'cl-v2-0-0',
+        version: 'Versión 2.0.0',
         date: 'Abril 2026',
         tag: 'Estable',
-        title: 'Integración Cloud & Nuevos Módulos',
+        title: 'Conectividad Centralizada en la Nube y Expansión de Módulos',
         changes: [
-            { type: 'feature', text: 'Conexión completa de la plataforma con la base de datos cloud Firebase Firestore.' },
-            { type: 'feature', text: 'Lanzamiento de 2 nuevos módulos operativos: "Crisis RRSS" e "Interacciones y Comentarios".' },
-            { type: 'feature', text: 'Modales de administrador para ver Detalles, Editar en tiempo real y Eliminar registros.' },
-            { type: 'feature', text: 'Generación y descarga de sábanas de datos en formato CSV para análisis externo.' },
-            { type: 'security', text: 'Sistema de protección de rutas y acciones condicionado por el rol del usuario (Admin vs Lector).' }
+            { id: 'ch-200-1', type: 'feature', text: 'Ecosistema Sincronizado en la Nube: Migración integral de la plataforma hacia servidores en la nube de alta disponibilidad, asegurando actualización inmediata entre dispositivos.' },
+            { id: 'ch-200-2', type: 'feature', text: 'Lanzamiento de Nuevas Líneas Operativas: Despliegue de los módulos estratégicos para el control de "Reputación Digital" y "Trazabilidad de Comentarios".' },
+            { id: 'ch-200-3', type: 'feature', text: 'Consola de Gestión Gerencial: Modales interactivos para examinar el desglose completo de casos, realizar correcciones en tiempo real o archivar registros de forma segura.' },
+            { id: 'ch-200-4', type: 'feature', text: 'Generación y descarga de sábanas de datos en formato CSV para análisis externo.' },
+            { id: 'ch-200-5', type: 'security', text: 'Sistema de protección de rutas y acciones condicionado por el rol del usuario (Admin vs Lector).' }
         ]
     },
     {
-        version: 'v1.0.0',
+        id: 'cl-v1-0-0',
+        version: 'Versión 1.0.0',
         date: 'Marzo 2026',
         tag: 'Estable',
-        title: 'Lanzamiento Base TDI Secure Social',
+        title: 'Despliegue de la Plataforma Corporativa',
         changes: [
-            { type: 'ui', text: 'Lanzamiento de la plataforma estructurada en React + Tailwind CSS.' },
-            { type: 'ui', text: 'Diseño UX/UI Premium corporativo con soporte responsivo y Dark/Light Mode automático.' },
-            { type: 'feature', text: 'Módulo principal de "Seguridad e IT" para registro y seguimiento de hackeos.' },
-            { type: 'feature', text: 'Checklist de respuesta rápida y contención con barra de progreso global y persistencia de datos.' },
-            { type: 'ui', text: 'Navegación lateral tipo App con menús colapsables.' }
+            { id: 'ch-100-1', type: 'ui', text: 'Lanzamiento Estructural Base: Despliegue de la arquitectura del software optimizada para alta velocidad de respuesta.' },
+            { id: 'ch-100-2', type: 'ui', text: 'Identidad Visual Premium: Interfaz limpia con soporte total de accesibilidad y transición fluida automatizada entre modos de visualización claro y oscuro.' },
+            { id: 'ch-100-3', type: 'feature', text: 'Módulo de Respuestas e Incidentes: Panel inicial enfocado en registrar, documentar y dar seguimiento oportuno a eventos críticos de seguridad informática.' },
+            { id: 'ch-100-4', type: 'feature', text: 'Protocolos de Contención Inmediata: Listas interactivas compartidas en tiempo real para coordinar y verificar de manera obligatoria las acciones de mitigación ante emergencias.' }
         ]
     }
 ];
@@ -135,11 +141,24 @@ const getChangeStyle = (type: string) => {
 };
 
 export const ChangelogView = () => {
-    const [expandedVersions, setExpandedSections] = useState<Record<string, boolean>>({ [changelogData[0].version]: true });
+    const [expandedVersions, setExpandedSections] = useState<Record<string, boolean>>({ [changelogData[0].id]: true });
+    const [currentYear, setCurrentYear] = useState<number>(2026);
+    
+    const [visibleCount, setVisibleCount] = useState<number>(5);
 
-    const toggleVersion = (version: string) => {
-        setExpandedSections(prev => ({ ...prev, [version]: !prev[version] }));
+    useEffect(() => {
+        setCurrentYear(new Date().getFullYear());
+    }, []);
+
+    const toggleVersion = (id: string) => {
+        setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
     };
+
+    const handleLoadMore = () => {
+        setVisibleCount(prev => prev + 5);
+    };
+
+    const visibleChangelog = changelogData.slice(0, visibleCount);
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
@@ -159,18 +178,21 @@ export const ChangelogView = () => {
             </div>
 
             <div className="space-y-4">
-                {changelogData.map((item) => {
-                    const isExpanded = !!expandedVersions[item.version];
+                {visibleChangelog.map((item) => {
+                    const isExpanded = !!expandedVersions[item.id];
 
                     return (
-                        <div key={item.version} className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm transition-all hover:border-gray-500/50">
+                        <div key={item.id} className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm transition-all hover:border-gray-500/50">
                             <button 
-                                onClick={() => toggleVersion(item.version)}
+                                type="button"
+                                onClick={() => toggleVersion(item.id)}
                                 className="w-full flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:p-6 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-left gap-4"
                             >
                                 <div className="flex items-start gap-4">
                                     <div className="mt-1">
-                                        {isExpanded ? <ChevronDown className="w-5 h-5 theme-text-muted" /> : <ChevronRight className="w-5 h-5 theme-text-muted" />}
+                                        <div className={`transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-90' : 'rotate-0'}`}>
+                                            <ChevronRight className="w-5 h-5 theme-text-muted" />
+                                        </div>
                                     </div>
                                     <div>
                                         <div className="flex flex-wrap items-center gap-3 mb-1">
@@ -189,45 +211,60 @@ export const ChangelogView = () => {
                                 </div>
                             </button>
 
-                            {isExpanded && (
-                                <div className="p-6 border-t theme-border bg-[var(--background)]">
-                                    <ul className="space-y-2">
-                                        {item.changes.map((change, idx) => {
-                                            if (change.type === 'divider') {
-                                                return <div key={idx} className="h-px w-full bg-gray-200 dark:bg-gray-700 my-4"></div>;
-                                            }
-                                            if (change.type === 'title') {
-                                                return (
-                                                    <h4 key={idx} className="text-sm font-black text-[var(--primary)] uppercase tracking-wider mt-4 mb-2 flex items-center gap-2">
-                                                        <Sparkles className="w-4 h-4" />
-                                                        {change.text}
-                                                    </h4>
-                                                );
-                                            }
+                            <div className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                                <div className="overflow-hidden">
+                                    <div className="p-6 border-t theme-border bg-[var(--background)]">
+                                        <ul className="space-y-2">
+                                            {item.changes.map((change) => {
+                                                if (change.type === 'divider') {
+                                                    return <div key={change.id} className="h-px w-full bg-gray-200 dark:bg-gray-700 my-4"></div>;
+                                                }
+                                                if (change.type === 'title') {
+                                                    return (
+                                                        <h4 key={change.id} className="text-sm font-black text-[var(--primary)] uppercase tracking-wider mt-4 mb-2 flex items-center gap-2">
+                                                            <Sparkles className="w-4 h-4" />
+                                                            {change.text}
+                                                        </h4>
+                                                    );
+                                                }
 
-                                            const style = getChangeStyle(change.type);
-                                            return (
-                                                <li key={idx} className="flex items-start gap-4 fade-in py-1">
-                                                    <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 shadow-sm ${style.bg}`}>
-                                                        {style.icon}
-                                                    </div>
-                                                    <p className="text-sm theme-text-main leading-relaxed pt-1.5">
-                                                        {change.text}
-                                                    </p>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
+                                                const style = getChangeStyle(change.type);
+                                                return (
+                                                    <li key={change.id} className="flex items-start gap-4 fade-in py-1">
+                                                        <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 shadow-sm ${style.bg}`}>
+                                                            {style.icon}
+                                                        </div>
+                                                        <p className="text-sm theme-text-main leading-relaxed pt-1.5">
+                                                            {change.text}
+                                                        </p>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     );
                 })}
             </div>
 
+            {visibleCount < changelogData.length && (
+                <div className="flex justify-center pt-4 fade-in">
+                    <button 
+                        type="button" 
+                        onClick={handleLoadMore}
+                        className="flex items-center gap-2 px-6 py-2.5 theme-bg-container border theme-border rounded-xl text-sm font-bold theme-text-main hover:border-[var(--primary)] hover:text-[var(--primary)] shadow-sm transition-all group"
+                    >
+                        <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+                        Cargar versiones anteriores
+                    </button>
+                </div>
+            )}
+
             <div className="text-center pt-8 pb-4">
                 <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">
-                    Innova Management &copy; {new Date().getFullYear()}
+                    Innova Management &copy; {currentYear}
                 </p>
             </div>
         </div>

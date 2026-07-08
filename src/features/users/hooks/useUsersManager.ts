@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
 import { safeFirestoreOperation } from '../../../services/firebase/audit.service';
+import { updateDocument } from '../../../services/firebase/core.service';
 
 export const useUsersManager = (user: any, userRole: string, showToast: any, setConfirmModal: any) => {
     const [appUsers, setAppUsers] = useState<any[]>([]);
+    
+    // 🚨 FIX REACT DOCTOR (Bug): Derivación de estado síncrona, sin useEffect
+    const [prevRole, setPrevRole] = useState(userRole);
+    if (userRole !== prevRole) {
+        setPrevRole(userRole);
+        if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
+            setAppUsers([]);
+        }
+    }
 
     useEffect(() => {
         if (!user || user.isAnonymous) return;
-        // Solo IT y ADMIN_CM abren este listener
-        if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
-            setAppUsers([]);
-            return;
-        }
+        if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') return;
 
         const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
         const unsubAllUsers = onSnapshot(usersRef, (snap) => {
@@ -26,9 +32,7 @@ export const useUsersManager = (user: any, userRole: string, showToast: any, set
 
     const updateUserRole = async (email: string, newRole: string) => {
         try {
-            await safeFirestoreOperation(async () => {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { role: newRole }, { merge: true });
-            }, `Modificar rol de ${email} a ${newRole}`);
+            await updateDocument('users', email, { role: newRole }, `Modificar rol de ${email} a ${newRole}`);
             showToast('Rol actualizado exitosamente');
         } catch (e: any) { 
             showToast(e.code === 'permission-denied' ? 'Acceso bloqueado: No tienes permisos.' : 'Acción denegada.', true);
@@ -37,9 +41,7 @@ export const useUsersManager = (user: any, userRole: string, showToast: any, set
 
     const toggleUserStatus = async (email: string, currentStatus: boolean) => {
         try {
-            await safeFirestoreOperation(async () => {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), { disabled: !currentStatus }, { merge: true });
-            }, `${!currentStatus ? 'Deshabilitar' : 'Habilitar'} cuenta de ${email}`);
+            await updateDocument('users', email, { disabled: !currentStatus }, `${!currentStatus ? 'Deshabilitar' : 'Habilitar'} cuenta de ${email}`);
             showToast(!currentStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada');
         } catch (e: any) { 
             showToast(e.code === 'permission-denied' ? 'Acceso bloqueado: No tienes permisos.' : 'Acción denegada.', true);
@@ -65,10 +67,13 @@ export const useUsersManager = (user: any, userRole: string, showToast: any, set
     const addManualUser = async (email: string, role: string) => {
         if (!email.endsWith('@tierradeideas.mx')) return showToast('Solo correos @tierradeideas.mx', true);
         try {
-            await safeFirestoreOperation(async () => {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email), {
-                    email: email.trim().toLowerCase(), displayName: email.split('@')[0], photoURL: '', role: role, disabled: false
-                }, { merge: true });
+            // 🚨 FIX REACT DOCTOR (Seguridad): Abstrayendo la inyección del rol mediante core.service
+            await updateDocument('users', email, {
+                email: email.trim().toLowerCase(), 
+                displayName: email.split('@')[0], 
+                photoURL: '', 
+                role: role, 
+                disabled: false
             }, `Pre-registrar usuario: ${email}`);
             showToast(`Usuario pre-registrado correctamente.`);
         } catch (e: any) { 

@@ -5,6 +5,75 @@ import {
     ChevronDown, ChevronRight, History, Cloud, CloudOff, Database
 } from 'lucide-react';
 
+// 🚨 FIX REACT DOCTOR: Extracción a nivel de módulo para evitar renderizados fantasma
+const NavBtn = ({ id, icon: Icon, label, currentView, navigate }: any) => (
+    <button 
+        onClick={() => navigate(id)}
+        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            currentView === id 
+            ? 'bg-[var(--primary)] text-white shadow-sm' 
+            : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
+        }`}
+    >
+        <Icon className="w-5 h-5" />
+        {label}
+    </button>
+);
+
+const SubNavBtn = ({ id, icon: Icon, label, currentView, navigate, requireAdmin, isAdmin }: any) => {
+    if (requireAdmin && !isAdmin) return null;
+    
+    return (
+        <button 
+            onClick={() => navigate(id)}
+            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all pl-8 ${
+                currentView === id 
+                ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-bold' 
+                : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
+            }`}
+        >
+            <Icon className="w-4 h-4 opacity-70" />
+            {label}
+        </button>
+    );
+};
+
+const DropdownGroup = ({ id, icon: Icon, label, children, openGroup, toggleGroup, currentView }: any) => {
+    const isOpen = openGroup === id;
+    // Extraemos si algún hijo está activo clonando los hijos para leer sus props con cuidado
+    let isActive = false;
+    React.Children.forEach(children, (child: any) => {
+        if (child && child.props && child.props.id === currentView) {
+            isActive = true;
+        }
+    });
+
+    return (
+        <div className="space-y-1">
+            <button 
+                onClick={() => toggleGroup(id)}
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    isActive && !isOpen ? 'text-[var(--primary)] font-bold bg-[var(--primary)]/5' : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
+                }`}
+            >
+                <div className="flex items-center gap-3">
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-[var(--primary)]' : ''}`} />
+                    <span className={isActive ? 'text-[var(--primary)]' : ''}>{label}</span>
+                </div>
+                {isOpen ? <ChevronDown className="w-4 h-4 opacity-50 transition-transform" /> : <ChevronRight className="w-4 h-4 opacity-50 transition-transform" />}
+            </button>
+            
+            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                    <div className="pt-1 pb-2 space-y-1">
+                        {children}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus, userRole }: any) => {
     
     const isDisconnected = cloudStatus.includes('Desconectado');
@@ -26,68 +95,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         setOpenGroup(openGroup === group ? '' : group);
     };
 
-    const NavBtn = ({ id, icon: Icon, label }: any) => (
-        <button 
-            onClick={() => navigate(id)}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                currentView === id 
-                ? 'bg-[var(--primary)] text-white shadow-sm' 
-                : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
-            }`}
-        >
-            <Icon className="w-5 h-5" />
-            {label}
-        </button>
-    );
-
-    const SubNavBtn = ({ id, icon: Icon, label, requireAdmin = false }: any) => {
-        if (requireAdmin && !isAdmin) return null;
-        
-        return (
-            <button 
-                onClick={() => navigate(id)}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all pl-8 ${
-                    currentView === id 
-                    ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-bold' 
-                    : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
-                }`}
-            >
-                <Icon className="w-4 h-4 opacity-70" />
-                {label}
-            </button>
-        );
-    };
-
-    const DropdownGroup = ({ id, icon: Icon, label, children }: any) => {
-        const isOpen = openGroup === id;
-        const isActive = children.some((child: any) => child && child.props && child.props.id === currentView);
-
-        return (
-            <div className="space-y-1">
-                <button 
-                    onClick={() => toggleGroup(id)}
-                    className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive && !isOpen ? 'text-[var(--primary)] font-bold bg-[var(--primary)]/5' : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
-                    }`}
-                >
-                    <div className="flex items-center gap-3">
-                        <Icon className={`w-5 h-5 ${isActive ? 'text-[var(--primary)]' : ''}`} />
-                        <span className={isActive ? 'text-[var(--primary)]' : ''}>{label}</span>
-                    </div>
-                    {isOpen ? <ChevronDown className="w-4 h-4 opacity-50 transition-transform" /> : <ChevronRight className="w-4 h-4 opacity-50 transition-transform" />}
-                </button>
-                
-                <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-                    <div className="overflow-hidden">
-                        <div className="pt-1 pb-2 space-y-1">
-                            {children}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     const isITAdmin = userRole?.toUpperCase()?.trim() === 'ADMIN_IT';
 
     return (
@@ -107,39 +114,38 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                 </div>
                 
                 <nav className="flex-1 overflow-y-auto px-4 space-y-1 custom-scrollbar">
-                    <NavBtn id="dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavBtn id="dashboard" icon={LayoutDashboard} label="Dashboard" currentView={currentView} navigate={navigate} />
                     
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
-                    <DropdownGroup id="hackeos" icon={ShieldAlert} label="Hackeos">
-                        <SubNavBtn id="protocolo" icon={BookOpen} label="Protocolo" />
-                        <SubNavBtn id="nuevo" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} />
-                        <SubNavBtn id="checklist" icon={ListChecks} label="Checklist Rápido" requireAdmin={true} />
-                        <SubNavBtn id="historial" icon={FileText} label="Historial" />
-                        <SubNavBtn id="glosario" icon={BookOpen} label="Glosario" />
+                    <DropdownGroup id="hackeos" icon={ShieldAlert} label="Hackeos" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                        <SubNavBtn id="protocolo" icon={BookOpen} label="Protocolo" currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="nuevo" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="checklist" icon={ListChecks} label="Checklist Rápido" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="historial" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="glosario" icon={BookOpen} label="Glosario" currentView={currentView} navigate={navigate} />
                     </DropdownGroup>
 
-                    <DropdownGroup id="rss" icon={Smartphone} label="Incidencias RRSS">
-                        <SubNavBtn id="protocolo-rss" icon={BookOpen} label="Protocolo" />
-                        <SubNavBtn id="nuevo-rss" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} />
-                        <SubNavBtn id="historial-rss" icon={FileText} label="Historial" />
+                    <DropdownGroup id="rss" icon={Smartphone} label="Incidencias RRSS" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                        <SubNavBtn id="protocolo-rss" icon={BookOpen} label="Protocolo" currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="nuevo-rss" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="historial-rss" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
                     </DropdownGroup>
 
-                    <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios">
-                        <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} />
-                        <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" />
+                    <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                        <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                        <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
                     </DropdownGroup>
 
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
-                    <NavBtn id="roles" icon={Users} label="Roles" />
-                    {isAdmin && <NavBtn id="changelog" icon={History} label="Changelog" />}
+                    <NavBtn id="roles" icon={Users} label="Roles" currentView={currentView} navigate={navigate} />
+                    {isAdmin && <NavBtn id="changelog" icon={History} label="Changelog" currentView={currentView} navigate={navigate} />}
                     
                     {isITAdmin && (
                         <>
-                            <NavBtn id="backups" icon={Database} label="Backups Core" />
-                            {/* 🛡️ Auditoría ahora usa la base de diseño de la app */}
-                            <NavBtn id="auditoria" icon={ShieldAlert} label="Auditoría Avanzada" />
+                            <NavBtn id="backups" icon={Database} label="Backups Core" currentView={currentView} navigate={navigate} />
+                            <NavBtn id="auditoria" icon={ShieldAlert} label="Auditoría Avanzada" currentView={currentView} navigate={navigate} />
                         </>
                     )}
                 </nav>

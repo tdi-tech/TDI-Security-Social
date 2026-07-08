@@ -26,114 +26,204 @@ service cloud.firestore {
     }
 
     function hasRole(appId, role) {
-      return userExists(appId) && getUserData(appId).role == role;
+      return userExists(appId) 
+        && getUserData(appId).disabled != true 
+        && getUserData(appId).role == role;
     }
 
-    function isITAdmin(appId) {
-      return hasRole(appId, 'ADMIN_IT');
+    function isITAdmin(appId) { return hasRole(appId, 'ADMIN_IT'); }
+    function isCMAdmin(appId) { return hasRole(appId, 'ADMIN_CM'); }
+    function isCMEditor(appId) { return hasRole(appId, 'EDITOR_CM'); }
+    function isCMTeam(appId) { return isITAdmin(appId) || isCMAdmin(appId) || isCMEditor(appId); }
+
+    function isValidUser() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['email', 'displayName', 'photoURL', 'role', 'disabled', 'isProtected', 'lastLogin', 'preferences'])
+          && data.keys().hasAll(['email', 'displayName', 'lastLogin'])
+          && data.email is string
+          && data.displayName is string
+          && (!('photoURL' in data) || data.photoURL is string || data.photoURL == null)
+          && (!('role' in data) || (data.role is string && data.role in ['READER', 'EDITOR_CM', 'ADMIN_CM', 'ADMIN_IT']))
+          && (!('disabled' in data) || data.disabled is bool)
+          && (!('isProtected' in data) || data.isProtected is bool)
+          && (!('preferences' in data) || data.preferences is map)
+          && data.lastLogin is string;
     }
 
-    function isCMAdmin(appId) {
-      return hasRole(appId, 'ADMIN_CM');
+    function isValidIncident() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+        'id', 'fecha', 'autor', 'plataforma', 'vector', 'descripcion', 
+        'vistas', 'interacciones', 'impacto', 'contencion', 'erradicacion', 
+        'lecciones', 'estado'
+      ])
+      && data.keys().hasAll([
+        'id', 'fecha', 'autor', 'plataforma', 'vector', 'descripcion', 'impacto', 'estado'
+      ])
+      && data.id is string
+      && data.fecha is string
+      && data.autor is string
+      && data.plataforma is string
+      && data.vector is string
+      && data.descripcion is string
+      && data.impacto in ['Bajo', 'Medio', 'Alto', 'Crítico'] 
+      && data.estado in ['Abierto', 'Resuelto']
+      && (!('vistas' in data) || data.vistas is number)
+      && (!('interacciones' in data) || data.interacciones is number)
+      && (!('contencion' in data) || data.contencion is string)
+      && (!('erradicacion' in data) || data.erradicacion is string)
+      && (!('lecciones' in data) || data.lecciones is string);
     }
 
-    function isCMEditor(appId) {
-      return hasRole(appId, 'EDITOR_CM');
+    function isValidRRSSIncident() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+        'totalIncidencias', 'fecha', 'usuario', 'medio', 'campus', 'riesgo', 
+        'descripcion', 'area', 'comentarios', 'enlacePublicacion', 'enlaceDrive', 
+        'reporteTexto', 'autor', 'timestamp'
+      ])
+      && data.keys().hasAll([
+        'totalIncidencias', 'fecha', 'usuario', 'medio', 'campus', 'riesgo', 'descripcion', 'autor', 'timestamp'
+      ]) 
+      && data.totalIncidencias is number
+      && data.fecha is string
+      && data.usuario is string
+      && data.medio is string
+      && data.campus is string
+      && data.riesgo in ['Bajo', 'Medio', 'Alto', 'Critico'] 
+      && data.autor is string
+      && data.timestamp is string
+      && (!('area' in data) || data.area is string)
+      && (!('comentarios' in data) || data.comentarios is string)
+      && (!('enlacePublicacion' in data) || data.enlacePublicacion is string)
+      && (!('enlaceDrive' in data) || data.enlaceDrive is string)
+      && (!('reporteTexto' in data) || data.reporteTexto is string);
     }
 
-    function isCMTeam(appId) {
-      return isITAdmin(appId) || isCMAdmin(appId) || isCMEditor(appId);
+    function isValidCommentReport() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+        'fechaInicio', 'fechaFin', 'contenido', 'evidencia', 'comentariosList', 
+        'autor', 'timestamp'
+      ])
+      && data.keys().hasAll([
+        'fechaInicio', 'fechaFin', 'contenido', 'comentariosList', 'autor', 'timestamp'
+      ]) 
+      && data.fechaInicio is string
+      && data.fechaFin is string
+      && data.contenido in ['Orgánico', 'Pautado']
+      && data.comentariosList is list
+      && data.autor is string
+      && data.timestamp is string
+      && (!('evidencia' in data) || data.evidencia is string);
+    }
+
+    function isValidNotification() {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+        'userId', 'userName', 'userPhoto', 'action', 'module', 'type', 
+        'incidentId', 'timestamp', 'readBy', 'deletedBy'
+      ])
+      && data.keys().hasAll([
+        'userId', 'userName', 'action', 'module', 'type', 'timestamp', 'readBy', 'deletedBy'
+      ])
+      && data.userId is string
+      && data.userName is string
+      && data.action is string
+      && data.module is string
+      && data.type is string
+      && data.timestamp is string
+      && data.readBy is list
+      && data.deletedBy is list
+      && (!('userPhoto' in data) || data.userPhoto is string)
+      && (!('incidentId' in data) || data.incidentId is string);
     }
 
     match /artifacts/{appId}/public/data {
 
       match /users/{userEmail} {
-        allow read: if isITAdmin(appId)
-          || isCMAdmin(appId)
-          || (
-            isAuthenticated()
-            && request.auth.token.email == userEmail
-          );
-
+        allow read: if isITAdmin(appId) || isCMAdmin(appId) || (isAuthenticated() && request.auth.token.email == userEmail);
+        
         allow create: if (
           isAuthenticated()
           && request.auth.token.email == userEmail
-          && request.resource.data.role == 'READER'
-          && request.resource.data.disabled == false
-          && request.resource.data.isProtected == false
-        )
-        || isITAdmin(appId)
-        || (
+          && !request.resource.data.keys().hasAny(['role', 'disabled', 'isProtected'])
+          && isValidUser()
+        ) || isITAdmin(appId) || (
           isCMAdmin(appId)
           && request.resource.data.role != 'ADMIN_IT'
           && request.resource.data.isProtected != true
+          && isValidUser()
         );
-
+        
         allow update: if (
           isAuthenticated()
           && request.auth.token.email == userEmail
-          && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['role', 'disabled', 'isProtected'])
-        )
-        || (
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'disabled', 'isProtected'])
+          && isValidUser()
+        ) || (
           isITAdmin(appId)
           && resource.data.get('isProtected', false) != true
-        )
-        || (
+          && isValidUser()
+        ) || (
           isCMAdmin(appId)
           && resource.data.get('isProtected', false) != true
           && resource.data.role != 'ADMIN_IT'
-          // 🚨 CANDADO: El ADMIN_CM solo puede modificar estados (disabled), jamás alterar roles de cuentas existentes
           && request.resource.data.role == resource.data.role
+          && isValidUser()
         );
-
-        allow delete: if isITAdmin(appId)
-          && resource.data.get('isProtected', false) != true;
+        
+        allow delete: if isITAdmin(appId) && resource.data.get('isProtected', false) != true;
       }
 
-      // ✅ CORREGIDO: Todo el equipo CM puede crear, editar y borrar del historial de Hackeos
       match /incidents/{incidentId} {
         allow read: if isAnySignedIn();
-        allow create, update, delete: if isCMTeam(appId);
+        allow create: if isCMTeam(appId) && isValidIncident() && request.resource.data.id == incidentId;
+        allow update: if isCMTeam(appId) && isValidIncident() && request.resource.data.id == resource.data.id && request.resource.data.fecha == resource.data.fecha && request.resource.data.autor == resource.data.autor;
+        allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
       match /rrss_incidents/{incidentId} {
         allow read: if isAnySignedIn();
-        allow create, update, delete: if isCMTeam(appId);
+        allow create: if isCMTeam(appId) && isValidRRSSIncident();
+        allow update: if isCMTeam(appId) && isValidRRSSIncident() && request.resource.data.autor == resource.data.autor && request.resource.data.timestamp == resource.data.timestamp;
+        allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
-      // ✅ CORREGIDO: Todo el equipo CM puede interactuar por completo con comentarios
       match /comments/{commentId} {
         allow read: if isAnySignedIn();
-        allow create, update, delete: if isCMTeam(appId);
+        allow create: if isCMTeam(appId) && isValidCommentReport();
+        allow update: if isCMTeam(appId) && isValidCommentReport() && request.resource.data.autor == resource.data.autor && request.resource.data.timestamp == resource.data.timestamp;
+        allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
       match /notifications/{notificationId} {
         allow read: if isAnySignedIn();
-        allow create, update: if userExists(appId);
+        allow create: if userExists(appId) && isValidNotification() && request.resource.data.userId == request.auth.uid;
+        allow update: if userExists(appId) && isValidNotification() && request.resource.data.userId == resource.data.userId && request.resource.data.action == resource.data.action && request.resource.data.timestamp == resource.data.timestamp;
         allow delete: if isITAdmin(appId);
       }
 
       match /auditLogs/{logId} {
-        allow create: if request.auth != null
+        allow read: if isITAdmin(appId);
+        allow create: if isAuthenticated()
           && request.resource.data.keys().hasOnly([
             'ip', 'pais', 'fecha', 'uid', 'email',
             'provider', 'userAgent', 'accion', 'expireAt'
           ])
           && request.resource.data.ip is string
           && request.resource.data.pais is string
-          && request.resource.data.fecha is timestamp
+          && request.resource.data.fecha is timestamp 
           && request.resource.data.expireAt is timestamp
           && request.resource.data.uid is string
           && request.resource.data.provider is string
           && request.resource.data.accion is string
-          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid 
+          && request.resource.data.email == request.auth.token.email
           && request.resource.data.expireAt > request.time
           && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
-
-        allow read: if isITAdmin(appId);
-        allow delete: if isITAdmin(appId);
-        allow update: if false;
+        allow update: if false; 
+        allow delete: if false; 
       }
 
       match /appState/{docId} {

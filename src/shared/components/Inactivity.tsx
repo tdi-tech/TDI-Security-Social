@@ -7,38 +7,39 @@ interface InactivityProps {
 
 export const Inactivity = ({ onLogout }: InactivityProps) => {
     const [showModal, setShowModal] = useState(false);
-    const [countdown, setCountdown] = useState(300); // 5 minutos en segundos
+    const [countdown, setCountdown] = useState(300);
 
     const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    
+    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const INACTIVITY_LIMIT = 60 * 1000; // 1 Minuto para mostrar el aviso
+    const INACTIVITY_LIMIT = 60 * 1000;
 
-    const resetIdleTimer = () => {
-        setShowModal(false);
-        setCountdown(300);
+    useEffect(() => {
+        if (!onLogout) return;
 
-        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-        if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+        // 🚨 FIX REACT DOCTOR: Este handler reacciona a eventos del DOM, no al render
+        const handleActivity = () => {
+            setShowModal(false);
+            setCountdown(300);
 
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+            if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+
+            idleTimerRef.current = setTimeout(() => {
+                setShowModal(true);
+            }, INACTIVITY_LIMIT);
+        };
+
+        const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+        events.forEach(event => window.addEventListener(event, handleActivity));
+
+        // Iniciamos el timer directamente sin usar setState() en el efecto
         idleTimerRef.current = setTimeout(() => {
             setShowModal(true);
         }, INACTIVITY_LIMIT);
-    };
-
-    useEffect(() => {
-        // Doble verificación: si no hay función de logout, cancelamos todo el escucha
-        if (!onLogout) return;
-
-        // Registrar eventos globales para detectar actividad humana en el navegador
-        const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
-        events.forEach(event => window.addEventListener(event, resetIdleTimer));
-        
-        resetIdleTimer();
 
         return () => {
-            events.forEach(event => window.removeEventListener(event, resetIdleTimer));
+            events.forEach(event => window.removeEventListener(event, handleActivity));
             if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
             if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
         };

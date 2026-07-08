@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import type { ToastState } from '../../shared/types/models';
 
@@ -11,13 +11,16 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
     const [toast, setToast] = useState<ToastState | null>(null);
 
-    const showToast = (msg: string, isError = false) => {
+    const showToast = React.useCallback((msg: string, isError = false) => {
         setToast({ msg, isError });
         setTimeout(() => setToast(null), 4000);
-    };
+    }, []);
+
+    // 🚨 FIX REACT DOCTOR: useMemo para estabilizar el contexto
+    const contextValue = useMemo(() => ({ showToast }), [showToast]);
 
     return (
-        <ToastContext.Provider value={{ showToast }}>
+        <ToastContext.Provider value={contextValue}>
             {children}
             <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 no-print">
                 {toast && (

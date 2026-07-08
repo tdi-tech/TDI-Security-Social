@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../services/firebase/config';
 
@@ -37,8 +37,7 @@ const AppContent = () => {
     const { updateRrssIncident, deleteRrssIncident } = useRRSS(showToast, openConfirmModal, logAction);
     const { updateComment, deleteComment } = useComments(showToast, openConfirmModal, logAction);
 
-    // 🛡️ GUARDIA DE RUTAS REAL (RBAC)
-    const navigate = async (view: string) => {
+    const navigate = useCallback(async (view: string) => {
         const route = ROUTES[view] || ROUTES['dashboard'];
         const access = route.access;
 
@@ -58,10 +57,20 @@ const AppContent = () => {
         setCurrentView(view); 
         localStorage.setItem('innova_current_view', view); 
         setSidebarOpen(false);
-    };
+    }, [isAdmin, userRole, showToast]); 
 
-    // Conectamos el ref de navegación del ModalProvider con la función real
-    useEffect(() => { onNavigateRef.current = navigate; }, [navigate]);
+    // 🔥 FIX: Cierre de sesión suave, primero navega y luego destruye la sesión
+    const handleLogout = useCallback(() => {
+        navigate('dashboard');
+        setTimeout(() => {
+            logoutAdmin();
+            showToast('Sesión cerrada correctamente');
+        }, 150);
+    }, [navigate, logoutAdmin, showToast]);
+
+    useEffect(() => { 
+        onNavigateRef.current = navigate; 
+    }, [navigate, onNavigateRef]);
 
     useEffect(() => {
         if (cloudStatus === 'Conectando...') return;
@@ -116,7 +125,7 @@ const AppContent = () => {
             user={user} isAdmin={isAdmin} userRole={userRole} cloudStatus={cloudStatus} displayRoleName={displayRoleName}
             unreadNotifications={unreadNotifications} readNotifications={readNotifications} validNotifications={validNotifications}
             markAsRead={markAsRead} hideNotification={hideNotification} handleViewIncident={handleViewIncident}
-            openLoginModal={() => setLoginModalOpen(true)} logoutAdmin={logoutAdmin}
+            openLoginModal={() => setLoginModalOpen(true)} logoutAdmin={handleLogout}
         >
             <AppRouter currentView={currentView} props={viewProps} />
             <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={loginWithGoogle} />

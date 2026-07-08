@@ -1,115 +1,148 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-    HelpCircle, ChevronDown, ChevronRight, ShieldAlert, 
-    Database, Users, FileText, AlertTriangle, MessageSquareWarning, 
-    Info, Lock, Settings
+    HelpCircle, ShieldAlert, Database, Users, FileText, 
+    AlertTriangle, MessageSquareWarning, Info, Lock, Settings
 } from 'lucide-react';
 
 const helpTopics = [
     {
         id: 'intro',
         title: 'Introducción al Sistema',
-        icon: <Info className="w-5 h-5 text-blue-500" />,
+        icon: <Info className="w-6 h-6 text-blue-500" />,
+        badge: 'General',
+        badgeColor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <p>
                     <strong>Innova Management</strong> es una plataforma de gestión de crisis y seguridad diseñada bajo una arquitectura <em>Zero-Trust</em> (Cero Confianza). 
                 </p>
-                <p>
+                <p className="theme-text-muted">
                     El sistema está dividido en tres módulos operativos principales (Hackeos, Crisis en RRSS y Comentarios) y módulos administrativos para el control total de la información.
                 </p>
             </div>
         )
     },
     {
-        id: 'modulos',
-        title: 'Gestión de Incidentes y Reportes',
-        icon: <FileText className="w-5 h-5 text-emerald-500" />,
+        id: 'roles',
+        title: 'Roles y Permisos (RBAC)',
+        icon: <Users className="w-6 h-6 text-purple-500" />,
+        badge: 'Administración',
+        badgeColor: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
         content: (
-            <div className="space-y-4 theme-text-main text-sm leading-relaxed">
-                <div className="flex gap-3">
-                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-bold">Módulo de Hackeos</p>
-                        <p className="theme-text-muted mt-1">Registra vulnerabilidades técnicas, intrusiones en plataformas o pérdida de cuentas. Utiliza el Checklist para contención inmediata.</p>
-                    </div>
-                </div>
-                <div className="flex gap-3">
-                    <ShieldAlert className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-bold">Incidencias RRSS</p>
-                        <p className="theme-text-muted mt-1">Gestión de crisis de reputación online, ataques de bots o campañas de desprestigio en redes sociales.</p>
-                    </div>
-                </div>
-                <div className="flex gap-3">
-                    <MessageSquareWarning className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                        <p className="font-bold">Comentarios</p>
-                        <p className="theme-text-muted mt-1">Reportes unificados de interacción negativa o quejas recurrentes por parte de la comunidad en canales oficiales.</p>
-                    </div>
-                </div>
-            </div>
+            <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto. Gestión de Backups, Auditoría Avanzada y administración total de usuarios.</p>
+                </li>
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo. Acceso total a incidentes. Permite pre-registrar y deshabilitar usuarios (sin modificar roles IT).</p>
+                </li>
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel básico operativo. Capacidad de crear y editar incidentes sin acceso al panel de usuarios.</p>
+                </li>
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
+                    <p><strong className="theme-text-main">Lector:</strong> Visualización de Dashboard y protocolos. Sin permisos de escritura.</p>
+                </li>
+            </ul>
         )
     },
     {
-        id: 'roles',
-        title: 'Roles y Permisos (RBAC)',
-        icon: <Users className="w-5 h-5 text-purple-500" />,
+        id: 'modulos',
+        title: 'Gestión de Reportes',
+        icon: <FileText className="w-6 h-6 text-emerald-500" />,
+        badge: 'Operativo',
+        badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
         content: (
-            <div className="space-y-3 theme-text-main text-sm leading-relaxed">
-                <p>El sistema protege la información basándose en el rol asignado a tu cuenta:</p>
-                <ul className="list-disc pl-5 space-y-2 mt-2 theme-text-muted">
-                    <li><strong className="theme-text-main">ADMIN_IT:</strong> Control total. Acceso a Backups, Auditoría Avanzada y gestión absoluta de cualquier usuario y módulo.</li>
-                    <li><strong className="theme-text-main">ADMIN_CM:</strong> Administrador de comunicación. Acceso total para crear, editar y borrar incidentes de Hackeos, RRSS y Comentarios. Puede pre-registrar y deshabilitar usuarios operativos (no puede eliminar cuentas definitivamente ni otorgar roles IT).</li>
-                    <li><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Permite crear, editar y borrar incidentes de Hackeos, RRSS y Comentarios. No tiene acceso a la gestión de usuarios.</li>
-                    <li><strong className="theme-text-main">Lector:</strong> (Usuarios sin rol o no autenticados) Solo pueden visualizar el Dashboard, protocolos y glosarios. No pueden crear, editar ni borrar ningún registro.</li>
-                </ul>
+            <div className="space-y-4 theme-text-main text-sm leading-relaxed">
+                <div className="flex gap-3 items-start group/item">
+                    <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
+                    <div>
+                        <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Hackeos</p>
+                        <p className="theme-text-muted text-xs">Vulnerabilidades e intrusiones técnicas. Incluye checklist de contención inmediata.</p>
+                    </div>
+                </div>
+                <div className="flex gap-3 items-start group/item">
+                    <ShieldAlert className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
+                    <div>
+                        <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Incidencias RRSS</p>
+                        <p className="theme-text-muted text-xs">Gestión de crisis de reputación online y ataques de bots en canales oficiales.</p>
+                    </div>
+                </div>
+                <div className="flex gap-3 items-start group/item">
+                    <MessageSquareWarning className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
+                    <div>
+                        <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Comentarios</p>
+                        <p className="theme-text-muted text-xs">Reportes unificados de interacción comunitaria y trazabilidad de quejas.</p>
+                    </div>
+                </div>
             </div>
         )
     },
     {
         id: 'configuracion',
         title: 'Panel de Configuración',
-        icon: <Settings className="w-5 h-5 text-slate-500" />,
+        icon: <Settings className="w-6 h-6 text-slate-500" />,
+        badge: 'Sistema',
+        badgeColor: 'bg-slate-500/10 text-slate-500 border-slate-500/20',
         content: (
-            <div className="space-y-3 theme-text-main text-sm leading-relaxed">
-                <p>Las opciones del panel de configuración se adaptan a tu nivel de acceso:</p>
-                <ul className="list-disc pl-5 space-y-2 mt-2 theme-text-muted">
-                    <li><strong className="theme-text-main">ADMIN_IT:</strong> Control total. Acceso a cambios de interfaz, preferencias de notificación, monitoreo en tiempo real de la salud del servidor (Firestore) y purga global de rastros.</li>
-                    <li><strong className="theme-text-main">Equipo CM (Admin/Editor):</strong> Tienen control sobre su propio Tema Visual (Claro/Oscuro) y pueden encender o apagar las alertas sonoras y notificaciones operativas de los módulos.</li>
-                    <li><strong className="theme-text-main">Lector:</strong> Su panel se limita exclusivamente a personalizar el Tema Visual (Claro/Oscuro) para mayor comodidad de lectura.</li>
-                </ul>
-            </div>
+            <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 flex-shrink-0"></span>
+                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Acceso a preferencias de notificación, purga de rastros del servidor y liberación de memoria caché.</p>
+                </li>
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 flex-shrink-0"></span>
+                    <p><strong className="theme-text-main">Equipo CM:</strong> Control sobre tema visual y personalización de alertas sonoras por módulo operativo.</p>
+                </li>
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 flex-shrink-0"></span>
+                    <p><strong className="theme-text-main">Lectores:</strong> Acceso exclusivo al cambio de Tema (Claro/Oscuro).</p>
+                </li>
+            </ul>
         )
     },
     {
         id: 'backups',
-        title: 'Copias de Seguridad (Backups Core)',
-        icon: <Database className="w-5 h-5 text-indigo-500" />,
+        title: 'Gestión de Backups',
+        icon: <Database className="w-6 h-6 text-teal-500" />,
+        badge: 'Exclusivo IT',
+        badgeColor: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+        requireAdmin: true,
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
-                <p>
-                    Exclusivo para el rol <strong>ADMIN_IT</strong>. Permite exportar toda la base de datos a un archivo JSON cifrado localmente (AES-256).
+                <p className="theme-text-muted">
+                    Herramienta de prevención de desastres para copias de seguridad de la base de datos operativa.
                 </p>
-                <p>
-                    Al restaurar una copia de seguridad, el sistema valida las firmas criptográficas e inyecta únicamente los registros que falten en el servidor, evitando duplicidades. Es fundamental guardar la contraseña de encriptación, ya que sin ella el respaldo es irrecuperable.
-                </p>
+                <div className="p-3 bg-teal-500/5 border border-teal-500/20 rounded-xl mt-2">
+                    <p className="font-bold text-teal-700 dark:text-teal-400 text-xs flex items-center gap-1.5 mb-1">
+                        <Lock className="w-3.5 h-3.5" /> Cifrado AES-256
+                    </p>
+                    <p className="text-xs text-teal-600 dark:text-teal-500 leading-tight">
+                        Los respaldos generados requieren contraseña para ser inyectados. La restauración previene documentos duplicados verificando identificadores únicos.
+                    </p>
+                </div>
             </div>
         )
     },
     {
         id: 'auditoria',
-        title: 'Radar de Intrusos (Auditoría Avanzada)',
-        icon: <Lock className="w-5 h-5 text-red-500" />,
+        title: 'Radar de Intrusos (SIEM)',
+        icon: <Lock className="w-6 h-6 text-red-500" />,
+        badge: 'Exclusivo IT',
+        badgeColor: 'bg-red-500/10 text-red-500 border-red-500/20',
+        requireAdmin: true,
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
-                <p>
-                    Módulo de seguridad forense (SIEM) exclusivo para <strong>ADMIN_IT</strong>. Funciona de manera completamente silenciosa sin interrumpir la operación normal.
+                <p className="theme-text-muted">
+                    Módulo de seguridad forense y auditoría avanzada. Funciona silenciosamente atrapando accesos denegados (Error 403) a nivel de servidor.
                 </p>
-                <ul className="list-disc pl-5 space-y-2 mt-2 theme-text-muted">
-                    <li><strong>¿Qué detecta?</strong> Fuerza bruta, inyecciones de código (XSS/SQLi), ingresos con correos no autorizados, invasión de rutas (escalada de privilegios) y bloqueos nativos del servidor.</li>
-                    <li><strong>Retención (TTL):</strong> Los registros son inmutables (no se pueden borrar manualmente). Google Cloud los elimina automáticamente a los 14 días exactos.</li>
-                    <li><strong>Exportación:</strong> Permite descargar un reporte CSV detallado para auditorías de ciberseguridad.</li>
+                <ul className="space-y-2 text-xs mt-3 p-3 theme-bg-low rounded-xl border theme-border">
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Captura:</span> IP, País, UserAgent y Acción.</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Retención:</span> Inmutable por 14 días (TTL Cloud).</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Exportación:</span> Descarga forense a formato CSV.</li>
                 </ul>
             </div>
         )
@@ -117,69 +150,59 @@ const helpTopics = [
 ];
 
 export const AyudaView = ({ isAdmin }: { isAdmin: boolean }) => {
-    const [expandedSection, setExpandedSection] = useState<string>('intro');
-
-    const toggleSection = (id: string) => {
-        setExpandedSection(prev => prev === id ? '' : id);
-    };
-
     return (
-        <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            <div className="theme-bg-container p-6 sm:p-8 rounded-2xl border theme-border shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+        <div className="max-w-6xl mx-auto space-y-6 fade-in pb-10">
+            {/* Header Hero */}
+            <div className="theme-bg-container p-6 sm:p-8 rounded-2xl border theme-border shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:rotate-3 transition-transform duration-700">
                     <HelpCircle className="w-48 h-48" />
                 </div>
                 <div className="relative z-10">
                     <p className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                         <Info className="w-4 h-4" /> Centro de Soporte
                     </p>
-                    <h2 className="text-3xl font-black theme-text-main mb-2">Ayuda y Documentación</h2>
+                    <h2 className="text-3xl font-black theme-text-main mb-2">Manual Operativo</h2>
                     <p className="theme-text-muted text-sm max-w-xl">
-                        Encuentra respuestas a preguntas frecuentes y conoce los lineamientos operativos de la matriz de accesos.
+                        Consulta los lineamientos técnicos, las matrices de permisos y el funcionamiento general de la arquitectura del sistema.
                     </p>
                 </div>
             </div>
 
-            <div className="space-y-4">
+            {/* Grid de Tarjetas con Hover Sobrio y Elegante */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                 {helpTopics.map((topic) => {
-                    if ((topic.id === 'backups' || topic.id === 'auditoria') && !isAdmin) return null;
-
-                    const isExpanded = expandedSection === topic.id;
+                    if (topic.requireAdmin && !isAdmin) return null;
 
                     return (
-                        <div key={topic.id} className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm transition-all hover:border-gray-500/50">
-                            <button 
-                                onClick={() => toggleSection(topic.id)}
-                                className="w-full flex items-center justify-between p-5 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-left gap-4"
-                            >
+                        <div 
+                            key={topic.id} 
+                            className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 flex flex-col h-full fade-in group relative"
+                        >
+                            <div className="flex items-start justify-between mb-5 relative z-10">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-2 bg-[var(--surface)] rounded-lg shadow-sm border theme-border">
+                                    <div className="p-3 theme-bg-low rounded-xl border theme-border shadow-sm transition-transform duration-300 group-hover:scale-105">
                                         {topic.icon}
                                     </div>
-                                    <h3 className="text-base font-bold theme-text-main">{topic.title}</h3>
+                                    <h3 className="text-base font-bold theme-text-main leading-tight">
+                                        {topic.title}
+                                    </h3>
                                 </div>
-                                <div className="flex-shrink-0">
-                                    {isExpanded ? (
-                                        <ChevronDown className="w-5 h-5 theme-text-muted" />
-                                    ) : (
-                                        <ChevronRight className="w-5 h-5 theme-text-muted" />
-                                    )}
-                                </div>
-                            </button>
-
-                            {isExpanded && (
-                                <div className="p-6 border-t theme-border bg-[var(--background)] fade-in">
-                                    {topic.content}
-                                </div>
-                            )}
+                                <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border ${topic.badgeColor} whitespace-nowrap ml-2`}>
+                                    {topic.badge}
+                                </span>
+                            </div>
+                            
+                            <div className="flex-1 relative z-10">
+                                {topic.content}
+                            </div>
                         </div>
                     );
                 })}
             </div>
 
-            <div className="text-center pt-8 pb-4">
-                <p className="text-xs font-bold theme-text-muted uppercase tracking-wider">
-                    ¿Necesitas más ayuda? Contacta al Administrador IT.
+            <div className="text-center pt-8 pb-4 fade-in">
+                <p className="text-xs font-bold theme-text-muted uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-default">
+                    <ShieldAlert className="w-3.5 h-3.5" /> ¿Necesitas escalamiento técnico? Contacta a Soporte IT.
                 </p>
             </div>
         </div>

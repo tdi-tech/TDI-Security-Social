@@ -2,12 +2,20 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { 
     ShieldAlert, ListChecks, BookOpen, Users, Clock, Activity, 
     AlertTriangle, CheckCircle2, Lock, Megaphone, MessageSquare, 
-    FileText, X, ChevronRight, PieChart, TrendingUp, MapPin, Download
+    FileText, X, ChevronRight, PieChart, TrendingUp, MapPin, Download, Loader2
 } from 'lucide-react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db, appId, auth } from '../../../services/firebase/config'; 
 import { StatCard, ActionBtn } from '../../../shared/components/UIComponents';
 import { DetailModal, EditIncidentModal } from '../../incidents/components/HackViews';
+
+const RestrictedArea = () => (
+    <div className="theme-bg-container theme-border border rounded-2xl p-10 text-center shadow-sm fade-in mt-6">
+        <Lock className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" />
+        <h3 className="text-lg font-bold theme-text-main mb-2">Área Restringida</h3>
+        <p className="theme-text-muted text-sm max-w-md mx-auto">Inicia sesión como Administrador para visualizar estas métricas.</p>
+    </div>
+);
 
 export const DashboardView = ({ 
     isAdmin, navigate, showToast, 
@@ -18,6 +26,7 @@ export const DashboardView = ({
     const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
     const [comments, setComments] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isExportingPDF, setIsExportingPDF] = useState(false);
 
     const [activeTab, setActiveTab] = useState('seguridad');
     const [mounted, setMounted] = useState(false);
@@ -127,30 +136,47 @@ export const DashboardView = ({
         if (activeTab === 'seguridad' && hackStats.total === 0) return showToast("No hay datos de Seguridad.", true);
         if (activeTab === 'rrss' && (!isAdmin || rrssStats.total === 0)) return showToast("Sin acceso o sin datos RRSS.", true);
         if (activeTab === 'comentarios' && (!isAdmin || commentsStats.totalReportes === 0)) return showToast("Sin acceso o sin datos.", true);
-        window.print();
+        
+        setIsExportingPDF(true);
+        setTimeout(() => {
+            window.print();
+            setIsExportingPDF(false);
+        }, 1500);
     };
-
-    const RestrictedArea = () => (
-        <div className="theme-bg-container theme-border border rounded-2xl p-10 text-center shadow-sm fade-in mt-6">
-            <Lock className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" />
-            <h3 className="text-lg font-bold theme-text-main mb-2">Área Restringida</h3>
-            <p className="theme-text-muted text-sm max-w-md mx-auto">Inicia sesión como Administrador para visualizar estas métricas.</p>
-        </div>
-    );
 
     if (isLoading) {
         return (
             <div className="fade-in pb-20 space-y-8 animate-pulse">
-                <div className="h-10 w-full sm:w-1/2 bg-gray-200 dark:bg-gray-800 rounded-xl"></div>
+                <div className="flex gap-2 mb-8">
+                    <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                    <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                    <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    {[1,2,3,4].map(i => <div key={i} className="h-28 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>)}
+                    {/* 🔥 FIX: Skeletons estilo líneas de contenido real */}
+                    {[1,2,3,4].map(i => (
+                        <div key={i} className="theme-bg-container border theme-border rounded-xl p-6 shadow-sm h-28 flex flex-col justify-between">
+                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                            <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-1/3 mt-2"></div>
+                        </div>
+                    ))}
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
-                        <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
+                        <div className="h-64 theme-bg-container border theme-border rounded-xl shadow-sm p-6 flex flex-col gap-5">
+                            <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
+                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
+                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-4/5"></div>
+                            <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+                        </div>
+                        <div className="h-32 theme-bg-container border theme-border rounded-xl shadow-sm"></div>
                     </div>
-                    <div className="h-96 bg-gray-200 dark:bg-gray-800 rounded-2xl"></div>
+                    <div className="h-96 theme-bg-container border theme-border rounded-xl shadow-sm p-6 flex flex-col gap-4">
+                        <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+                        <div className="flex gap-4 items-center"><div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-700"></div><div className="flex-1 space-y-2"><div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div><div className="h-2 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div></div></div>
+                        <div className="flex gap-4 items-center mt-2"><div className="w-10 h-10 rounded-lg bg-gray-300 dark:bg-gray-700"></div><div className="flex-1 space-y-2"><div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-4/5"></div><div className="h-2 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div></div></div>
+                    </div>
                 </div>
             </div>
         );
@@ -166,11 +192,15 @@ export const DashboardView = ({
                 
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
                     <div className="flex flex-col sm:flex-row items-center gap-2 p-1.5 bg-black/5 dark:bg-white/5 border theme-border rounded-xl w-full md:w-fit shadow-inner">
-                        <button onClick={() => setActiveTab('seguridad')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'seguridad' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><ShieldAlert className="w-4 h-4" /> Seguridad y Accesos</button>
-                        <button onClick={() => setActiveTab('rrss')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'rrss' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Megaphone className="w-4 h-4" /> Reputación RRSS</button>
-                        <button onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4" /> Comentarios</button>
+                        <button type="button" onClick={() => setActiveTab('seguridad')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'seguridad' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><ShieldAlert className="w-4 h-4" /> Seguridad y Accesos</button>
+                        <button type="button" onClick={() => setActiveTab('rrss')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'rrss' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Megaphone className="w-4 h-4" /> Reputación RRSS</button>
+                        <button type="button" onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4" /> Comentarios</button>
                     </div>
-                    <button onClick={handleDownloadReport} className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--primary)] text-white hover:brightness-110 transition-all shadow-sm"><Download className="w-4 h-4" /> Descargar PDF</button>
+                    {/* 🔥 FIX: Botón de Descarga con Spinner y Bloqueo */}
+                    <button type="button" onClick={handleDownloadReport} disabled={isExportingPDF} className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--primary)] text-white hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4" />} 
+                        {isExportingPDF ? 'Generando PDF...' : 'Descargar PDF'}
+                    </button>
                 </div>
 
                 <div className="space-y-6">
@@ -189,8 +219,8 @@ export const DashboardView = ({
                                         <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm">
                                             <h4 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500"/> Top 3 Vectores de Ataque</h4>
                                             <div className="space-y-3">
-                                                {hackStats.topVectors.length > 0 ? hackStats.topVectors.map((vec, i) => (
-                                                    <div key={i}>
+                                                {hackStats.topVectors.length > 0 ? hackStats.topVectors.map((vec) => (
+                                                    <div key={vec.name}>
                                                         <div className="flex justify-between text-xs mb-1"><span className="font-bold theme-text-main truncate pr-2">{vec.name}</span><span className="theme-text-muted">{vec.percent}%</span></div>
                                                         <div className="h-2 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out" style={{ width: mounted ? `${vec.percent}%` : '0%' }}></div></div>
                                                     </div>
@@ -228,15 +258,15 @@ export const DashboardView = ({
                                         ) : (
                                             <div className="flex-1 overflow-y-auto space-y-2">
                                                 {incidents.slice(0, 5).map((inc: any) => (
-                                                    <div key={inc.id} onClick={() => { setSelectedHackeo(inc); setDetailModalOpen(true); }} className="p-3 theme-bg-low rounded-xl hover:border-red-500 border border-transparent transition-colors cursor-pointer group">
+                                                    <button type="button" key={inc.id} onClick={() => { setSelectedHackeo(inc); setDetailModalOpen(true); }} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-red-500 border border-transparent transition-colors cursor-pointer group">
                                                         <div className="flex justify-between items-start mb-1">
                                                             <p className="text-sm font-bold theme-text-main truncate group-hover:text-red-500 transition-colors">{inc.plataforma}</p>
                                                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${inc.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{inc.estado}</span>
                                                         </div>
                                                         <p className="text-xs theme-text-muted truncate">{new Date(inc.fecha).toLocaleDateString()} - {inc.vector}</p>
-                                                    </div>
+                                                    </button>
                                                 ))}
-                                                <button onClick={() => navigate('historial')} className="w-full mt-2 py-2 text-xs font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">Ver historial completo</button>
+                                                <button type="button" onClick={() => navigate('historial')} className="w-full mt-2 py-2 text-xs font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">Ver historial completo</button>
                                             </div>
                                         )}
                                     </div>
@@ -292,15 +322,15 @@ export const DashboardView = ({
                                             ) : (
                                                 <div className="flex-1 overflow-y-auto space-y-2">
                                                     {rrssIncidents.slice(0, 5).map((inc: any) => (
-                                                        <div key={inc.id} onClick={() => setPreviewModal({isOpen: true, type: 'rrss', data: inc})} className="p-3 theme-bg-low rounded-xl hover:border-orange-500 border border-transparent transition-colors cursor-pointer group">
+                                                        <button type="button" key={inc.id} onClick={() => setPreviewModal({isOpen: true, type: 'rrss', data: inc})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-orange-500 border border-transparent transition-colors cursor-pointer group">
                                                             <div className="flex justify-between items-start mb-1">
                                                                 <p className="text-sm font-bold theme-text-main truncate group-hover:text-orange-500 transition-colors">{inc.redSocial}</p>
                                                                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${inc.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{inc.estado}</span>
                                                             </div>
                                                             <p className="text-xs theme-text-muted truncate">Riesgo {inc.riesgo} • {new Date(inc.fecha).toLocaleDateString()}</p>
-                                                        </div>
+                                                        </button>
                                                     ))}
-                                                    <button onClick={() => navigate('historial-rss')} className="w-full mt-2 py-2 text-xs font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors">Ver historial completo</button>
+                                                    <button type="button" onClick={() => navigate('historial-rss')} className="w-full mt-2 py-2 text-xs font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors">Ver historial completo</button>
                                                 </div>
                                             )}
                                         </div>
@@ -355,15 +385,15 @@ export const DashboardView = ({
                                             ) : (
                                                 <div className="flex-1 overflow-y-auto space-y-2">
                                                     {comments.slice(0, 5).map((com: any) => (
-                                                        <div key={com.id} onClick={() => setPreviewModal({isOpen: true, type: 'comment', data: com})} className="p-3 theme-bg-low rounded-xl hover:border-blue-500 border border-transparent transition-colors cursor-pointer group">
+                                                        <button type="button" key={com.id} onClick={() => setPreviewModal({isOpen: true, type: 'comment', data: com})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-blue-500 border border-transparent transition-colors cursor-pointer group">
                                                             <div className="flex justify-between items-start mb-1">
                                                                 <p className="text-sm font-bold theme-text-main truncate group-hover:text-blue-500 transition-colors">Reporte del {com.fechaInicio}</p>
                                                                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{com.contenido}</span>
                                                             </div>
                                                             <p className="text-xs theme-text-muted truncate">Finaliza: {com.fechaFin}</p>
-                                                        </div>
+                                                        </button>
                                                     ))}
-                                                    <button onClick={() => navigate('historial-comentario')} className="w-full mt-2 py-2 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">Ver historial completo</button>
+                                                    <button type="button" onClick={() => navigate('historial-comentario')} className="w-full mt-2 py-2 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">Ver historial completo</button>
                                                 </div>
                                             )}
                                         </div>
@@ -385,7 +415,7 @@ export const DashboardView = ({
                                     </div>
                                     <div><h3 className="font-bold theme-text-main">Vista Rápida</h3><p className="text-[10px] theme-text-muted font-medium uppercase tracking-wider">{previewModal.type === 'rrss' ? 'Crisis RRSS' : 'Comentarios'}</p></div>
                                 </div>
-                                <button onClick={() => setPreviewModal({isOpen: false, type: '', data: null})} className="p-1.5 theme-text-muted hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
+                                <button type="button" onClick={() => setPreviewModal({isOpen: false, type: '', data: null})} className="p-1.5 theme-text-muted hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"><X className="w-5 h-5"/></button>
                             </div>
                             <div className="p-5 space-y-4">
                                 {previewModal.type === 'rrss' ? (
@@ -411,7 +441,7 @@ export const DashboardView = ({
                                 )}
                             </div>
                             <div className="p-4 border-t theme-border flex gap-3">
-                                <button onClick={() => { setPreviewModal({isOpen: false, type: '', data: null}); navigate(previewModal.type === 'rrss' ? 'historial-rss' : 'historial-comentario'); }} className={`w-full py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:brightness-110 ${previewModal.type === 'rrss' ? 'bg-orange-600' : 'bg-blue-600'}`}>
+                                <button type="button" onClick={() => { setPreviewModal({isOpen: false, type: '', data: null}); navigate(previewModal.type === 'rrss' ? 'historial-rss' : 'historial-comentario'); }} className={`w-full py-2.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:brightness-110 ${previewModal.type === 'rrss' ? 'bg-orange-600' : 'bg-blue-600'}`}>
                                     Ver historial completo <ChevronRight className="w-4 h-4"/>
                                 </button>
                             </div>
@@ -424,7 +454,7 @@ export const DashboardView = ({
             <DetailModal isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} incident={selectedHackeo} isAdmin={isAdmin} onToggleStatus={toggleIncidentStatus} onEdit={() => { setDetailModalOpen(false); setEditModalOpen(true); }} onDelete={deleteIncident} />
             <EditIncidentModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} incident={selectedHackeo} onUpdate={updateIncident} />
 
-            {/* VISTA OCULTA DE IMPRESIÓN (RESTAURADA AL 100%) */}
+            {/* VISTA OCULTA DE IMPRESIÓN */}
             <div className="hidden print-report-container p-8 max-w-4xl mx-auto">
                 <div className="border-b-2 border-gray-800 pb-4 mb-8">
                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">INNOVA MANAGEMENT</h1>
