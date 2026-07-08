@@ -13,24 +13,30 @@ Siga estos pasos para clonar, configurar y ejecutar el proyecto en su entorno de
 ### 1. Instalar dependencias
 Asegúrese de contar con Node.js instalado en su sistema. Ejecute el siguiente comando en la terminal desde la raíz del proyecto para descargar los módulos necesarios:
 
-`npm install`
+```bash
+npm install
+```
 
 *(Nota de dependencias críticas: Asegúrese de instalar `dompurify` para la desinfección de código HTML enriquecido usando `npm i dompurify` y `npm i -D @types/dompurify`).*
 
 ### 2. Configurar variables de entorno
 Cree un archivo llamado `.env` en la raíz del proyecto e ingrese las credenciales correspondientes de la API de Firebase:
 
-`VITE_FIREBASE_API_KEY=`
-`VITE_FIREBASE_AUTH_DOMAIN=`
-`VITE_FIREBASE_PROJECT_ID=`
-`VITE_FIREBASE_STORAGE_BUCKET=`
-`VITE_FIREBASE_MESSAGING_SENDER_ID=`
-`VITE_FIREBASE_APP_ID=`
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+```
 
 ### 3. Ejecutar el entorno de desarrollo
 Inicie el servidor de desarrollo local de Vite mediante el siguiente comando en la terminal:
 
-`npm run dev`
+```bash
+npm run dev
+```
 
 ---
 

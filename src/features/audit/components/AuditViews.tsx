@@ -5,7 +5,6 @@ import {
   ShieldAlert, Download, Activity, Clock, User, Globe, MapPin, ShieldCheck, AlertOctagon, Laptop
 } from 'lucide-react';
 
-// Tipado fuerte usando la arquitectura
 import type { AuditLog } from '../../../shared/types/models';
 
 export const AuditViews: React.FC = () => {
@@ -64,6 +63,13 @@ export const AuditViews: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // 🔥 Helper para acortar las acciones largas en la UI (remueve el @dominio)
+  const formatActionStr = (text: string) => {
+    if (!text) return 'Desconocido';
+    // Busca correos con dominio tierradeideas.mx y deja solo el @usuario
+    return text.replace(/([a-zA-Z0-9._-]+)@tierradeideas\.mx/g, '@$1');
   };
 
   if (loading) {
@@ -142,13 +148,14 @@ export const AuditViews: React.FC = () => {
                       <p className="text-[10px] theme-text-muted font-mono mt-0.5 truncate max-w-[150px]" title={log.uid}>{log.uid}</p>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm ${
-                        log.accion.includes('403') 
-                        ? 'bg-red-500/10 text-red-500 border-red-500/20' 
-                        : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                      {/* 🔥 Usamos formatActionStr y whitespace-normal para que el texto sea corto y se ajuste si es necesario */}
+                      <span className={`inline-flex items-center gap-2 border px-3 py-2 rounded-xl text-xs font-bold shadow-sm whitespace-normal max-w-sm leading-relaxed ${
+                        log.accion.includes('403') || log.accion.toLowerCase().includes('bloqueo')
+                        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' 
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                       }`}>
-                        <Laptop className="w-3.5 h-3.5" />
-                        {log.accion}
+                        <Laptop className="w-4 h-4 flex-shrink-0" />
+                        {formatActionStr(log.accion)}
                       </span>
                     </td>
                     <td className="px-5 py-4"><span className="font-mono text-xs font-semibold bg-[var(--surface)] border theme-border theme-text-main px-3 py-1.5 rounded-lg shadow-inner">{log.ip}</span></td>

@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock, Eye, EyeOff } from 'lucide-react';
+import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock, Eye, EyeOff, FileJson, Server } from 'lucide-react';
 import CryptoJS from 'crypto-js';
 import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
-// 🛡️ INTEGRACIÓN DEL RADAR PERIMETRAL DE AUDITORÍA
 import { logAuditEvent } from "../../../services/firebase/audit.service";
 
 export const BackupView = ({ showToast }: any) => {
@@ -94,12 +93,10 @@ export const BackupView = ({ showToast }: any) => {
                     setBackupInfo(parsedData);
                     setEncryptedFileContent(null);
                 } else {
-                    // 🚨 SENSOR CORREGIDO: Mensaje corto
                     await logAuditEvent("Alerta de Integridad: Formato inválido");
                     showToast('El archivo no corresponde a un formato válido de Innova', true);
                 }
             } catch (err) {
-                // 🚨 SENSOR CORREGIDO: Mensaje corto
                 await logAuditEvent("Fallo de Integridad: Archivo corrupto o manipulado");
                 showToast('Error al leer el archivo. Estructura corrupta.', true);
             }
@@ -123,7 +120,6 @@ export const BackupView = ({ showToast }: any) => {
             setShowImportPassword(false);
             showToast('Archivo descifrado correctamente. Listo para restaurar.');
         } catch (error) {
-            // 🚨 SENSOR CORREGIDO: Mensaje corto
             await logAuditEvent("Alerta Criptográfica: Fallo de descifrado");
             showToast('Contraseña incorrecta o archivo corrupto.', true);
         }
@@ -171,106 +167,179 @@ export const BackupView = ({ showToast }: any) => {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            <div>
-                <h2 className="text-2xl font-bold theme-text-main flex items-center gap-2">
-                    <Database className="w-6 h-6 text-[var(--primary)]" /> Centro de Respaldos Core
-                </h2>
-                <p className="theme-text-muted text-sm mt-1">Exporta bases de datos consolidadas e inyecta respaldos cifrados para restaurar incidentes.</p>
+        <div className="max-w-6xl mx-auto space-y-12 fade-in pb-16">
+            
+            {/* Hero Header Corporativo */}
+            <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:rotate-3 transition-transform duration-700">
+                    <Database className="w-48 h-48" />
+                </div>
+                <div className="relative z-10">
+                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Server className="w-4 h-4" /> Infraestructura Segura
+                    </p>
+                    <h2 className="text-4xl font-black theme-text-main mb-4 tracking-tight">Centro de Respaldos Core</h2>
+                    <p className="theme-text-muted text-base max-w-2xl leading-relaxed">
+                        Exportación de bases de datos consolidadas e inyección de respaldos cifrados con protocolo AES-256. Módulo de uso exclusivo para recuperación ante desastres.
+                    </p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Layout Plano en 2 Columnas (Sin Cards cerradas) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 px-4 sm:px-8">
                 
-                {/* EXPORTACIÓN CIFRADA */}
-                <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
-                    <div className="space-y-2">
-                        <div className="p-2 bg-blue-500/10 text-blue-500 rounded-xl w-10 h-10 flex items-center justify-center"><Download className="w-5 h-5" /></div>
-                        <h3 className="text-base font-bold theme-text-main flex items-center gap-2">Respaldo Encriptado <Lock className="w-4 h-4 text-emerald-500"/></h3>
-                        <p className="text-xs theme-text-muted leading-relaxed">Descarga el núcleo en formato JSON protegido con cifrado AES-256. El archivo será ilegible si es interceptado.</p>
+                {/* COLUMNA IZQUIERDA: EXPORTACIÓN */}
+                <div className="space-y-8 border-b lg:border-b-0 lg:border-r theme-border pb-12 lg:pb-0 lg:pr-12">
+                    <div>
+                        <h3 className="text-2xl font-black theme-text-main flex items-center gap-3 mb-3">
+                            <Download className="w-7 h-7 text-indigo-500" /> Generar Respaldo
+                        </h3>
+                        <p className="text-sm theme-text-muted leading-relaxed">
+                            Descarga la totalidad de los historiales operativos en un archivo JSON protegido. Este archivo será ilegible si es interceptado por un tercero.
+                        </p>
                     </div>
-                    <div className="space-y-3 pt-2">
-                        <div className="relative">
-                            <Key className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
+
+                    <div className="space-y-5">
+                        <div className="relative focus-within:scale-[1.02] transition-transform duration-300">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 p-1 bg-indigo-500/10 rounded-md">
+                                <Key className="w-4 h-4 text-indigo-500" />
+                            </div>
                             <input 
                                 type={showExportPassword ? "text" : "password"} 
-                                placeholder="Crear contraseña de respaldo..." 
+                                placeholder="Establece una contraseña segura..." 
                                 value={exportPassword} 
                                 onChange={(e) => setExportPassword(e.target.value)} 
-                                className="w-full pl-9 pr-11 p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)] text-sm font-medium" 
+                                className="w-full pl-14 pr-12 py-4 rounded-2xl theme-bg-low border-2 border-transparent theme-text-main outline-none focus:border-indigo-500/50 focus:bg-[var(--surface)] text-sm font-bold shadow-inner transition-all" 
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowExportPassword(!showExportPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:theme-text-main transition-colors rounded-lg"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-indigo-500 transition-colors rounded-lg"
                                 title={showExportPassword ? "Ocultar clave" : "Mostrar clave"}
                             >
-                                {showExportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showExportPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                         </div>
-                        <button onClick={handleExportAll} disabled={!exportPassword} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white font-bold text-sm rounded-xl hover:brightness-110 shadow-sm transition-all disabled:opacity-50">
-                            <Download className="w-4 h-4" /> Exportar Copia Segura
+                        
+                        <button 
+                            type="button"
+                            onClick={handleExportAll} 
+                            disabled={!exportPassword || exportPassword.length < 6} 
+                            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white font-bold text-sm rounded-2xl hover:bg-indigo-500 shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+                        >
+                            <Lock className="w-4 h-4" /> Encriptar y Descargar JSON
                         </button>
+                        
+                        {!exportPassword && (
+                            <p className="text-xs font-bold text-amber-500 flex items-center gap-1.5 opacity-80">
+                                <AlertCircle className="w-3.5 h-3.5" /> Requiere mínimo 6 caracteres para habilitar descarga.
+                            </p>
+                        )}
                     </div>
                 </div>
 
-                {/* IMPORTACIÓN Y DESCIFRADO */}
-                <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
-                    <div className="space-y-2">
-                        <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl w-10 h-10 flex items-center justify-center"><UploadCloud className="w-5 h-5" /></div>
-                        <h3 className="text-base font-bold theme-text-main">Inyectar Copia</h3>
-                        <p className="text-xs theme-text-muted leading-relaxed">Sube el archivo JSON cifrado y proporciona su contraseña para reintroducir datos eliminados al servidor en la nube.</p>
+                {/* COLUMNA DERECHA: IMPORTACIÓN */}
+                <div className="space-y-8">
+                    <div>
+                        <h3 className="text-2xl font-black theme-text-main flex items-center gap-3 mb-3">
+                            <UploadCloud className="w-7 h-7 text-emerald-500" /> Inyectar Copia
+                        </h3>
+                        <p className="text-sm theme-text-muted leading-relaxed">
+                            Proporciona un archivo de respaldo oficial y su contraseña de descifrado. El sistema filtrará duplicados e inyectará únicamente los registros faltantes.
+                        </p>
                     </div>
 
                     {!encryptedFileContent ? (
-                        <div className="relative h-[88px]">
-                            <input type="file" accept=".json" onChange={handleFileChange} disabled={uploading} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10" />
-                            <div className="absolute inset-0 border border-dashed theme-border rounded-xl p-3 flex flex-col items-center justify-center text-xs theme-text-muted font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                <UploadCloud className="w-5 h-5 mb-1 opacity-50" /> Seleccionar archivo .json
+                        <div className="relative group cursor-pointer">
+                            <input 
+                                type="file" 
+                                accept=".json" 
+                                onChange={handleFileChange} 
+                                disabled={uploading} 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10" 
+                            />
+                            <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 group-hover:border-emerald-500/50 bg-black/5 dark:bg-white/5 group-hover:bg-emerald-500/5 rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all duration-300">
+                                <div className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <FileJson className="w-8 h-8 text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                                </div>
+                                <p className="text-sm font-bold theme-text-main">Arrastra o haz clic para subir</p>
+                                <p className="text-xs theme-text-muted mt-1">Solo archivos .json cifrados (Innova Management)</p>
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl fade-in">
-                            <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">Archivo cifrado detectado. Ingrese clave:</p>
-                            <div className="flex gap-2 relative">
-                                <div className="relative flex-1">
-                                    <input 
-                                        type={showImportPassword ? "text" : "password"} 
-                                        placeholder="Contraseña..." 
-                                        value={importPassword} 
-                                        onChange={(e) => setImportPassword(e.target.value)} 
-                                        className="w-full pl-3 pr-11 py-2 rounded-lg bg-white dark:bg-black/20 border border-amber-500/30 theme-text-main outline-none text-sm font-medium" 
-                                    />
+                        <div className="space-y-6 fade-in">
+                            <div className="flex items-center gap-4 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                                <div className="p-2 bg-emerald-500 rounded-full"><Lock className="w-4 h-4 text-white"/></div>
+                                <div>
+                                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Archivo Protegido Detectado</p>
+                                    <p className="text-xs theme-text-muted">Desbloquea el paquete para continuar.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="relative">
+                                <input 
+                                    type={showImportPassword ? "text" : "password"} 
+                                    placeholder="Ingresa la contraseña de descifrado..." 
+                                    value={importPassword} 
+                                    onChange={(e) => setImportPassword(e.target.value)} 
+                                    className="w-full pl-4 pr-32 py-4 rounded-2xl bg-white dark:bg-[var(--surface)] border-2 border-gray-200 dark:border-gray-800 theme-text-main outline-none focus:border-emerald-500/50 text-sm font-bold shadow-sm transition-all" 
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                     <button
                                         type="button"
                                         onClick={() => setShowImportPassword(!showImportPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:theme-text-main transition-colors rounded"
-                                        title={showImportPassword ? "Ocultar clave" : "Mostrar clave"}
+                                        className="p-2 text-gray-400 hover:text-emerald-500 transition-colors rounded-lg"
                                     >
-                                        {showImportPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                        {showImportPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={handleDecrypt} 
+                                        disabled={!importPassword}
+                                        className="px-4 py-2 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors text-sm disabled:opacity-50"
+                                    >
+                                        Abrir
                                     </button>
                                 </div>
-                                <button onClick={handleDecrypt} className="px-4 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition-colors text-sm">Abrir</button>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* CONFIRMACIÓN DE RESTAURACIÓN */}
+            {/* CONFIRMACIÓN DE RESTAURACIÓN (Aparece abajo centrado) */}
             {backupInfo && (
-                <div className="theme-bg-container border border-emerald-500/30 bg-emerald-500/5 rounded-2xl p-6 shadow-md space-y-4 fade-in">
-                    <div className="flex items-start gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                        <div><h4 className="font-bold theme-text-main text-sm">Respaldo Validado y Descifrado</h4><p className="text-xs theme-text-muted mt-1">Fecha de la copia: <strong className="theme-text-main">{new Date(backupInfo.exportDate).toLocaleString()}</strong></p></div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 bg-black/5 dark:bg-white/5 p-4 rounded-xl text-center">
-                        <div><span className="block text-lg font-bold theme-text-main">{backupInfo.modules?.hackeos?.length || 0}</span><span className="text-[10px] uppercase font-bold theme-text-muted tracking-wider">Hackeos</span></div>
-                        <div><span className="block text-lg font-bold theme-text-main">{backupInfo.modules?.rrss?.length || 0}</span><span className="text-[10px] uppercase font-bold theme-text-muted tracking-wider">Crisis RRSS</span></div>
-                        <div><span className="block text-lg font-bold theme-text-main">{backupInfo.modules?.comentarios?.length || 0}</span><span className="text-[10px] uppercase font-bold theme-text-muted tracking-wider">Comentarios</span></div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t theme-border">
-                        <p className="text-[11px] theme-text-muted flex items-center gap-1.5 leading-relaxed"><AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" /> Omitiremos registros que ya existan para evitar duplicados.</p>
-                        <button onClick={handleExecuteRestore} disabled={uploading} className="w-full sm:w-auto px-6 py-2 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-500 shadow-md transition-all disabled:opacity-50">{uploading ? "Inyectando a la nube..." : "Ejecutar Restauración"}</button>
+                <div className="px-4 sm:px-8 fade-in">
+                    <div className="border-t theme-border pt-12">
+                        <div className="max-w-2xl mx-auto p-8 bg-[var(--background)] border-[3px] border-emerald-500/30 rounded-3xl shadow-xl space-y-6">
+                            <div className="text-center space-y-2">
+                                <div className="w-12 h-12 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                                    <CheckCircle2 className="w-6 h-6" />
+                                </div>
+                                <h4 className="font-black theme-text-main text-2xl">Respaldo Verificado</h4>
+                                <p className="text-sm theme-text-muted">Fecha de extracción: <strong className="theme-text-main">{new Date(backupInfo.exportDate).toLocaleString()}</strong></p>
+                            </div>
+                            
+                            <div className="grid grid-cols-3 gap-6 py-6 border-y theme-border text-center">
+                                <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.hackeos?.length || 0}</span><span className="text-xs uppercase font-bold text-red-500 tracking-wider">Hackeos</span></div>
+                                <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.rrss?.length || 0}</span><span className="text-xs uppercase font-bold text-orange-500 tracking-wider">Crisis RRSS</span></div>
+                                <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.comentarios?.length || 0}</span><span className="text-xs uppercase font-bold text-blue-500 tracking-wider">Comentarios</span></div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <p className="text-xs theme-text-muted flex items-center justify-center gap-1.5 text-center">
+                                    <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" /> Algoritmo de inyección activado. Evitaremos registros duplicados.
+                                </p>
+                                <button 
+                                    type="button"
+                                    onClick={handleExecuteRestore} 
+                                    disabled={uploading} 
+                                    className="w-full py-4 bg-emerald-600 text-white font-black text-base rounded-2xl hover:bg-emerald-500 shadow-lg transition-all disabled:opacity-50"
+                                >
+                                    {uploading ? "Inyectando estructura a la nube..." : "Autorizar Inyección de Datos"}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

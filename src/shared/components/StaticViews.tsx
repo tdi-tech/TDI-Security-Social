@@ -10,13 +10,11 @@ import {
 // VISTA: PROTOCOLO DE HACKEOS
 // ==========================================
 export const StaticProtocoloView = () => (
-    <div className="fade-in max-w-5xl mx-auto space-y-12 pb-16 print:pb-0">
+    <div className="fade-in max-w-5xl mx-auto space-y-12 pb-16">
         
-        <h1 className="hidden print:block text-3xl font-bold text-black mb-8 border-b pb-4">TDI Secure Social - Protocolo Oficial</h1>
-
         {/* Hero Header Corporativo */}
-        <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group print:border-none print:shadow-none print:p-0">
-            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700 no-print">
+        <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
                 <ShieldAlert className="w-48 h-48" />
             </div>
             <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -501,7 +499,7 @@ export const ProtocoloRRSSView = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                    <div className="flex flex-col">
+                    <div className="flex flex-col h-full">
                         <div className="h-1.5 w-full bg-green-500 rounded-full mb-6 opacity-80"></div>
                         <h4 className="font-black text-2xl text-green-700 dark:text-green-500 mb-4">Nivel Bajo</h4>
                         <p className="text-base theme-text-main mb-8 opacity-90 leading-relaxed">Riesgos de impacto menor, aislados y manejables internamente sin repercusiones graves para la institución.</p>
@@ -510,7 +508,7 @@ export const ProtocoloRRSSView = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col">
+                    <div className="flex flex-col h-full">
                         <div className="h-1.5 w-full bg-yellow-500 rounded-full mb-6 opacity-80"></div>
                         <h4 className="font-black text-2xl text-yellow-700 dark:text-yellow-500 mb-4">Nivel Intermedio</h4>
                         <p className="text-base theme-text-main mb-8 opacity-90 leading-relaxed">Situaciones con potencial de generar ruido sostenido en la comunidad, requiriendo acción proactiva y respuestas estructuradas.</p>
@@ -519,7 +517,7 @@ export const ProtocoloRRSSView = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-col">
+                    <div className="flex flex-col h-full">
                         <div className="h-1.5 w-full bg-red-500 rounded-full mb-6 opacity-80"></div>
                         <h4 className="font-black text-2xl text-red-700 dark:text-red-500 mb-4">Nivel Crítico</h4>
                         <p className="text-base theme-text-main mb-8 opacity-90 leading-relaxed">Riesgos mediáticos que comprometen la operación normal, integridad física o legalidad, escalando a la prensa.</p>
