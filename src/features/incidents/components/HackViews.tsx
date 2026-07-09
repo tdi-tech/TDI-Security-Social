@@ -9,22 +9,64 @@ import { doc, setDoc, collection, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
 import { getMonthName } from '../../../shared/utils/date';
 
-const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
+const inputStyles = "w-full p-3 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] outline-none transition-all text-sm";
 
-const checklistData = [
-    { id: 'c1', icon: Camera, text: 'Evidencia capturada (capturas, logs, URLs)' },
-    { id: 'c2', icon: Megaphone, text: 'Reporte interno realizado a TI/Manager' },
-    { id: 'c3', icon: Key, text: 'Cambio de contraseñas desde dispositivo limpio' },
-    { id: 'c4', icon: LogOut, text: 'Sesiones activas cerradas en todas las plataformas' },
-    { id: 'c5', icon: PowerOff, text: 'Apps de terceros revocadas' },
-    { id: 'c6', icon: MailCheck, text: 'Correo/teléfono de recuperación verificados' },
-    { id: 'c7', icon: MonitorDot, text: 'Equipo aislado y escaneado con Antivirus' },
-    { id: 'c8', icon: RefreshCw, text: 'Tokens/APIs regenerados' },
-    { id: 'c9', icon: Globe, text: 'Contenido legítimo restaurado' },
-    { id: 'c10', icon: Clock, text: 'Monitoreo activo programado (72h)' },
-    { id: 'c11', icon: FileText, text: 'Reporte post-incidente iniciado' },
-    { id: 'c12', icon: MessageSquare, text: 'Comunicación externa emitida (si aplica)' }
+const groupedChecklistData = [
+    {
+        phase: 1,
+        title: 'Fase 1: Contención Inmediata',
+        description: 'Frenar el ataque y aislar el entorno comprometido.',
+        color: 'text-red-500',
+        bg: 'bg-red-500/10',
+        border: 'border-l-red-500',
+        items: [
+            { id: 'c4', icon: LogOut, text: 'Sesiones activas cerradas en todas las plataformas' },
+            { id: 'c5', icon: PowerOff, text: 'Apps de terceros revocadas' },
+            { id: 'c7', icon: MonitorDot, text: 'Equipo aislado y escaneado con Antivirus' }
+        ]
+    },
+    {
+        phase: 2,
+        title: 'Fase 2: Recuperación de Accesos',
+        description: 'Asegurar cuentas y regenerar credenciales de seguridad.',
+        color: 'text-orange-500',
+        bg: 'bg-orange-500/10',
+        border: 'border-l-orange-500',
+        items: [
+            { id: 'c3', icon: Key, text: 'Cambio de contraseñas desde dispositivo limpio' },
+            { id: 'c6', icon: MailCheck, text: 'Correo/teléfono de recuperación verificados' },
+            { id: 'c8', icon: RefreshCw, text: 'Tokens/APIs regenerados' }
+        ]
+    },
+    {
+        phase: 3,
+        title: 'Fase 3: Evidencia y Notificación',
+        description: 'Recopilar pruebas forenses y alertar a los involucrados.',
+        color: 'text-blue-500',
+        bg: 'bg-blue-500/10',
+        border: 'border-l-blue-500',
+        items: [
+            { id: 'c1', icon: Camera, text: 'Evidencia capturada (capturas, logs, URLs)' },
+            { id: 'c2', icon: Megaphone, text: 'Reporte interno realizado a TI/Manager' },
+            { id: 'c12', icon: MessageSquare, text: 'Comunicación externa emitida (si aplica)' }
+        ]
+    },
+    {
+        phase: 4,
+        title: 'Fase 4: Seguimiento y Cierre',
+        description: 'Restaurar la normalidad operativa y documentar el evento.',
+        color: 'text-emerald-500',
+        bg: 'bg-emerald-500/10',
+        border: 'border-l-emerald-500',
+        items: [
+            { id: 'c9', icon: Globe, text: 'Contenido legítimo restaurado' },
+            { id: 'c10', icon: Clock, text: 'Monitoreo activo programado (72h)' },
+            { id: 'c11', icon: FileText, text: 'Reporte post-incidente iniciado' }
+        ]
+    }
 ];
+
+const allChecklistIds = groupedChecklistData.flatMap(g => g.items.map(i => i.id));
 
 export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction }: any) => {
     const [vector, setVector] = useState('Desconocido');
@@ -69,52 +111,127 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            <div className="theme-bg-container p-6 rounded-2xl border theme-border shadow-sm">
-                <div className="border-b theme-border pb-4 mb-6">
-                    <h2 className="text-xl font-bold theme-text-main flex items-center gap-2"><AlertTriangle className="w-6 h-6 text-[var(--error)]" /> Reportar Incidente de Seguridad</h2>
-                    <p className="text-sm theme-text-muted mt-1 ml-8">Registra un evento crítico relacionado con accesos no autorizados o pérdida de cuentas corporativas.</p>
+        <>
+            <div className="max-w-5xl mx-auto space-y-10 fade-in pb-16">
+                
+                {/* HERO HEADER CORPORATIVO */}
+                <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
+                        <ShieldAlert className="w-48 h-48" />
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-xs font-bold text-[var(--error)] uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4" /> Seguridad IT
+                        </p>
+                        <h2 className="text-4xl font-black theme-text-main mb-4 tracking-tight">Reportar Incidente de Seguridad</h2>
+                        <p className="theme-text-muted text-base max-w-2xl leading-relaxed">
+                            Registra de manera formal cualquier evento crítico relacionado con accesos no autorizados, hackeos, pérdida de cuentas corporativas o exposición de datos.
+                        </p>
+                    </div>
                 </div>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-xs">1</span> Datos Básicos</h3>
-                        <div className="p-5 theme-bg-lowest border theme-border rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1"><label htmlFor="n-plataforma" className="text-xs font-medium theme-text-muted">Plataforma(s) Afectada(s)</label><input id="n-plataforma" type="text" name="plataforma" required className={inputStyles} placeholder="Ej: Instagram, Facebook..." /></div>
-                            <div className="space-y-1"><label htmlFor="n-vector" className="text-xs font-medium theme-text-muted">Vector de Ataque</label>
-                                <select id="n-vector" value={vector} onChange={(e) => setVector(e.target.value)} className={inputStyles}>
-                                    <option value="Desconocido">Desconocido</option><option value="Phishing">Phishing</option><option value="Malware/Troyano">Malware/Troyano</option><option value="Contraseña Débil">Contraseña Débil</option><option value="App Tercera">App de Terceros</option><option value="Torrents/P2P">Descargas P2P/Torrents</option><option value="Otro">Otro (Especificar)</option>
-                                </select>
-                                {vector === 'Otro' && <input aria-label="Especificar otro vector" type="text" value={otroVector} onChange={(e) => setOtroVector(e.target.value)} required className={`${inputStyles} mt-2 fade-in`} placeholder="Especifica el vector..." />}
+
+                <form onSubmit={handleSubmit} className="space-y-8 px-2 sm:px-8">
+                    
+                    {/* SECCIÓN 1: DATOS BÁSICOS */}
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
+                            <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">1</span> 
+                            Datos Básicos
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 sm:p-8 theme-bg-container rounded-[1.5rem] border theme-border shadow-sm border-l-[6px] border-l-[var(--primary)]">
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-plataforma" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Plataforma(s) Afectada(s)</label>
+                                <input id="n-plataforma" type="text" name="plataforma" required className={inputStyles} placeholder="Ej: Instagram, Base de Datos, Servidor..." />
                             </div>
-                            <div className="space-y-1 md:col-span-2"><label htmlFor="n-descripcion" className="text-xs font-medium theme-text-muted">Descripción del Incidente</label><textarea id="n-descripcion" name="descripcion" required rows={3} className={`${inputStyles} resize-none`} placeholder="¿Qué sucedió?"></textarea></div>
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-vector" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Vector de Ataque Inicial</label>
+                                <select id="n-vector" value={vector} onChange={(e) => setVector(e.target.value)} className={inputStyles}>
+                                    <option value="Desconocido">Desconocido (Bajo investigación)</option>
+                                    <option value="Phishing">Phishing / Ingeniería Social</option>
+                                    <option value="Malware/Troyano">Malware / Troyano</option>
+                                    <option value="Contraseña Débil">Vulneración por Contraseña Débil</option>
+                                    <option value="App Tercera">Fuga por App de Terceros</option>
+                                    <option value="Torrents/P2P">Descargas P2P / Torrents</option>
+                                    <option value="Otro">Otro (Especificar manualmente)</option>
+                                </select>
+                                {vector === 'Otro' && <input aria-label="Especificar otro vector" type="text" value={otroVector} onChange={(e) => setOtroVector(e.target.value)} required className={`${inputStyles} mt-3 fade-in`} placeholder="Especifique el vector exacto..." />}
+                            </div>
+                            <div className="space-y-1.5 md:col-span-2 pt-2">
+                                <label htmlFor="n-descripcion" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Descripción Detallada del Incidente</label>
+                                <textarea id="n-descripcion" name="descripcion" required rows={3} className={`${inputStyles} resize-none leading-relaxed`} placeholder="Describa a detalle qué sucedió, cuándo se detectó y qué información fue comprometida..."></textarea>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-xs">2</span> Impacto y Alcance</h3>
-                        <div className="p-5 theme-bg-lowest border theme-border rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div className="space-y-1"><label htmlFor="n-vistas" className="text-xs font-medium theme-text-muted">Vistas Estimadas</label><input id="n-vistas" type="number" name="vistas" className={inputStyles} placeholder="0" /></div>
-                            <div className="space-y-1"><label htmlFor="n-interacciones" className="text-xs font-medium theme-text-muted">Interacciones</label><input id="n-interacciones" type="number" name="interacciones" className={inputStyles} placeholder="0" /></div>
-                            <div className="space-y-1"><label htmlFor="n-impacto" className="text-xs font-medium theme-text-muted">Nivel de Impacto</label><select id="n-impacto" name="impacto" className={inputStyles}><option value="Bajo">🟢 Bajo</option><option value="Medio">🟡 Medio</option><option value="Alto">🔴 Alto</option><option value="Crítico">🟣 Crítico</option></select></div>
+
+                    {/* SECCIÓN 2: IMPACTO Y ALCANCE */}
+                    <div className="space-y-4 pt-4">
+                        <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
+                            <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">2</span> 
+                            Impacto y Alcance Estimado
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-6 sm:p-8 bg-black/5 dark:bg-white/5 rounded-[1.5rem] border theme-border shadow-inner">
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-vistas" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Vistas Estimadas</label>
+                                <input id="n-vistas" type="number" name="vistas" className={inputStyles} placeholder="Ej: 1500" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-interacciones" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Interacciones</label>
+                                <input id="n-interacciones" type="number" name="interacciones" className={inputStyles} placeholder="Ej: 340" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-impacto" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Nivel de Impacto Corporativo</label>
+                                <select id="n-impacto" name="impacto" className={`${inputStyles} font-bold`}>
+                                    <option value="Bajo">🟢 Bajo (Operación normal)</option>
+                                    <option value="Medio">🟡 Medio (Afectación parcial)</option>
+                                    <option value="Alto">🔴 Alto (Pérdida de datos/Cuentas)</option>
+                                    <option value="Crítico">🟣 Crítico (Inoperatividad total)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-xs">3</span> Acciones Tomadas</h3>
-                        <div className="p-5 theme-bg-lowest border theme-border rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1"><label htmlFor="n-contencion" className="text-xs font-medium theme-text-muted">Contención Inmediata</label><textarea id="n-contencion" name="contencion" rows={3} className={`${inputStyles} resize-none`} placeholder="Ej: Cambio de contraseña..."></textarea></div>
-                            <div className="space-y-1"><label htmlFor="n-erradicacion" className="text-xs font-medium theme-text-muted">Erradicación / Limpieza</label><textarea id="n-erradicacion" name="erradicacion" rows={3} className={`${inputStyles} resize-none`} placeholder="Ej: Formateo de equipo..."></textarea></div>
+
+                    {/* SECCIÓN 3: ACCIONES Y ERRADICACIÓN */}
+                    <div className="space-y-4 pt-4">
+                        <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
+                            <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">3</span> 
+                            Protocolo de Respuesta
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 sm:p-8 theme-bg-container rounded-[1.5rem] border theme-border shadow-sm">
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-contencion" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Contención Inmediata</label>
+                                <textarea id="n-contencion" name="contencion" rows={3} className={`${inputStyles} resize-none leading-relaxed`} placeholder="Acciones ejecutadas para frenar la hemorragia (Ej: Forzar cierre de sesiones, cambio de contraseñas, aislamiento de red)..."></textarea>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-erradicacion" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Erradicación y Limpieza</label>
+                                <textarea id="n-erradicacion" name="erradicacion" rows={3} className={`${inputStyles} resize-none leading-relaxed`} placeholder="Acciones para eliminar la amenaza de raíz (Ej: Formateo de discos, eliminación de malware, revocación de tokens API)..."></textarea>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-sm font-bold theme-text-main uppercase tracking-wider flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-xs">4</span> Cierre</h3>
-                        <div className="p-5 theme-bg-lowest border theme-border rounded-xl space-y-1"><label htmlFor="n-lecciones" className="text-xs font-medium theme-text-muted">Lecciones Aprendidas</label><textarea id="n-lecciones" name="lecciones" rows={2} className={`${inputStyles} resize-none`} placeholder="¿Qué podríamos mejorar?"></textarea></div>
+
+                    {/* SECCIÓN 4: CIERRE Y LECCIONES */}
+                    <div className="space-y-4 pt-4">
+                        <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
+                            <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">4</span> 
+                            Cierre Operativo
+                        </h3>
+                        <div className="p-6 sm:p-8 theme-bg-container rounded-[1.5rem] border theme-border shadow-sm">
+                            <div className="space-y-1.5">
+                                <label htmlFor="n-lecciones" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Lecciones Aprendidas y Mejoras a Futuro</label>
+                                <textarea id="n-lecciones" name="lecciones" rows={3} className={`${inputStyles} resize-none leading-relaxed`} placeholder="¿Qué falló en nuestra infraestructura o procesos? ¿Qué medidas debemos implementar para que no vuelva a ocurrir?"></textarea>
+                            </div>
+                        </div>
                     </div>
-                    <div className="pt-4 flex items-center justify-end gap-3 border-t theme-border">
-                        <button type="button" onClick={() => navigate('dashboard')} className="px-5 py-2.5 rounded-xl font-medium theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Cancelar</button>
-                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--primary)] text-white hover:brightness-110 transition-all disabled:opacity-50">{isSubmitting ? 'Guardando...' : <><Save className="w-5 h-5"/> Guardar Incidente</>}</button>
+
+                    {/* BOTONES DE ACCIÓN */}
+                    <div className="pt-8 flex flex-col sm:flex-row items-center justify-end gap-4 border-t-2 border-gray-200 dark:border-gray-800">
+                        <button type="button" onClick={() => navigate('dashboard')} className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Cancelar y Volver</button>
+                        <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-black bg-[var(--primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:hover:translate-y-0">
+                            {isSubmitting ? 'Guardando en la nube...' : <><Save className="w-5 h-5"/> Consolidar Incidente Oficial</>}
+                        </button>
                     </div>
                 </form>
             </div>
-        </div>
+        </>
     );
 };
 
@@ -146,7 +263,6 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
         return () => unsub();
     }, []);
 
-    // 🔥 FIX: Reseteamos la paginación a la página 1 cuando cambia el buscador o el filtro
     useEffect(() => {
         setPagePerMonth({});
     }, [searchTerm, filterYear]);
@@ -419,69 +535,192 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
     );
 };
 
-export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, showToast, setConfirmModal }: any) => {
-    const completedCount = checklistData.filter(i => checklistState[i.id]).length;
-    const percent = Math.round((completedCount / checklistData.length) * 100) || 0;
+export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, showToast }: any) => {
+    const [showResetModal, setShowResetModal] = useState(false);
+    const completedCount = allChecklistIds.filter(id => checklistState[id]).length;
+    const percent = Math.round((completedCount / allChecklistIds.length) * 100) || 0;
 
     const handleToggle = async (id: string) => {
         if (!isAdmin) return showToast("Debes ser Administrador para modificar.", true);
         const newState = { ...checklistState, [id]: !checklistState[id] };
         if (!newState[id] && id === 'c1') newState.c1_link = '';
         setChecklistState(newState); 
-        try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'globalChecklist'), { items: newState }); } catch (e) { showToast("Error de sincronización", true); }
+        try { 
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'globalChecklist'), { items: newState }); 
+        } catch (e) { 
+            showToast("Error de sincronización", true); 
+        }
     };
 
     const updateLink = async (id: string, link: string) => {
         if (!isAdmin) return;
         const newState = { ...checklistState, [`${id}_link`]: link };
         setChecklistState(newState);
-        try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'globalChecklist'), { items: newState }); showToast('Enlace guardado'); } catch (e) { showToast("Error", true); }
+        try { 
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'globalChecklist'), { items: newState }); 
+            showToast('Enlace guardado'); 
+        } catch (e) { 
+            showToast("Error al guardar enlace", true); 
+        }
     };
 
-    const handleReset = () => {
-        setConfirmModal({
-            isOpen: true, title: 'Reiniciar Checklist', msg: 'Esto borrará el progreso para todos. ¿Continuar?',
-            onConfirm: async () => { try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'globalChecklist'), { items: {} }); showToast('Checklist reiniciado'); } catch(e) { showToast("Error", true); } }
-        });
+    const executeReset = async () => {
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'appState', 'globalChecklist'), { items: {} });
+            setChecklistState({});
+            showToast('Checklist reiniciado con éxito');
+        } catch(e) {
+            showToast("Error de sincronización al reiniciar", true);
+        }
+        setShowResetModal(false);
     };
 
     return (
-        <div className="fade-in max-w-4xl mx-auto pb-10 print:pb-0">
-            <div className="theme-bg-container p-6 rounded-2xl border theme-border shadow-sm mb-6 print:border-none print:shadow-none print:p-0">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b theme-border pb-4 mb-6 no-print">
-                    <div><h2 className="text-xl font-bold theme-text-main flex items-center gap-2"><ListChecks className="w-6 h-6 text-[var(--primary)]" />Checklist de Respuesta Rápida</h2><p className="text-sm theme-text-muted mt-1 ml-8">Pasos estandarizados para contener un incidente activo en tiempo real.</p></div>
-                    {isAdmin && <button type="button" onClick={handleReset} className="text-xs font-bold text-[var(--error)] bg-[var(--error)]/10 px-3 py-1.5 rounded-lg hover:bg-[var(--error)]/20 transition-colors">Reiniciar Progreso</button>}
+        <>
+            <div className="max-w-5xl mx-auto space-y-10 fade-in pb-16 print:pb-0">
+                
+                {/* HERO HEADER CORPORATIVO */}
+                <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group no-print">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
+                        <ListChecks className="w-48 h-48" />
+                    </div>
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div className="max-w-2xl relative z-10">
+                            <p className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest mb-3 flex items-center gap-2">
+                                <ListChecks className="w-4 h-4" /> Mitigación y Respuesta
+                            </p>
+                            <h2 className="text-4xl font-black theme-text-main mb-4 tracking-tight">Checklist de Contención</h2>
+                            <p className="theme-text-muted text-base leading-relaxed">
+                                Sigue los pasos estandarizados para contener un incidente activo en tiempo real. Este progreso es global y se sincroniza en vivo con el equipo de TI.
+                            </p>
+                        </div>
+                        {isAdmin && (
+                            <button 
+                                type="button" 
+                                onClick={() => setShowResetModal(true)} 
+                                className="relative z-50 flex-shrink-0 flex items-center gap-1.5 text-xs font-bold text-[var(--error)] bg-[var(--error)]/10 px-4 py-2.5 rounded-xl hover:bg-[var(--error)]/20 transition-colors cursor-pointer"
+                            >
+                                <RefreshCw className="w-3.5 h-3.5" /> Reiniciar Progreso
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <h1 className="hidden print:block text-3xl font-bold text-black mb-8 border-b pb-4">Innova Management - Reporte de Checklist</h1>
-                <div className="theme-bg-low rounded-xl border theme-border p-5 mb-6 print:border-gray-300 print:bg-white">
-                    <div className="h-4 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden print:border print:border-gray-300"><div className="h-full bg-[var(--primary)] transition-all duration-500 print:bg-blue-600" style={{ width: `${percent}%` }}></div></div>
-                    <div className="flex justify-between px-1 pt-3"><span className="text-xs font-medium theme-text-muted print:text-black">Progreso Global Compartido</span><span className="text-xs font-bold text-[var(--primary)] print:text-black">{percent}% Completado</span></div>
+
+                <h1 className="hidden print:block text-3xl font-bold text-black mb-8 border-b pb-4">Innova Management - Reporte de Mitigación de Crisis</h1>
+
+                {/* PANEL DE PROGRESO GLOBAL */}
+                <div className="p-6 sm:p-8 bg-black/5 dark:bg-white/5 rounded-[1.5rem] border theme-border shadow-inner print:border-gray-300 print:bg-white">
+                    <div className="flex justify-between items-end mb-3">
+                        <p className="text-sm font-bold theme-text-muted uppercase tracking-wider print:text-black">Estatus Operativo de Contención</p>
+                        <span className="text-sm font-bold theme-text-main print:text-black">{completedCount} / {allChecklistIds.length} Pasos</span>
+                    </div>
+                    <div className="h-4 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden print:border print:border-gray-300">
+                        <div className="h-full bg-[var(--primary)] transition-all duration-700 print:bg-blue-600" style={{ width: `${percent}%` }}></div>
+                    </div>
+                    <div className="mt-3 flex justify-between">
+                        <span className="text-xs font-bold text-[var(--primary)] print:text-black">{percent}% Completado</span>
+                    </div>
                 </div>
-                <div className="space-y-3 print:space-y-4">
-                    {checklistData.map(item => {
-                        const isChecked = checklistState[item.id] || false;
-                        const IconComponent = item.icon;
+
+                {/* FASES MULTI-STEP */}
+                <div className="space-y-8">
+                    {groupedChecklistData.map((group) => {
+                        const groupCompletedCount = group.items.filter(i => checklistState[i.id]).length;
+                        const isGroupDone = groupCompletedCount === group.items.length;
+
                         return (
-                            <div key={item.id} className={`p-4 rounded-xl border transition-all print:break-inside-avoid print:bg-white print:border-gray-300 ${isChecked ? 'bg-[var(--success)]/10 border-[var(--success)]/30' : 'theme-bg-lowest theme-border hover:border-[var(--primary)]/50 shadow-sm'}`}>
-                                <div role="button" tabIndex={0} onKeyDown={(e) => {if(e.key==='Enter') handleToggle(item.id)}} className={`flex items-center ${isAdmin ? 'cursor-pointer' : 'cursor-default opacity-90'}`} onClick={() => handleToggle(item.id)}>
-                                    <div className={`w-6 h-6 rounded border-2 flex items-center justify-center mr-4 flex-shrink-0 transition-colors print:border-gray-400 ${isChecked ? 'bg-[var(--success)] border-[var(--success)] print:bg-green-500' : 'border-[var(--on-surface-variant)]'}`}>{isChecked && <CheckCircle2 className="w-4 h-4 text-white" strokeWidth={3} />}</div>
-                                    <IconComponent className={`w-4 h-4 mr-3 flex-shrink-0 ${isChecked ? 'text-[var(--success)] print:text-green-600' : 'theme-text-muted print:text-gray-500'}`} />
-                                    <span className={`text-sm font-medium ${isChecked ? 'text-[var(--success)] print:text-green-700 line-through' : 'theme-text-main print:text-black'}`}>{item.text}</span>
-                                </div>
-                                {isChecked && item.id === 'c1' && (
-                                    <div className="ml-10 mt-4 pt-3 border-t border-[var(--success)]/20 print:border-gray-200 fade-in">
-                                        <label htmlFor="cv-enlace-drive" className="text-xs font-bold text-[var(--success)] print:text-black uppercase tracking-wider mb-2 flex items-center gap-1"><LinkIcon className="w-3 h-3"/> Enlace a Carpeta de Evidencias (Drive)</label>
-                                        <input id="cv-enlace-drive" type="url" placeholder="🔗 Pega la URL de Google Drive aquí..." defaultValue={checklistState[`${item.id}_link`] || ''} onBlur={(e) => updateLink(item.id, e.target.value)} className={`${inputStyles} bg-white dark:bg-black/20 no-print`} disabled={!isAdmin} />
-                                        {checklistState[`${item.id}_link`] && <a href={checklistState[`${item.id}_link`]} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-500 hover:underline mt-2 block print-friendly break-all">{checklistState[`${item.id}_link`]}</a>}
+                            <div key={group.phase} className={`p-6 sm:p-8 theme-bg-container rounded-[1.5rem] border theme-border shadow-sm border-l-[6px] transition-all print:border-gray-300 print:bg-white print:break-inside-avoid ${isGroupDone ? 'border-l-gray-300 dark:border-l-gray-700 opacity-80 hover:opacity-100' : group.border}`}>
+                                
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b theme-border pb-5">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl transition-colors ${isGroupDone ? 'bg-[var(--success)] text-white' : `${group.bg} ${group.color}`}`}>
+                                            {isGroupDone ? <CheckCircle2 className="w-6 h-6" /> : group.phase}
+                                        </div>
+                                        <div>
+                                            <h3 className={`text-xl font-black ${isGroupDone ? 'theme-text-muted' : 'theme-text-main'}`}>{group.title}</h3>
+                                            <p className="text-sm theme-text-muted font-medium mt-1">{group.description}</p>
+                                        </div>
                                     </div>
-                                )}
+                                    <div className="text-right flex-shrink-0">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider theme-text-muted">Completado</span>
+                                        <p className={`font-black text-lg ${isGroupDone ? 'text-[var(--success)]' : 'theme-text-main'}`}>{groupCompletedCount} / {group.items.length}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {group.items.map(item => {
+                                        const isChecked = checklistState[item.id] || false;
+                                        const IconComponent = item.icon;
+                                        return (
+                                            <div key={item.id} className={`p-4 rounded-xl border transition-all ${isChecked ? 'bg-[var(--success)]/10 border-[var(--success)]/30' : 'theme-bg-lowest theme-border hover:border-[var(--primary)]/50 shadow-sm print:border-gray-300'}`}>
+                                                <div role="button" tabIndex={0} onKeyDown={(e) => {if(e.key==='Enter') handleToggle(item.id)}} className={`flex items-center ${isAdmin ? 'cursor-pointer' : 'cursor-default opacity-90'}`} onClick={() => handleToggle(item.id)}>
+                                                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center mr-4 flex-shrink-0 transition-colors print:border-gray-400 ${isChecked ? 'bg-[var(--success)] border-[var(--success)] print:bg-green-500' : 'border-gray-300 dark:border-gray-600'}`}>
+                                                        {isChecked && <CheckCircle2 className="w-4 h-4 text-white" strokeWidth={3} />}
+                                                    </div>
+                                                    <IconComponent className={`w-5 h-5 mr-3 flex-shrink-0 transition-colors ${isChecked ? 'text-[var(--success)] print:text-green-600' : 'theme-text-muted print:text-gray-500'}`} />
+                                                    <span className={`text-sm font-bold transition-colors ${isChecked ? 'text-[var(--success)] print:text-green-700 line-through' : 'theme-text-main print:text-black'}`}>{item.text}</span>
+                                                </div>
+                                                
+                                                {/* CAMPO DE EVIDENCIA DESPLEGABLE */}
+                                                {isChecked && item.id === 'c1' && (
+                                                    <div className="ml-10 mt-4 pt-4 border-t border-[var(--success)]/20 print:border-gray-200 fade-in">
+                                                        <label htmlFor="cv-enlace-drive" className="text-xs font-black text-[var(--success)] print:text-black uppercase tracking-wider mb-2 flex items-center gap-2">
+                                                            <LinkIcon className="w-4 h-4"/> Enlace de Evidencias Forenses (Drive)
+                                                        </label>
+                                                        <input id="cv-enlace-drive" type="url" placeholder="🔗 Pega la URL de Google Drive aquí..." defaultValue={checklistState[`${item.id}_link`] || ''} onBlur={(e) => updateLink(item.id, e.target.value)} className={`${inputStyles} bg-white dark:bg-black/20 no-print`} disabled={!isAdmin} />
+                                                        {checklistState[`${item.id}_link`] && <a href={checklistState[`${item.id}_link`]} target="_blank" rel="noreferrer" className="text-sm font-bold text-blue-500 hover:underline mt-2 block print-friendly break-all">{checklistState[`${item.id}_link`]}</a>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         );
                     })}
                 </div>
-                <div className="mt-8 flex justify-end no-print pt-6 border-t theme-border"><button type="button" onClick={() => window.print()} className="px-5 py-2.5 theme-bg-low theme-border border theme-text-main font-bold rounded-xl shadow-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2"><Printer className="w-5 h-5"/> Imprimir Checklist</button></div>
+
+                <div className="mt-8 flex justify-end no-print pt-6 border-t theme-border">
+                    <button type="button" onClick={() => window.print()} className="px-6 py-3.5 theme-bg-container theme-border border theme-text-main font-bold rounded-xl shadow-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-2">
+                        <Printer className="w-5 h-5"/> Imprimir Checklist de Contingencia
+                    </button>
+                </div>
             </div>
-        </div>
+
+            {/* MODAL INTERNO DE REINICIO DE CHECKLIST */}
+            {showResetModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in no-print">
+                    <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
+                        <div className="p-5 border-b theme-border flex justify-between items-center bg-red-500/5">
+                            <h3 className="font-bold theme-text-main flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-red-500" />
+                                Reiniciar Checklist Global
+                            </h3>
+                            <button type="button" onClick={() => setShowResetModal(false)} className="p-2 theme-text-muted hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors">
+                                <X className="w-5 h-5"/>
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm theme-text-main leading-relaxed">
+                                <strong className="text-red-500">ATENCIÓN:</strong> Esto borrará el progreso de la mitigación para <strong className="theme-text-main">todos los usuarios</strong> en tiempo real.
+                            </p>
+                            <p className="text-sm theme-text-muted">
+                                ¿Estás seguro de que deseas reiniciar la checklist global?
+                            </p>
+                        </div>
+                        <div className="p-4 border-t theme-border flex justify-end gap-3 bg-black/5 dark:bg-white/5">
+                            <button type="button" onClick={() => setShowResetModal(false)} className="px-5 py-2.5 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={executeReset} className="px-5 py-2.5 rounded-xl font-bold bg-red-600 text-white hover:bg-red-500 flex items-center gap-2 shadow-sm">
+                                <RefreshCw className="w-4 h-4"/>
+                                Sí, Reiniciar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

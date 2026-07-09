@@ -3,55 +3,55 @@ import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layou
 
 const changelogData = [
     {
-        id: 'cl-v3-4-1',
-        version: 'Versión 3.4.1',
+        id: 'cl-v3-2-3',
+        version: 'Versión 3.2.3',
         date: 'Junio 2026',
         tag: 'Última Versión',
         title: 'Optimización de Canales Operativos y Filtros de Monitoreo',
         changes: [
-            { id: 'ch-341-1', type: 'title', text: 'Unificación de Criterios y Permisos Corporativos' },
-            { id: 'ch-341-2', type: 'feature', text: 'Unificación Operativa: Los equipos de coordinación y edición de contenidos ahora cuentan con acceso completo para documentar, actualizar y gestionar incidencias de seguridad de forma centralizada.' },
-            { id: 'ch-341-3', type: 'security', text: 'Jerarquía de Privilegios: El equipo de administración de contenidos ahora puede pre-registrar colaboradores y pausar accesos temporales, manteniendo bloqueada la asignación de roles técnicos avanzados por seguridad del sistema.' },
-            { id: 'ch-341-4', type: 'security', text: 'Blindaje de Áreas Críticas: Restricción absoluta del módulo de Gestión de Cuentas para roles operativos; cualquier intento de acceso no autorizado es registrado automáticamente en las bitácoras.' },
-            { id: 'ch-341-5', type: 'divider', text: '' },
-            { id: 'ch-341-6', type: 'title', text: 'Estabilidad de Consola y Depuración de Alertas' },
-            { id: 'ch-341-7', type: 'ui', text: 'Optimización de Procesos: Implementación de controladores silenciosos en la carga de datos para suprimir alertas innecesarias durante la validación de perfiles corporativos.' },
-            { id: 'ch-341-8', type: 'security', text: 'Depuración Forense: Se optimizó el Radar de Intrusos para omitir alertas normales de exportación de sábanas de datos o respaldos, dejándolo exclusivo para la detección de anomalías.' }
+            { id: 'ch-323-1', type: 'title', text: 'Unificación de Criterios y Permisos Corporativos' },
+            { id: 'ch-323-2', type: 'feature', text: 'Unificación Operativa: Los equipos de coordinación y edición de contenidos ahora cuentan con acceso completo para documentar, actualizar y gestionar incidencias de seguridad de forma centralizada.' },
+            { id: 'ch-323-3', type: 'security', text: 'Jerarquía de Privilegios: El equipo de administración de contenidos ahora puede pre-registrar colaboradores y pausar accesos temporales, manteniendo bloqueada la asignación de roles técnicos avanzados por seguridad del sistema.' },
+            { id: 'ch-323-4', type: 'security', text: 'Blindaje de Áreas Críticas: Restricción absoluta del módulo de Gestión de Cuentas para roles operativos; cualquier intento de acceso no autorizado es registrado automáticamente en las bitácoras.' },
+            { id: 'ch-323-5', type: 'divider', text: '' },
+            { id: 'ch-323-6', type: 'title', text: 'Estabilidad de Consola y Depuración de Alertas' },
+            { id: 'ch-323-7', type: 'ui', text: 'Optimización de Procesos: Implementación de controladores silenciosos en la carga de datos para suprimir alertas innecesarias durante la validación de perfiles corporativos.' },
+            { id: 'ch-323-8', type: 'security', text: 'Depuración Forense: Se optimizó el Radar de Intrusos para omitir alertas normales de exportación de sábanas de datos o respaldos, dejándolo exclusivo para la detección de anomalías.' }
         ]
     },
     {
-        id: 'cl-v3-4-0',
-        version: 'Versión 3.4.0',
+        id: 'cl-v3-2-2',
+        version: 'Versión 3.2.2',
         date: 'Junio 2026',
         tag: 'Estable',
         title: 'Radar de Intrusos & Auditoría Centralizada',
         changes: [
-            { id: 'ch-340-1', type: 'title', text: 'Monitoreo Perimetral Automático' },
-            { id: 'ch-340-2', type: 'security', text: 'Radar de Intrusos: Incorporación de una bitácora inmutable en el servidor que registra al instante cualquier intento de acceso no autorizado o violación a las políticas corporativas.' },
-            { id: 'ch-340-3', type: 'security', text: 'Retención y Autodestrucción Segura: Los registros de auditoría avanzada no pueden ser editados ni borrados por ningún usuario. Se eliminan físicamente de forma automática a los 14 días mediante políticas automáticas del servidor.' },
-            { id: 'ch-340-4', type: 'feature', text: 'Trazabilidad y Auditoría de Conexiones: Captura automatizada y discreta de la procedencia geográfica, proveedor y agente de navegación en accesos bloqueados para análisis forense de TI.' },
-            { id: 'ch-340-5', type: 'feature', text: 'Descargas Forenses CSV: Nuevo motor de exportación local en memoria que permite generar sábanas de datos analíticos sin elevar los consumos de cuota del servidor.' },
-            { id: 'ch-340-6', type: 'ui', text: 'Consola Blindada de TI: Interfaz de supervisión de amenazas exclusiva para el perfil directivo de sistemas, equipada con pantallas de carga fluida y estados visuales limpios.' }
+            { id: 'ch-322-1', type: 'title', text: 'Monitoreo Perimetral Automático' },
+            { id: 'ch-322-2', type: 'security', text: 'Radar de Intrusos: Incorporación de una bitácora inmutable en el servidor que registra al instante cualquier intento de acceso no autorizado o violación a las políticas corporativas.' },
+            { id: 'ch-322-3', type: 'security', text: 'Retención y Autodestrucción Segura: Los registros de auditoría avanzada no pueden ser editados ni borrados por ningún usuario. Se eliminan físicamente de forma automática a los 14 días mediante políticas automáticas del servidor.' },
+            { id: 'ch-322-4', type: 'feature', text: 'Trazabilidad y Auditoría de Conexiones: Captura automatizada y discreta de la procedencia geográfica, proveedor y agente de navegación en accesos bloqueados para análisis forense de TI.' },
+            { id: 'ch-322-5', type: 'feature', text: 'Descargas Forenses CSV: Nuevo motor de exportación local en memoria que permite generar sábanas de datos analíticos sin elevar los consumos de cuota del servidor.' },
+            { id: 'ch-322-6', type: 'ui', text: 'Consola Blindada de TI: Interfaz de supervisión de amenazas exclusiva para el perfil directivo de sistemas, equipada con pantallas de carga fluida y estados visuales limpios.' }
         ]
     },
     {
-        id: 'cl-v3-3-0',
-        version: 'Versión 3.3.0',
+        id: 'cl-v3-2-1',
+        version: 'Versión 3.2.1',
         date: 'Junio 2026',
         tag: 'Estable',
         title: 'Políticas de Cero Confianza y Protección de Datos',
         changes: [
-            { id: 'ch-330-1', type: 'title', text: 'Políticas de Seguridad de Cero Confianza' },
-            { id: 'ch-330-2', type: 'security', text: 'Validación Centralizada: Todo el control de accesos y roles institucionales se procesa directamente en el servidor central, impidiendo manipulaciones externas desde el navegador.' },
-            { id: 'ch-330-3', type: 'security', text: 'Protección de Brechas Informativas: Bloqueo perimetral estricto a usuarios no identificados para la visualización de paneles operativos, alertas de incidentes y listas corporativas.' },
-            { id: 'ch-330-4', type: 'security', text: 'Resguardo de Cuentas Fundacionales: Las credenciales y rangos clave de la organización se encuentran protegidos a nivel de infraestructura para evitar cualquier modificación accidental.' },
-            { id: 'ch-330-5', type: 'security', text: 'Vigía Preventivo de Sesión: Lanzamiento de un temporizador automático que concluye de forma segura la sesión tras detectar inactividad prolongada en la estación de trabajo.' },
-            { id: 'ch-330-6', type: 'divider', text: '' },
-            { id: 'ch-330-7', type: 'title', text: 'Cifrado Corporativo y Eficiencia de Red' },
-            { id: 'ch-330-8', type: 'security', text: 'Respaldos de Datos Blindados: El módulo de copias de seguridad genera archivos descargables con cifrado avanzado que exigen una llave maestra para su lectura o inyección.' },
-            { id: 'ch-330-9', type: 'feature', text: 'Centro de Restauración Inteligente: Capacidad de recuperar de emergencia expedientes históricos específicos sin generar duplicidad de datos activos en la nube.' },
-            { id: 'ch-330-10', type: 'feature', text: 'Carga Bajo Demanda de Información: Refactorización del flujo de datos; las sábanas de información histórica se descargan únicamente cuando el usuario consulta la sección de forma explícita.' },
-            { id: 'ch-330-11', type: 'ui', text: 'Estructuras Visuales de Espera: Implementación de componentes de carga fluidos que eliminan parpadeos y mejoran la experiencia de usuario mientras se consulta al servidor.' }
+            { id: 'ch-321-1', type: 'title', text: 'Políticas de Seguridad de Cero Confianza' },
+            { id: 'ch-321-2', type: 'security', text: 'Validación Centralizada: Todo el control de accesos y roles institucionales se procesa directamente en el servidor central, impidiendo manipulaciones externas desde el navegador.' },
+            { id: 'ch-321-3', type: 'security', text: 'Protección de Brechas Informativas: Bloqueo perimetral estricto a usuarios no identificados para la visualización de paneles operativos, alertas de incidentes y listas corporativas.' },
+            { id: 'ch-321-4', type: 'security', text: 'Resguardo de Cuentas Fundacionales: Las credenciales y rangos clave de la organización se encuentran protegidos a nivel de infraestructura para evitar cualquier modificación accidental.' },
+            { id: 'ch-321-5', type: 'security', text: 'Vigía Preventivo de Sesión: Lanzamiento de un temporizador automático que concluye de forma segura la sesión tras detectar inactividad prolongada en la estación de trabajo.' },
+            { id: 'ch-321-6', type: 'divider', text: '' },
+            { id: 'ch-321-7', type: 'title', text: 'Cifrado Corporativo y Eficiencia de Red' },
+            { id: 'ch-321-8', type: 'security', text: 'Respaldos de Datos Blindados: El módulo de copias de seguridad genera archivos descargables con cifrado avanzado que exigen una llave maestra para su lectura o inyección.' },
+            { id: 'ch-321-9', type: 'feature', text: 'Centro de Restauración Inteligente: Capacidad de recuperar de emergencia expedientes históricos específicos sin generar duplicidad de datos activos en la nube.' },
+            { id: 'ch-321-10', type: 'feature', text: 'Carga Bajo Demanda de Información: Refactorización del flujo de datos; las sábanas de información histórica se descargan únicamente cuando el usuario consulta la sección de forma explícita.' },
+            { id: 'ch-321-11', type: 'ui', text: 'Estructuras Visuales de Espera: Implementación de componentes de carga fluidos que eliminan parpadeos y mejoran la experiencia de usuario mientras se consulta al servidor.' }
         ]
     },
     {
@@ -162,6 +162,18 @@ export const ChangelogView = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
+            {/* INYECCIÓN DE KEYFRAMES PARA TRANSICIÓN EN CASCADA */}
+            <style>{`
+                @keyframes staggerFade {
+                    0% { opacity: 0; transform: translateY(20px); }
+                    100% { opacity: 1; transform: translateY(0); }
+                }
+                .stagger-item {
+                    animation: staggerFade 0.6s ease-out forwards;
+                    opacity: 0; /* Asegura que nazcan invisibles antes de la animación */
+                }
+            `}</style>
+
             <div className="theme-bg-container p-6 sm:p-8 rounded-2xl border theme-border shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                     <History className="w-48 h-48" />
@@ -178,11 +190,17 @@ export const ChangelogView = () => {
             </div>
 
             <div className="space-y-4">
-                {visibleChangelog.map((item) => {
+                {visibleChangelog.map((item, index) => {
                     const isExpanded = !!expandedVersions[item.id];
 
                     return (
-                        <div key={item.id} className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm transition-all hover:border-gray-500/50">
+                        <div 
+                            key={item.id} 
+                            className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm transition-all hover:border-gray-500/50 stagger-item"
+                            style={{ 
+                                animationDelay: `${(index % 5) * 0.12}s` 
+                            }}
+                        >
                             <button 
                                 type="button"
                                 onClick={() => toggleVersion(item.id)}
@@ -230,7 +248,7 @@ export const ChangelogView = () => {
 
                                                 const style = getChangeStyle(change.type);
                                                 return (
-                                                    <li key={change.id} className="flex items-start gap-4 fade-in py-1">
+                                                    <li key={change.id} className="flex items-start gap-4 py-1">
                                                         <div className={`p-2 rounded-lg mt-0.5 flex-shrink-0 shadow-sm ${style.bg}`}>
                                                             {style.icon}
                                                         </div>
@@ -250,7 +268,7 @@ export const ChangelogView = () => {
             </div>
 
             {visibleCount < changelogData.length && (
-                <div className="flex justify-center pt-4 fade-in">
+                <div className="flex justify-center pt-4">
                     <button 
                         type="button" 
                         onClick={handleLoadMore}

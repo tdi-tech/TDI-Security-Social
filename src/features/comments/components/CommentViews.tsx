@@ -8,8 +8,20 @@ import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
 import { getMonthName } from '../../../shared/utils/date';
 
-const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-gray-400 focus:ring-1 focus:ring-gray-400 outline-none transition-all";
+const inputStyles = "w-full p-3 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all text-sm";
 const radioLabelStyles = "flex items-center gap-2 text-sm font-medium theme-text-main cursor-pointer";
+
+// Opciones actualizadas y segmentadas de Redes Sociales
+const redesSocialesOptions = [
+    'Facebook comentario',
+    'Facebook DM',
+    'Facebook grupos',
+    'Instagram comentario',
+    'Instagram DM',
+    'LinkedIn',
+    'Tiktok DM',
+    'Tiktok comentario'
+];
 
 const SentimentBadge = ({ sentiment }: { sentiment: string }) => {
     if (!sentiment) return null;
@@ -21,7 +33,7 @@ const SentimentBadge = ({ sentiment }: { sentiment: string }) => {
 export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }: any) => {
     const [formData, setFormData] = useState<any>({
         fechaInicio: '', fechaFin: '', contenido: 'Orgánico', evidencia: '',
-        comentariosList: [{ id: Date.now().toString(), usuario: '', comentario: '', redSocial: 'Facebook', campus: 'Sin especificar', sentiment: '', posteoTipo: 'url', posteoUrl: '', posteoTexto: '' }]
+        comentariosList: [{ id: Date.now().toString(), usuario: '', comentario: '', redSocial: 'Facebook comentario', campus: 'Sin especificar', sentiment: '', posteoTipo: 'url', posteoUrl: '', posteoTexto: '' }]
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,58 +70,106 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            <div className="theme-bg-container p-6 rounded-2xl border theme-border shadow-sm">
-                <div className="border-b theme-border pb-4 mb-6">
-                    <h2 className="text-xl font-bold theme-text-main flex items-center gap-2"><MessageSquare className="w-6 h-6 text-blue-500" /> Crear Reporte de Comentarios</h2>
-                    <p className="text-sm theme-text-muted mt-1 ml-8">Registra comentarios independientes o grupales durante un periodo.</p>
+        <div className="max-w-5xl mx-auto space-y-10 fade-in pb-16">
+            
+            {/* HERO HEADER CORPORATIVO (Diseño Modular) */}
+            <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
+                    <MessageSquare className="w-48 h-48" />
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 theme-bg-lowest border theme-border rounded-xl">
-                        <div className="space-y-3 md:col-span-1">
-                            <label className="text-sm font-bold theme-text-main flex items-center gap-2"><Calendar className="w-4 h-4 text-blue-500"/> Periodo del reporte</label>
+                <div className="relative z-10">
+                    <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4" /> Trazabilidad Comunitaria
+                    </p>
+                    <h2 className="text-4xl font-black theme-text-main mb-4 tracking-tight">Crear Reporte de Comentarios</h2>
+                    <p className="theme-text-muted text-base max-w-2xl leading-relaxed">
+                        Registra interacciones, quejas independientes o discusiones grupales durante un periodo específico. Categoriza por red social, canal y evalúa el sentimiento (Sentiment) de la audiencia.
+                    </p>
+                </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-8 px-2 sm:px-8">
+                
+                {/* SECCIÓN: PARÁMETROS GLOBALES */}
+                <div className="space-y-4">
+                    <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
+                        <Calendar className="w-5 h-5 text-blue-500" /> Parámetros Globales
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-black/5 dark:bg-white/5 rounded-2xl border theme-border">
+                        <div className="space-y-4">
+                            <label className="text-sm font-bold theme-text-main block">Periodo del reporte</label>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1"><label htmlFor="n-fechaInicio" className="text-xs font-medium theme-text-muted">Inicio</label><input id="n-fechaInicio" type="date" required value={formData.fechaInicio} onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
-                                <div className="space-y-1"><label htmlFor="n-fechaFin" className="text-xs font-medium theme-text-muted">Fin</label><input id="n-fechaFin" type="date" required value={formData.fechaFin} onChange={(e) => setFormData({...formData, fechaFin: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
+                                <div className="space-y-1.5"><label htmlFor="n-fechaInicio" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Inicio</label><input id="n-fechaInicio" type="date" required value={formData.fechaInicio} onChange={(e) => setFormData({...formData, fechaInicio: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
+                                <div className="space-y-1.5"><label htmlFor="n-fechaFin" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Fin</label><input id="n-fechaFin" type="date" required value={formData.fechaFin} onChange={(e) => setFormData({...formData, fechaFin: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
                             </div>
                         </div>
-                        <div className="space-y-3 md:col-span-1 flex flex-col justify-center pl-0 md:pl-4 border-t md:border-t-0 md:border-l theme-border pt-4 md:pt-0 mt-2 md:mt-0">
-                            <label className="text-sm font-bold theme-text-main">Tipo de Contenido General</label>
-                            <div className="flex items-center gap-6 mt-1">
-                                <label className={radioLabelStyles}><input type="radio" name="contenido" value="Orgánico" checked={formData.contenido === 'Orgánico'} onChange={(e) => setFormData({...formData, contenido: e.target.value})} className="w-4 h-4 text-blue-500" /> Orgánico</label>
-                                <label className={radioLabelStyles}><input type="radio" name="contenido" value="Pautado" checked={formData.contenido === 'Pautado'} onChange={(e) => setFormData({...formData, contenido: e.target.value})} className="w-4 h-4 text-blue-500" /> Pautado</label>
+                        <div className="space-y-4 flex flex-col justify-center border-t md:border-t-0 md:border-l theme-border pt-6 md:pt-0 md:pl-8">
+                            <label className="text-sm font-bold theme-text-main block">Tipo de Contenido Asociado</label>
+                            <div className="flex flex-wrap items-center gap-8 mt-1">
+                                <label className={radioLabelStyles}><input type="radio" name="contenido" value="Orgánico" checked={formData.contenido === 'Orgánico'} onChange={(e) => setFormData({...formData, contenido: e.target.value})} className="w-5 h-5 text-blue-500 focus:ring-blue-500" /> <span className="text-base">Orgánico</span></label>
+                                <label className={radioLabelStyles}><input type="radio" name="contenido" value="Pautado" checked={formData.contenido === 'Pautado'} onChange={(e) => setFormData({...formData, contenido: e.target.value})} className="w-5 h-5 text-blue-500 focus:ring-blue-500" /> <span className="text-base">Pautado (Ads)</span></label>
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center border-b theme-border pb-2">
-                            <h3 className="text-lg font-bold theme-text-main">Registro de Comentarios</h3>
-                            <button type="button" onClick={addComentario} className="flex items-center gap-1.5 text-xs font-bold text-blue-500 hover:text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-lg"><PlusCircle className="w-4 h-4"/> Agregar otro</button>
-                        </div>
+                </div>
+
+                {/* SECCIÓN: DESGLOSE DE COMENTARIOS */}
+                <div className="space-y-6 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
+                        <h3 className="text-xl font-black theme-text-main flex items-center gap-2">
+                            <Share2 className="w-5 h-5 text-blue-500" /> Desglose de Comentarios
+                        </h3>
+                        <button type="button" onClick={addComentario} className="flex items-center gap-2 text-sm font-bold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 px-4 py-2 rounded-xl transition-colors">
+                            <PlusCircle className="w-4 h-4"/> Agregar nuevo registro
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-6">
                         {formData.comentariosList.map((c: any, idx: number) => (
-                            <div key={c.id || idx} className="p-5 theme-bg-low border theme-border rounded-xl relative fade-in space-y-4 shadow-sm group border-l-4 border-l-blue-500">
-                                {formData.comentariosList.length > 1 && (<button type="button" onClick={() => removeComentario(idx)} className="absolute -top-3 -right-3 p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="w-4 h-4"/></button>)}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1"><label htmlFor={`red-${idx}`} className="text-xs font-medium theme-text-muted">Red Social</label><select id={`red-${idx}`} value={c.redSocial} onChange={(e) => updateComentario(idx, 'redSocial', e.target.value)} className={inputStyles}><option>Facebook</option><option>Tiktok</option><option>Instagram</option><option>Grupos FB</option></select></div>
-                                    <div className="space-y-1"><label htmlFor={`usr-${idx}`} className="text-xs font-medium theme-text-muted">Nombre de Usuario</label><input id={`usr-${idx}`} type="text" required placeholder="@usuario o Nombre" value={c.usuario} onChange={(e) => updateComentario(idx, 'usuario', e.target.value)} className={inputStyles} /></div>
-                                    <div className="space-y-1"><label htmlFor={`cam-${idx}`} className="text-xs font-medium theme-text-muted">Campus</label><select id={`cam-${idx}`} value={c.campus} onChange={(e) => updateComentario(idx, 'campus', e.target.value)} className={inputStyles}>{['Sin especificar', 'Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(camp => <option key={camp}>{camp}</option>)}</select></div>
-                                    <div className="space-y-1"><label htmlFor={`sen-${idx}`} className="text-xs font-medium theme-text-muted">Sentiment</label><select id={`sen-${idx}`} required value={c.sentiment} onChange={(e) => updateComentario(idx, 'sentiment', e.target.value)} className={`${inputStyles} ${!c.sentiment ? 'text-gray-400' : ''}`}><option value="" disabled>Seleccionar...</option><option value="Neutral" className="text-gray-700 dark:text-gray-300">Neutral</option><option value="Negativo" className="text-red-600 dark:text-red-400">Negativo</option></select></div>
+                            <div key={c.id || idx} className="p-6 sm:p-8 theme-bg-container border theme-border rounded-[1.5rem] relative fade-in shadow-sm group border-l-[6px] border-l-blue-500 hover:border-l-blue-600 transition-all">
+                                {formData.comentariosList.length > 1 && (
+                                    <button type="button" onClick={() => removeComentario(idx)} className="absolute top-4 right-4 p-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100 shadow-sm" title="Eliminar este comentario">
+                                        <Trash2 className="w-4 h-4"/>
+                                    </button>
+                                )}
+                                <div className="flex items-center gap-3 mb-6">
+                                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400 flex items-center justify-center text-xs font-black">{idx + 1}</span>
+                                    <h4 className="font-bold theme-text-main text-lg">Detalle del Registro</h4>
                                 </div>
-                                <div className="space-y-1"><label htmlFor={`com-${idx}`} className="text-xs font-medium theme-text-muted">Comentario del usuario</label><textarea id={`com-${idx}`} required rows={2} placeholder="Escribe el comentario..." value={c.comentario} onChange={(e) => updateComentario(idx, 'comentario', e.target.value)} className={`${inputStyles} resize-none`}></textarea></div>
-                                <div className="pt-3 border-t theme-border border-dashed">
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-3"><label className="text-xs font-bold theme-text-main">Formato del Post Original:</label><div className="flex items-center gap-6"><label className={radioLabelStyles}><input type="radio" value="url" checked={c.posteoTipo === 'url'} onChange={() => { updateComentario(idx, 'posteoTipo', 'url'); updateComentario(idx, 'posteoTexto', ''); }} className="w-4 h-4 text-blue-500" /> URL</label><label className={radioLabelStyles}><input type="radio" value="texto" checked={c.posteoTipo === 'texto'} onChange={() => { updateComentario(idx, 'posteoTipo', 'texto'); updateComentario(idx, 'posteoUrl', ''); }} className="w-4 h-4 text-blue-500" /> Texto</label></div></div>
-                                    {c.posteoTipo === 'url' ? (<input type="url" aria-label="URL del post original" placeholder="https://..." value={c.posteoUrl} onChange={(e) => updateComentario(idx, 'posteoUrl', e.target.value)} required className={inputStyles} />) : (<input type="text" aria-label="Texto del post original" placeholder="Post original..." value={c.posteoTexto} onChange={(e) => updateComentario(idx, 'posteoTexto', e.target.value)} required className={inputStyles} />)}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* DROPDOWN ACTUALIZADO */}
+                                    <div className="space-y-1.5"><label htmlFor={`red-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Red Social / Canal</label>
+                                        <select id={`red-${idx}`} value={c.redSocial} onChange={(e) => updateComentario(idx, 'redSocial', e.target.value)} className={inputStyles}>
+                                            {redesSocialesOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5"><label htmlFor={`usr-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Identidad (Usuario)</label><input id={`usr-${idx}`} type="text" required placeholder="@usuario o Nombre público" value={c.usuario} onChange={(e) => updateComentario(idx, 'usuario', e.target.value)} className={inputStyles} /></div>
+                                    <div className="space-y-1.5"><label htmlFor={`cam-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Campus Implicado</label><select id={`cam-${idx}`} value={c.campus} onChange={(e) => updateComentario(idx, 'campus', e.target.value)} className={inputStyles}>{['Sin especificar', 'Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(camp => <option key={camp}>{camp}</option>)}</select></div>
+                                    <div className="space-y-1.5"><label htmlFor={`sen-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Sentimiento (Sentiment)</label><select id={`sen-${idx}`} required value={c.sentiment} onChange={(e) => updateComentario(idx, 'sentiment', e.target.value)} className={`${inputStyles} ${!c.sentiment ? 'text-gray-400' : ''}`}><option value="" disabled>Seleccionar evaluación...</option><option value="Neutral" className="text-gray-700 dark:text-gray-300">Neutral</option><option value="Negativo" className="text-red-600 dark:text-red-400">Negativo</option></select></div>
+                                </div>
+                                <div className="space-y-1.5 mt-6"><label htmlFor={`com-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Transcripción del comentario</label><textarea id={`com-${idx}`} required rows={3} placeholder="Copia y pega el comentario exacto del usuario..." value={c.comentario} onChange={(e) => updateComentario(idx, 'comentario', e.target.value)} className={`${inputStyles} resize-none leading-relaxed`}></textarea></div>
+                                <div className="mt-6 pt-6 border-t theme-border border-dashed">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-4"><label className="text-sm font-bold theme-text-main">Referencia a Publicación Original:</label><div className="flex items-center gap-6"><label className={radioLabelStyles}><input type="radio" value="url" checked={c.posteoTipo === 'url'} onChange={() => { updateComentario(idx, 'posteoTipo', 'url'); updateComentario(idx, 'posteoTexto', ''); }} className="w-4 h-4 text-blue-500 focus:ring-blue-500" /> Ingresar Enlace (URL)</label><label className={radioLabelStyles}><input type="radio" value="texto" checked={c.posteoTipo === 'texto'} onChange={() => { updateComentario(idx, 'posteoTipo', 'texto'); updateComentario(idx, 'posteoUrl', ''); }} className="w-4 h-4 text-blue-500 focus:ring-blue-500" /> Ingresar Texto Libre</label></div></div>
+                                    {c.posteoTipo === 'url' ? (<input type="url" aria-label="URL del post original" placeholder="Ej: https://facebook.com/post/..." value={c.posteoUrl} onChange={(e) => updateComentario(idx, 'posteoUrl', e.target.value)} required className={inputStyles} />) : (<input type="text" aria-label="Texto del post original" placeholder="Describe brevemente de qué trataba el post original..." value={c.posteoTexto} onChange={(e) => updateComentario(idx, 'posteoTexto', e.target.value)} required className={inputStyles} />)}
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="space-y-1 pt-4 border-t theme-border"><label htmlFor="n-evidencia" className="text-sm font-medium theme-text-main flex items-center gap-2">URL de Evidencias <span className="text-[10px] font-normal theme-text-muted">(Drive, Slides)</span></label><input id="n-evidencia" type="url" value={formData.evidencia} onChange={(e) => setFormData({...formData, evidencia: e.target.value})} className={inputStyles} /></div>
-                    <div className="pt-4 flex items-center justify-end gap-3 border-t theme-border">
-                        <button type="button" onClick={() => navigate('dashboard')} className="px-5 py-2.5 rounded-xl font-medium theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Cancelar</button>
-                        <button type="submit" disabled={isSubmitting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 transition-all disabled:opacity-50">{isSubmitting ? 'Guardando...' : <><Save className="w-5 h-5"/> Guardar Reporte</>}</button>
+                </div>
+
+                {/* SECCIÓN: EVIDENCIA Y ACCIONES */}
+                <div className="pt-8 space-y-8">
+                    <div className="space-y-2"><label htmlFor="n-evidencia" className="text-sm font-bold theme-text-main flex items-center gap-2"><LinkIcon className="w-4 h-4 text-emerald-500"/> Repositorio de Evidencias <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider ml-2">Opcional</span></label>
+                        <p className="text-xs theme-text-muted mb-2">Ingresa el enlace a la carpeta de Google Drive o presentación con las capturas de pantalla.</p>
+                        <input id="n-evidencia" type="url" placeholder="https://drive.google.com/..." value={formData.evidencia} onChange={(e) => setFormData({...formData, evidencia: e.target.value})} className={inputStyles} />
                     </div>
-                </form>
-            </div>
+                    
+                    <div className="pt-6 flex flex-col sm:flex-row items-center justify-end gap-4 border-t-2 border-gray-200 dark:border-gray-800">
+                        <button type="button" onClick={() => navigate('dashboard')} className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Cancelar y Volver</button>
+                        <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-black bg-blue-600 text-white hover:bg-blue-500 hover:-translate-y-0.5 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:hover:translate-y-0">{isSubmitting ? 'Guardando en la nube...' : <><Save className="w-5 h-5"/> Guardar Reporte Final</>}</button>
+                    </div>
+                </div>
+            </form>
         </div>
     );
 };
@@ -130,8 +190,6 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
     const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
-    
-    // 🔥 FIX: Animación del botón CSV
     const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
@@ -147,14 +205,13 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
         return () => unsub();
     }, []);
 
-    // 🔥 FIX: Reseteamos la paginación a la página 1 cuando cambia el buscador o el filtro
     useEffect(() => {
         setPagePerMonth({});
     }, [searchTerm, filterYear]);
 
     const getNormalizedComments = (com: any) => {
-        if (com.comentariosList && com.comentariosList.length > 0) return com.comentariosList.map((c: any) => ({ ...c, redSocial: c.redSocial || com.redSocial || 'Facebook', campus: c.campus || com.campus || 'Sin especificar', sentiment: c.sentiment || com.sentiment || '', posteoTipo: c.posteoTipo || com.posteoTipo || 'url', posteoUrl: c.posteoUrl || com.posteoUrl || '', posteoTexto: c.posteoTexto || com.posteoTexto || '' }));
-        return [{ id: com.id, usuario: com.usuario || 'N/A', comentario: com.descripcion || 'Sin comentario', redSocial: com.redSocial || 'Facebook', campus: com.campus || 'Sin especificar', sentiment: com.sentiment || '', posteoTipo: com.posteoTipo || 'url', posteoUrl: com.posteoUrl || '', posteoTexto: com.posteoTexto || '' }];
+        if (com.comentariosList && com.comentariosList.length > 0) return com.comentariosList.map((c: any) => ({ ...c, redSocial: c.redSocial || com.redSocial || 'Facebook comentario', campus: c.campus || com.campus || 'Sin especificar', sentiment: c.sentiment || com.sentiment || '', posteoTipo: c.posteoTipo || com.posteoTipo || 'url', posteoUrl: c.posteoUrl || com.posteoUrl || '', posteoTexto: c.posteoTexto || com.posteoTexto || '' }));
+        return [{ id: com.id, usuario: com.usuario || 'N/A', comentario: com.descripcion || 'Sin comentario', redSocial: com.redSocial || 'Facebook comentario', campus: com.campus || 'Sin especificar', sentiment: com.sentiment || '', posteoTipo: com.posteoTipo || 'url', posteoUrl: com.posteoUrl || '', posteoTexto: com.posteoTexto || '' }];
     };
 
     const availableYears = useMemo(() => {
@@ -285,8 +342,8 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                             {searchTerm && <button type="button" aria-label="Limpiar búsqueda" onClick={() => setSearchTerm('')} className="absolute right-3 p-1 rounded-md text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-white transition-colors" title="Limpiar búsqueda"><X className="w-4 h-4" /></button>}
                         </div>
                         <div className="flex w-full md:w-auto items-center justify-between md:justify-end gap-4">
-                            <div className="flex items-center gap-2"><label htmlFor="hc-filter-year" className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label><select id="hc-filter-year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-1.5 px-3 min-w-[100px]`}><option value="Todos">Todos</option>{availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}</select></div>
-                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-1.5 rounded-lg whitespace-nowrap"><span className="text-xs font-bold theme-text-main">{filteredComments.length}</span><span className="text-[10px] theme-text-muted font-medium ml-1">de {comments.length}</span></div>
+                            <div className="flex items-center gap-2"><label htmlFor="hc-filter-year" className="text-xs font-bold theme-text-muted whitespace-nowrap">Año</label><select id="hc-filter-year" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className={`${inputStyles} py-2 px-3 min-w-[100px]`}><option value="Todos">Todos</option>{availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}</select></div>
+                            <div className="bg-black/5 dark:bg-white/5 border theme-border px-3 py-2 rounded-lg whitespace-nowrap"><span className="text-xs font-bold theme-text-main">{filteredComments.length}</span><span className="text-[10px] theme-text-muted font-medium ml-1">de {comments.length}</span></div>
                         </div>
                     </div>
 
@@ -445,7 +502,6 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                         </div>
                         <div className="p-4 border-t theme-border flex justify-end gap-3 bg-black/5 dark:bg-white/5">
                             <button type="button" onClick={() => setIsExportModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Cancelar</button>
-                            {/* 🔥 FIX: Botón con animación de carga de datos */}
                             <button type="button" onClick={handleExecuteExport} disabled={isExporting} className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                                 {isExporting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4"/>}
                                 {isExporting ? 'Generando...' : 'Generar CSV'}
@@ -455,6 +511,7 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                 </div>
             )}
 
+            {/* MODAL DETALLE DE REPORTE */}
             {isDetailOpen && selectedComment && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in print:static print:block print:p-0 print:bg-transparent">
                     <div className="theme-bg-container rounded-2xl w-full max-w-2xl shadow-2xl border theme-border overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-full">
@@ -493,6 +550,7 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                 </div>
             )}
 
+            {/* MODAL DE EDICIÓN CON EL NUEVO DROPDOWN */}
             {isEditOpen && editData && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-3xl shadow-2xl border theme-border flex flex-col max-h-[90vh]">
@@ -503,28 +561,33 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                             <form id="editCommentForm" onSubmit={handleEditUpdate} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 theme-bg-lowest border theme-border rounded-xl">
-                                    <div><label htmlFor="ec-fechaInicio" className="text-xs font-bold theme-text-muted">Fecha Inicio</label><input id="ec-fechaInicio" type="date" required value={editData.fechaInicio} onChange={e => setEditData({...editData, fechaInicio: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
-                                    <div><label htmlFor="ec-fechaFin" className="text-xs font-bold theme-text-muted">Fecha Fin</label><input id="ec-fechaFin" type="date" required value={editData.fechaFin} onChange={e => setEditData({...editData, fechaFin: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
-                                    <div><label htmlFor="ec-contenido" className="text-xs font-bold theme-text-muted">Contenido Global</label><select id="ec-contenido" value={editData.contenido} onChange={e => setEditData({...editData, contenido: e.target.value})} className={inputStyles}><option value="Orgánico">Orgánico</option><option value="Pautado">Pautado</option></select></div>
-                                    <div><label htmlFor="ec-evidencia" className="text-xs font-bold theme-text-muted">Evidencia (Drive/Slides)</label><input id="ec-evidencia" type="url" value={editData.evidencia} onChange={e => setEditData({...editData, evidencia: e.target.value})} className={inputStyles} /></div>
+                                    <div><label htmlFor="ec-fechaInicio" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Fecha Inicio</label><input id="ec-fechaInicio" type="date" required value={editData.fechaInicio} onChange={e => setEditData({...editData, fechaInicio: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
+                                    <div><label htmlFor="ec-fechaFin" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Fecha Fin</label><input id="ec-fechaFin" type="date" required value={editData.fechaFin} onChange={e => setEditData({...editData, fechaFin: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} /></div>
+                                    <div><label htmlFor="ec-contenido" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Contenido Global</label><select id="ec-contenido" value={editData.contenido} onChange={e => setEditData({...editData, contenido: e.target.value})} className={inputStyles}><option value="Orgánico">Orgánico</option><option value="Pautado">Pautado</option></select></div>
+                                    <div><label htmlFor="ec-evidencia" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Evidencia (Opcional)</label><input id="ec-evidencia" type="url" value={editData.evidencia} onChange={e => setEditData({...editData, evidencia: e.target.value})} className={inputStyles} /></div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center border-b theme-border pb-2">
                                         <label className="text-sm font-bold theme-text-main">Comentarios Registrados</label>
-                                        <button type="button" onClick={() => { const last = editData.comentariosList[editData.comentariosList.length - 1] || {}; setEditData({...editData, comentariosList: [...editData.comentariosList, { id: Date.now().toString(), usuario:'', comentario:'', redSocial: last.redSocial || 'Facebook', campus: last.campus || 'Sin especificar', sentiment: '', posteoTipo: last.posteoTipo || 'url', posteoUrl: last.posteoUrl || '', posteoTexto: last.posteoTexto || '' }]}); }} className="text-xs flex items-center gap-1 font-bold text-blue-500 hover:underline"><PlusCircle className="w-3 h-3"/> Agregar otro</button>
+                                        <button type="button" onClick={() => { const last = editData.comentariosList[editData.comentariosList.length - 1] || {}; setEditData({...editData, comentariosList: [...editData.comentariosList, { id: Date.now().toString(), usuario:'', comentario:'', redSocial: last.redSocial || 'Facebook comentario', campus: last.campus || 'Sin especificar', sentiment: '', posteoTipo: last.posteoTipo || 'url', posteoUrl: last.posteoUrl || '', posteoTexto: last.posteoTexto || '' }]}); }} className="text-xs flex items-center gap-1 font-bold text-blue-500 hover:underline"><PlusCircle className="w-3 h-3"/> Agregar otro</button>
                                     </div>
                                     {editData.comentariosList.map((c: any, idx: number) => (
                                         <div key={c.id || idx} className="flex flex-col gap-3 p-4 theme-bg-low border theme-border rounded-xl relative group">
                                             {editData.comentariosList.length > 1 && (<button type="button" onClick={() => { const newList = editData.comentariosList.filter((_:any, i:number) => i !== idx); setEditData({...editData, comentariosList: newList}); }} className="absolute -top-2 -right-2 p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3"/></button>)}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <div><label htmlFor={`ec-red-${idx}`} className="text-xs font-medium theme-text-muted">Red Social</label><select id={`ec-red-${idx}`} value={c.redSocial} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].redSocial = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles}><option>Facebook</option><option>Tiktok</option><option>Instagram</option><option>Grupos FB</option></select></div>
-                                                <div><label htmlFor={`ec-usr-${idx}`} className="text-xs font-medium theme-text-muted">Usuario</label><input id={`ec-usr-${idx}`} type="text" required value={c.usuario} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].usuario = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles} /></div>
-                                                <div><label htmlFor={`ec-cam-${idx}`} className="text-xs font-medium theme-text-muted">Campus</label><select id={`ec-cam-${idx}`} value={c.campus} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].campus = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles}>{['Sin especificar', 'Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(camp => <option key={camp}>{camp}</option>)}</select></div>
-                                                <div><label htmlFor={`ec-sen-${idx}`} className="text-xs font-medium theme-text-muted">Sentiment</label><select id={`ec-sen-${idx}`} required value={c.sentiment} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].sentiment = e.target.value; setEditData({...editData, comentariosList: n}); }} className={`${inputStyles} ${!c.sentiment ? 'text-gray-400' : ''}`}><option value="" disabled>Seleccionar...</option><option value="Neutral" className="text-gray-700 dark:text-gray-300">Neutral</option><option value="Negativo" className="text-red-600 dark:text-red-400">Negativo</option></select></div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* DROPDOWN ACTUALIZADO EN EDICIÓN */}
+                                                <div><label htmlFor={`ec-red-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Red Social / Canal</label>
+                                                    <select id={`ec-red-${idx}`} value={c.redSocial} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].redSocial = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles}>
+                                                        {redesSocialesOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div><label htmlFor={`ec-usr-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Usuario</label><input id={`ec-usr-${idx}`} type="text" required value={c.usuario} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].usuario = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles} /></div>
+                                                <div><label htmlFor={`ec-cam-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Campus</label><select id={`ec-cam-${idx}`} value={c.campus} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].campus = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles}>{['Sin especificar', 'Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(camp => <option key={camp}>{camp}</option>)}</select></div>
+                                                <div><label htmlFor={`ec-sen-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Sentiment</label><select id={`ec-sen-${idx}`} required value={c.sentiment} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].sentiment = e.target.value; setEditData({...editData, comentariosList: n}); }} className={`${inputStyles} ${!c.sentiment ? 'text-gray-400' : ''}`}><option value="" disabled>Seleccionar...</option><option value="Neutral" className="text-gray-700 dark:text-gray-300">Neutral</option><option value="Negativo" className="text-red-600 dark:text-red-400">Negativo</option></select></div>
                                             </div>
-                                            <div><label htmlFor={`ec-com-${idx}`} className="text-xs font-medium theme-text-muted">Comentario</label><textarea id={`ec-com-${idx}`} required rows={2} value={c.comentario} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].comentario = e.target.value; setEditData({...editData, comentariosList: n}); }} className={`${inputStyles} resize-none`}></textarea></div>
-                                            <div className="pt-2">
-                                                <div className="flex items-center gap-4 mb-2"><label className="text-xs font-bold theme-text-muted">Formato Post Original:</label><select aria-label="Tipo de post original" value={c.posteoTipo} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].posteoTipo = e.target.value; n[idx].posteoUrl = ''; n[idx].posteoTexto = ''; setEditData({...editData, comentariosList: n}); }} className={`${inputStyles} py-1 px-2 w-auto text-xs`}><option value="url">URL</option><option value="texto">Texto</option></select></div>
+                                            <div className="pt-2"><label htmlFor={`ec-com-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Comentario</label><textarea id={`ec-com-${idx}`} required rows={2} value={c.comentario} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].comentario = e.target.value; setEditData({...editData, comentariosList: n}); }} className={`${inputStyles} resize-none leading-relaxed`}></textarea></div>
+                                            <div className="pt-3 border-t theme-border border-dashed">
+                                                <div className="flex items-center gap-4 mb-3"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Formato Post Original:</label><select aria-label="Tipo de post original" value={c.posteoTipo} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].posteoTipo = e.target.value; n[idx].posteoUrl = ''; n[idx].posteoTexto = ''; setEditData({...editData, comentariosList: n}); }} className={`${inputStyles} py-1.5 px-3 w-auto text-xs`}><option value="url">Enlace (URL)</option><option value="texto">Texto Libre</option></select></div>
                                                 {c.posteoTipo === 'url' ? (<input aria-label="URL del post original" type="url" placeholder="URL del post..." value={c.posteoUrl} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].posteoUrl = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles} />) : (<input aria-label="Texto del post original" type="text" placeholder="Texto del post..." value={c.posteoTexto} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].posteoTexto = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles} />)}
                                             </div>
                                         </div>
@@ -533,8 +596,8 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                             </form>
                         </div>
                         <div className="p-4 border-t theme-border flex justify-end gap-3 bg-black/5 dark:bg-white/5">
-                            <button type="button" onClick={() => setIsEditOpen(false)} className="px-5 py-2 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Cancelar</button>
-                            <button type="submit" form="editCommentForm" className="px-5 py-2 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2"><Save className="w-4 h-4"/> Actualizar</button>
+                            <button type="button" onClick={() => setIsEditOpen(false)} className="px-5 py-2.5 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Cancelar</button>
+                            <button type="submit" form="editCommentForm" className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2 shadow-sm"><Save className="w-4 h-4"/> Actualizar Reporte</button>
                         </div>
                     </div>
                 </div>
