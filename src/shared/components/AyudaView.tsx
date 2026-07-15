@@ -61,14 +61,14 @@ const helpTopics = [
                     <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
                     <div>
                         <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Hackeos</p>
-                        <p className="theme-text-muted text-xs">Vulnerabilidades e intrusiones técnicas. Incluye checklist de contención inmediata.</p>
+                        <p className="theme-text-muted text-xs">Vulnerabilidades, malware y robo de cuentas oficiales. Incluye checklist de contención técnica inmediata.</p>
                     </div>
                 </div>
                 <div className="flex gap-3 items-start group/item">
                     <ShieldAlert className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
                     <div>
                         <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Incidencias RRSS</p>
-                        <p className="theme-text-muted text-xs">Gestión de crisis de reputación online y ataques de bots en canales oficiales.</p>
+                        <p className="theme-text-muted text-xs">Registro y gestión de quejas críticas o crisis reputacionales originadas en cualquier red social oficial.</p>
                     </div>
                 </div>
                 <div className="flex gap-3 items-start group/item">

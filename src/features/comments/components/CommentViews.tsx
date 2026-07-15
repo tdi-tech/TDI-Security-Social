@@ -11,16 +11,15 @@ import { getMonthName } from '../../../shared/utils/date';
 const inputStyles = "w-full p-3 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all text-sm";
 const radioLabelStyles = "flex items-center gap-2 text-sm font-medium theme-text-main cursor-pointer";
 
-// Opciones actualizadas y segmentadas de Redes Sociales
+const CAMPUS_OPTIONS = [
+    'Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 
+    'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 
+    'Huehuetoca', 'Chalco'
+];
+
 const redesSocialesOptions = [
-    'Facebook comentario',
-    'Facebook DM',
-    'Facebook grupos',
-    'Instagram comentario',
-    'Instagram DM',
-    'LinkedIn',
-    'Tiktok DM',
-    'Tiktok comentario'
+    'Facebook comentario', 'Facebook DM', 'Facebook grupos', 'Instagram comentario', 
+    'Instagram DM', 'LinkedIn', 'Tiktok DM', 'Tiktok comentario'
 ];
 
 const SentimentBadge = ({ sentiment }: { sentiment: string }) => {
@@ -137,14 +136,13 @@ export const NewCommentView = ({ isAdmin, showToast, navigate, user, logAction }
                                     <h4 className="font-bold theme-text-main text-lg">Detalle del Registro</h4>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* DROPDOWN ACTUALIZADO */}
                                     <div className="space-y-1.5"><label htmlFor={`red-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Red Social / Canal</label>
                                         <select id={`red-${idx}`} value={c.redSocial} onChange={(e) => updateComentario(idx, 'redSocial', e.target.value)} className={inputStyles}>
                                             {redesSocialesOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-1.5"><label htmlFor={`usr-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Identidad (Usuario)</label><input id={`usr-${idx}`} type="text" required placeholder="@usuario o Nombre público" value={c.usuario} onChange={(e) => updateComentario(idx, 'usuario', e.target.value)} className={inputStyles} /></div>
-                                    <div className="space-y-1.5"><label htmlFor={`cam-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Campus Implicado</label><select id={`cam-${idx}`} value={c.campus} onChange={(e) => updateComentario(idx, 'campus', e.target.value)} className={inputStyles}>{['Sin especificar', 'Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(camp => <option key={camp}>{camp}</option>)}</select></div>
+                                    <div className="space-y-1.5"><label htmlFor={`cam-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Campus Implicado</label><select id={`cam-${idx}`} value={c.campus} onChange={(e) => updateComentario(idx, 'campus', e.target.value)} className={inputStyles}>{['Sin especificar', ...CAMPUS_OPTIONS].map(camp => <option key={camp}>{camp}</option>)}</select></div>
                                     <div className="space-y-1.5"><label htmlFor={`sen-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Sentimiento (Sentiment)</label><select id={`sen-${idx}`} required value={c.sentiment} onChange={(e) => updateComentario(idx, 'sentiment', e.target.value)} className={`${inputStyles} ${!c.sentiment ? 'text-gray-400' : ''}`}><option value="" disabled>Seleccionar evaluación...</option><option value="Neutral" className="text-gray-700 dark:text-gray-300">Neutral</option><option value="Negativo" className="text-red-600 dark:text-red-400">Negativo</option></select></div>
                                 </div>
                                 <div className="space-y-1.5 mt-6"><label htmlFor={`com-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Transcripción del comentario</label><textarea id={`com-${idx}`} required rows={3} placeholder="Copia y pega el comentario exacto del usuario..." value={c.comentario} onChange={(e) => updateComentario(idx, 'comentario', e.target.value)} className={`${inputStyles} resize-none leading-relaxed`}></textarea></div>
@@ -186,10 +184,13 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
+    
+    // Estados Modal de Exportación
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
+    const [exportCampus, setExportCampus] = useState('');
     const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
@@ -208,6 +209,11 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
     useEffect(() => {
         setPagePerMonth({});
     }, [searchTerm, filterYear]);
+
+    // 🔥 FIX: Resetea el campus si el usuario cambia el año o mes para evitar selecciones fantasma
+    useEffect(() => {
+        setExportCampus('');
+    }, [exportType, exportYear, exportMonth]);
 
     const getNormalizedComments = (com: any) => {
         if (com.comentariosList && com.comentariosList.length > 0) return com.comentariosList.map((c: any) => ({ ...c, redSocial: c.redSocial || com.redSocial || 'Facebook comentario', campus: c.campus || com.campus || 'Sin especificar', sentiment: c.sentiment || com.sentiment || '', posteoTipo: c.posteoTipo || com.posteoTipo || 'url', posteoUrl: c.posteoUrl || com.posteoUrl || '', posteoTexto: c.posteoTexto || com.posteoTexto || '' }));
@@ -228,6 +234,26 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
         );
         return Array.from(months).sort((a: any, b: any) => b.localeCompare(a));
     }, [comments, exportYear]);
+
+    // 🔥 FIX: Extracción inteligente de campus basada en los comentarios desglosados de la fecha seleccionada
+    const availableCampusesForExport = useMemo(() => {
+        let filtered = comments;
+        if (exportType === 'year' && exportYear) {
+            filtered = comments.filter((i: any) => i.fechaInicio && i.fechaInicio.split('-')[0] === exportYear);
+        } else if (exportType === 'month' && exportYear && exportMonth) {
+            filtered = comments.filter((i: any) => i.fechaInicio && i.fechaInicio.startsWith(`${exportYear}-${exportMonth}`));
+        }
+        
+        const campuses = new Set<string>();
+        filtered.forEach((com: any) => {
+            const list = getNormalizedComments(com);
+            list.forEach((c: any) => {
+                if (c.campus && c.campus !== 'Sin especificar') campuses.add(c.campus);
+            });
+        });
+        
+        return Array.from(campuses).sort((a: any, b: any) => a.localeCompare(b));
+    }, [comments, exportType, exportYear, exportMonth]);
 
     const filteredComments = useMemo(() => {
         return comments.filter((com: any) => {
@@ -285,14 +311,17 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
         if (exportType === 'year') {
             if (!exportYear) return showToast('Selecciona un año para exportar', true);
             dataToExport = comments.filter((i: any) => i.fechaInicio && i.fechaInicio.split('-')[0] === exportYear);
-            filenameSuffix = exportYear;
+            if (exportCampus) dataToExport = dataToExport.filter((i: any) => getNormalizedComments(i).some((c:any) => c.campus === exportCampus));
+            filenameSuffix = exportCampus ? `${exportYear}_${exportCampus}` : exportYear;
+
         } else if (exportType === 'month') {
             if (!exportYear || !exportMonth) return showToast('Selecciona año y mes para exportar', true);
             dataToExport = comments.filter((i: any) => i.fechaInicio && i.fechaInicio.startsWith(`${exportYear}-${exportMonth}`));
-            filenameSuffix = `${exportYear}_${exportMonth}`;
+            if (exportCampus) dataToExport = dataToExport.filter((i: any) => getNormalizedComments(i).some((c:any) => c.campus === exportCampus));
+            filenameSuffix = exportCampus ? `${exportYear}_${exportMonth}_${exportCampus}` : `${exportYear}_${exportMonth}`;
         }
 
-        if (dataToExport.length === 0) return showToast('No hay datos registrados en esa fecha', true);
+        if (dataToExport.length === 0) return showToast('No hay datos registrados con esos filtros', true);
 
         setIsExporting(true);
 
@@ -302,7 +331,11 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                 : ['Fecha Inicio,Fecha Fin,Contenido Global,Evidencias,Red Social,Campus,Sentiment,Usuario,Tipo Posteo,Posteo Original,Comentario'];
             
             const rows = dataToExport.flatMap((i: any) => {
-                const list = getNormalizedComments(i);
+                let list = getNormalizedComments(i);
+                if (exportCampus) {
+                    list = list.filter((c: any) => c.campus === exportCampus);
+                }
+                
                 return list.map((c: any) => {
                     const escape = (text: string) => `"${(text || '').toString().replace(/"/g, '""')}"`;
                     const posteoOriginal = c.posteoTipo === 'url' ? c.posteoUrl : c.posteoTexto;
@@ -449,7 +482,7 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                 </div>
             </div>
 
-            {/* MODAL DE EXPORTACIÓN INTELIGENTE */}
+            {/* MODAL DE EXPORTACIÓN INTELIGENTE CON FILTRO DE CAMPUS */}
             {isExportModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
@@ -468,13 +501,21 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                                 <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'year' ? 'border-blue-500 bg-blue-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
                                     <div className="flex items-center gap-3">
                                         <input type="radio" name="exportType" checked={exportType === 'year'} onChange={() => { setExportType('year'); if(!exportYear && availableYears.length) setExportYear(String(availableYears[0])); }} className="w-4 h-4 text-blue-500" />
-                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Año</p><p className="text-xs theme-text-muted">Descarga un año en específico.</p></div>
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Año y Campus</p><p className="text-xs theme-text-muted">Descarga un año y campus en específico.</p></div>
                                     </div>
                                     {exportType === 'year' && (
-                                        <div className="ml-7 fade-in">
+                                        <div className="ml-7 flex flex-col gap-3 fade-in mt-2">
                                             <select aria-label="Seleccionar año" value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={inputStyles}>
                                                 <option value="" disabled>Selecciona un año</option>
                                                 {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                            </select>
+                                            <select aria-label="Seleccionar campus" value={exportCampus} onChange={(e) => setExportCampus(e.target.value)} className={inputStyles}>
+                                                <option value="">Todos los Campus</option>
+                                                {availableCampusesForExport.length > 0 ? (
+                                                    availableCampusesForExport.map((c: any) => <option key={c} value={c}>{c}</option>)
+                                                ) : (
+                                                    <option value="none" disabled>No hay campus en esta fecha</option>
+                                                )}
                                             </select>
                                         </div>
                                     )}
@@ -483,17 +524,27 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                                 <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'month' ? 'border-blue-500 bg-blue-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
                                     <div className="flex items-center gap-3">
                                         <input type="radio" name="exportType" checked={exportType === 'month'} onChange={() => { setExportType('month'); if(!exportYear && availableYears.length) setExportYear(String(availableYears[0])); }} className="w-4 h-4 text-blue-500" />
-                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes</p><p className="text-xs theme-text-muted">Descarga un mes y año específico.</p></div>
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes y Campus</p><p className="text-xs theme-text-muted">Descarga un mes, año y campus específico.</p></div>
                                     </div>
                                     {exportType === 'month' && (
-                                        <div className="ml-7 flex gap-3 fade-in">
-                                            <select aria-label="Seleccionar año" value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={`${inputStyles} w-1/2`}>
-                                                <option value="" disabled>Año</option>
-                                                {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
-                                            </select>
-                                            <select aria-label="Seleccionar mes" value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={`${inputStyles} w-1/2`}>
-                                                <option value="" disabled>Mes</option>
-                                                {availableMonthsForExport.map((m: any) => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                        <div className="ml-7 flex flex-col gap-3 fade-in mt-2">
+                                            <div className="flex gap-3">
+                                                <select aria-label="Seleccionar año" value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                    <option value="" disabled>Año</option>
+                                                    {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                                </select>
+                                                <select aria-label="Seleccionar mes" value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                    <option value="" disabled>Mes</option>
+                                                    {availableMonthsForExport.map((m: any) => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                                </select>
+                                            </div>
+                                            <select aria-label="Seleccionar campus" value={exportCampus} onChange={(e) => setExportCampus(e.target.value)} className={inputStyles}>
+                                                <option value="">Todos los Campus</option>
+                                                {availableCampusesForExport.length > 0 ? (
+                                                    availableCampusesForExport.map((c: any) => <option key={c} value={c}>{c}</option>)
+                                                ) : (
+                                                    <option value="none" disabled>No hay campus en esta fecha</option>
+                                                )}
                                             </select>
                                         </div>
                                     )}
@@ -503,7 +554,7 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                         <div className="p-4 border-t theme-border flex justify-end gap-3 bg-black/5 dark:bg-white/5">
                             <button type="button" onClick={() => setIsExportModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold theme-text-main hover:bg-black/10 dark:hover:bg-white/10 transition-colors">Cancelar</button>
                             <button type="button" onClick={handleExecuteExport} disabled={isExporting} className="px-5 py-2.5 rounded-xl font-bold bg-blue-600 text-white hover:bg-blue-500 flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                {isExporting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4"/>}
+                                {isExporting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4"/>} 
                                 {isExporting ? 'Generando...' : 'Generar CSV'}
                             </button>
                         </div>
@@ -511,7 +562,6 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                 </div>
             )}
 
-            {/* MODAL DETALLE DE REPORTE */}
             {isDetailOpen && selectedComment && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in print:static print:block print:p-0 print:bg-transparent">
                     <div className="theme-bg-container rounded-2xl w-full max-w-2xl shadow-2xl border theme-border overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-full">
@@ -550,7 +600,6 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                 </div>
             )}
 
-            {/* MODAL DE EDICIÓN CON EL NUEVO DROPDOWN */}
             {isEditOpen && editData && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-3xl shadow-2xl border theme-border flex flex-col max-h-[90vh]">
@@ -575,7 +624,6 @@ export const HistorialCommentView = ({ showToast, isAdmin, updateComment, delete
                                         <div key={c.id || idx} className="flex flex-col gap-3 p-4 theme-bg-low border theme-border rounded-xl relative group">
                                             {editData.comentariosList.length > 1 && (<button type="button" onClick={() => { const newList = editData.comentariosList.filter((_:any, i:number) => i !== idx); setEditData({...editData, comentariosList: newList}); }} className="absolute -top-2 -right-2 p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3"/></button>)}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* DROPDOWN ACTUALIZADO EN EDICIÓN */}
                                                 <div><label htmlFor={`ec-red-${idx}`} className="text-xs font-bold theme-text-muted uppercase tracking-wider">Red Social / Canal</label>
                                                     <select id={`ec-red-${idx}`} value={c.redSocial} onChange={(e) => { const n = [...editData.comentariosList]; n[idx].redSocial = e.target.value; setEditData({...editData, comentariosList: n}); }} className={inputStyles}>
                                                         {redesSocialesOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}

@@ -9,14 +9,6 @@ import { db, appId, auth } from '../../../services/firebase/config';
 import { StatCard, ActionBtn } from '../../../shared/components/UIComponents';
 import { DetailModal, EditIncidentModal } from '../../incidents/components/HackViews';
 
-const RestrictedArea = () => (
-    <div className="theme-bg-container theme-border border rounded-2xl p-10 text-center shadow-sm fade-in mt-6">
-        <Lock className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" />
-        <h3 className="text-lg font-bold theme-text-main mb-2">Área Restringida</h3>
-        <p className="theme-text-muted text-sm max-w-md mx-auto">Inicia sesión como Administrador para visualizar estas métricas.</p>
-    </div>
-);
-
 export const DashboardView = ({ 
     isAdmin, navigate, showToast, 
     toggleIncidentStatus, updateIncident, deleteIncident 
@@ -133,9 +125,10 @@ export const DashboardView = ({
     }, [comments]);
 
     const handleDownloadReport = () => {
+        // 🔥 FIX: Quitada la restricción de `!isAdmin` para que los lectores puedan exportar los PDF
         if (activeTab === 'seguridad' && hackStats.total === 0) return showToast("No hay datos de Seguridad.", true);
-        if (activeTab === 'rrss' && (!isAdmin || rrssStats.total === 0)) return showToast("Sin acceso o sin datos RRSS.", true);
-        if (activeTab === 'comentarios' && (!isAdmin || commentsStats.totalReportes === 0)) return showToast("Sin acceso o sin datos.", true);
+        if (activeTab === 'rrss' && rrssStats.total === 0) return showToast("No hay datos de Reputación RRSS.", true);
+        if (activeTab === 'comentarios' && commentsStats.totalReportes === 0) return showToast("No hay datos de Comentarios.", true);
         
         setIsExportingPDF(true);
         setTimeout(() => {
@@ -153,7 +146,6 @@ export const DashboardView = ({
                     <div className="h-10 w-32 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    {/* 🔥 FIX: Skeletons estilo líneas de contenido real */}
                     {[1,2,3,4].map(i => (
                         <div key={i} className="theme-bg-container border theme-border rounded-xl p-6 shadow-sm h-28 flex flex-col justify-between">
                             <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
@@ -196,7 +188,6 @@ export const DashboardView = ({
                         <button type="button" onClick={() => setActiveTab('rrss')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'rrss' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Megaphone className="w-4 h-4" /> Reputación RRSS</button>
                         <button type="button" onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4" /> Comentarios</button>
                     </div>
-                    {/* 🔥 FIX: Botón de Descarga con Spinner y Bloqueo */}
                     <button type="button" onClick={handleDownloadReport} disabled={isExportingPDF} className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--primary)] text-white hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                         {isExportingPDF ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4" />} 
                         {isExportingPDF ? 'Generando PDF...' : 'Descargar PDF'}
@@ -204,6 +195,7 @@ export const DashboardView = ({
                 </div>
 
                 <div className="space-y-6">
+                    {/* TRACTO: SEGURIDAD Y ACCESOS */}
                     {activeTab === 'seguridad' && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -275,132 +267,132 @@ export const DashboardView = ({
                         </div>
                     )}
 
+                    {/* TRACTO: REPUTACIÓN RRSS */}
                     {activeTab === 'rrss' && (
-                        !isAdmin ? <RestrictedArea /> : (
-                            <div className="fade-in space-y-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                    <StatCard title="Crisis Registradas" value={rrssStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                    <StatCard title="En Proceso" value={rrssStats.open} color="orange" icon={<Clock className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                    <StatCard title="Controladas" value={rrssStats.resolved} color="emerald" icon={<CheckCircle2 className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                    <StatCard title="Riesgo Alto" value={rrssStats.highRisk} color="red" icon={<AlertTriangle className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                </div>
+                        <div className="fade-in space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <StatCard title="Crisis Registradas" value={rrssStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="En Proceso" value={rrssStats.open} color="orange" icon={<Clock className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Controladas" value={rrssStats.resolved} color="emerald" icon={<CheckCircle2 className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Riesgo Alto" value={rrssStats.highRisk} color="red" icon={<AlertTriangle className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                            </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2 space-y-6">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center justify-between gap-4">
-                                                <div>
-                                                    <p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">Índice de Resolución</p>
-                                                    <div className="flex items-end gap-2"><span className="text-3xl font-black text-emerald-500">{rrssStats.resolutionRate}%</span><span className="text-xs font-medium theme-text-muted mb-1.5">casos cerrados</span></div>
-                                                </div>
-                                                <div className="relative w-20 h-20 flex-shrink-0">
-                                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" className="text-gray-200 dark:text-gray-800" />
-                                                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" strokeLinecap="round" className="text-emerald-500 transition-all duration-1000 ease-out" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={mounted ? (2 * Math.PI * 40) * (1 - rrssStats.resolutionRate / 100) : 2 * Math.PI * 40} />
-                                                    </svg>
-                                                </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 space-y-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center justify-between gap-4">
+                                            <div>
+                                                <p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">Índice de Resolución</p>
+                                                <div className="flex items-end gap-2"><span className="text-3xl font-black text-emerald-500">{rrssStats.resolutionRate}%</span><span className="text-xs font-medium theme-text-muted mb-1.5">casos cerrados</span></div>
                                             </div>
-                                            <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center gap-4">
-                                                <div className="p-3 bg-orange-500/10 text-orange-500 rounded-xl"><Megaphone className="w-6 h-6"/></div>
-                                                <div><p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-0.5">Canal más Crítico</p><p className="text-xl font-bold theme-text-main truncate">{rrssStats.topNetwork}</p></div>
+                                            <div className="relative w-20 h-20 flex-shrink-0">
+                                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" className="text-gray-200 dark:text-gray-800" />
+                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" strokeLinecap="round" className="text-emerald-500 transition-all duration-1000 ease-out" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={mounted ? (2 * Math.PI * 40) * (1 - rrssStats.resolutionRate / 100) : 2 * Math.PI * 40} />
+                                                </svg>
                                             </div>
                                         </div>
-                                        <div>
-                                            <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1">Acciones Rápidas</h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <ActionBtn onClick={() => navigate('nuevo-rss')} icon={<Megaphone className="w-5 h-5 text-orange-500"/>} title="Registrar Crisis" desc="Abre un nuevo caso RRSS." bgIcon="bg-orange-500/10" />
-                                                <ActionBtn onClick={() => navigate('historial-rss')} icon={<Clock className="w-5 h-5 text-blue-500"/>} title="Historial RRSS" desc="Casos de reputación pasados." bgIcon="bg-blue-500/10" />
-                                                <ActionBtn onClick={() => navigate('protocolo-rss')} icon={<BookOpen className="w-5 h-5 text-purple-500"/>} title="Protocolo Oficial" desc="Estrategia de atención." bgIcon="bg-purple-500/10" />
-                                            </div>
+                                        <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center gap-4">
+                                            <div className="p-3 bg-orange-500/10 text-orange-500 rounded-xl"><Megaphone className="w-6 h-6"/></div>
+                                            <div><p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-0.5">Canal más Crítico</p><p className="text-xl font-bold theme-text-main truncate">{rrssStats.topNetwork}</p></div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col h-full">
-                                        <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1 flex items-center gap-2"><Clock className="w-4 h-4"/> Actividad Reciente</h3>
-                                        <div className="theme-bg-container theme-border border rounded-2xl overflow-hidden shadow-sm flex-1 flex flex-col p-2 min-h-[16rem]">
-                                            {rrssIncidents.length === 0 ? (
-                                                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center"><Megaphone className="w-8 h-8 theme-text-muted opacity-30 mb-3" /><p className="theme-text-muted text-sm">Sin casos de crisis recientes.</p></div>
-                                            ) : (
-                                                <div className="flex-1 overflow-y-auto space-y-2">
-                                                    {rrssIncidents.slice(0, 5).map((inc: any) => (
-                                                        <button type="button" key={inc.id} onClick={() => setPreviewModal({isOpen: true, type: 'rrss', data: inc})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-orange-500 border border-transparent transition-colors cursor-pointer group">
-                                                            <div className="flex justify-between items-start mb-1">
-                                                                <p className="text-sm font-bold theme-text-main truncate group-hover:text-orange-500 transition-colors">{inc.redSocial}</p>
-                                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${inc.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{inc.estado}</span>
-                                                            </div>
-                                                            <p className="text-xs theme-text-muted truncate">Riesgo {inc.riesgo} • {new Date(inc.fecha).toLocaleDateString()}</p>
-                                                        </button>
-                                                    ))}
-                                                    <button type="button" onClick={() => navigate('historial-rss')} className="w-full mt-2 py-2 text-xs font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors">Ver historial completo</button>
-                                                </div>
-                                            )}
+                                    <div>
+                                        <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1">Acciones Rápidas</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            {/* 🔥 FIX: Candadito para no-admins */}
+                                            <ActionBtn onClick={() => navigate('nuevo-rss')} icon={isAdmin ? <Megaphone className="w-5 h-5 text-orange-500"/> : <Lock className="w-5 h-5 text-gray-400"/>} title="Registrar Crisis" desc={isAdmin ? "Abre un nuevo caso RRSS." : "Solo Administrador."} bgIcon={isAdmin ? "bg-orange-500/10" : "bg-gray-500/10"} />
+                                            <ActionBtn onClick={() => navigate('historial-rss')} icon={<Clock className="w-5 h-5 text-blue-500"/>} title="Historial RRSS" desc="Casos de reputación pasados." bgIcon="bg-blue-500/10" />
+                                            <ActionBtn onClick={() => navigate('protocolo-rss')} icon={<BookOpen className="w-5 h-5 text-purple-500"/>} title="Protocolo Oficial" desc="Estrategia de atención." bgIcon="bg-purple-500/10" />
                                         </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col h-full">
+                                    <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1 flex items-center gap-2"><Clock className="w-4 h-4"/> Actividad Reciente</h3>
+                                    <div className="theme-bg-container theme-border border rounded-2xl overflow-hidden shadow-sm flex-1 flex flex-col p-2 min-h-[16rem]">
+                                        {rrssIncidents.length === 0 ? (
+                                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center"><Megaphone className="w-8 h-8 theme-text-muted opacity-30 mb-3" /><p className="theme-text-muted text-sm">Sin casos de crisis recientes.</p></div>
+                                        ) : (
+                                            <div className="flex-1 overflow-y-auto space-y-2">
+                                                {rrssIncidents.slice(0, 5).map((inc: any) => (
+                                                    <button type="button" key={inc.id} onClick={() => setPreviewModal({isOpen: true, type: 'rrss', data: inc})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-orange-500 border border-transparent transition-colors cursor-pointer group">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <p className="text-sm font-bold theme-text-main truncate group-hover:text-orange-500 transition-colors">{inc.redSocial}</p>
+                                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${inc.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{inc.estado}</span>
+                                                        </div>
+                                                        <p className="text-xs theme-text-muted truncate">Riesgo {inc.riesgo} • {new Date(inc.fecha).toLocaleDateString()}</p>
+                                                    </button>
+                                                ))}
+                                                <button type="button" onClick={() => navigate('historial-rss')} className="w-full mt-2 py-2 text-xs font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors">Ver historial completo</button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                        )
+                        </div>
                     )}
 
+                    {/* TRACTO: COMENTARIOS */}
                     {activeTab === 'comentarios' && (
-                        !isAdmin ? <RestrictedArea /> : (
-                            <div className="fade-in space-y-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                    <StatCard title="Reportes Creados" value={commentsStats.totalReportes} color="purple" icon={<FileText className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                    <StatCard title="Total Comentarios" value={commentsStats.totalIndividuales} color="blue" icon={<MessageSquare className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                    <StatCard title="Contenido Orgánico" value={commentsStats.organic} color="emerald" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                    <StatCard title="Contenido Pautado" value={commentsStats.paid} color="orange" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                </div>
+                        <div className="fade-in space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <StatCard title="Reportes Creados" value={commentsStats.totalReportes} color="purple" icon={<FileText className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Total Comentarios" value={commentsStats.totalIndividuales} color="blue" icon={<MessageSquare className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Contenido Orgánico" value={commentsStats.organic} color="emerald" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Contenido Pautado" value={commentsStats.paid} color="orange" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                            </div>
 
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2 space-y-6">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm">
-                                                <h4 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-4 flex items-center gap-2"><PieChart className="w-4 h-4 text-purple-500"/> Análisis de Sentimiento</h4>
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex flex-col"><span className="text-2xl font-black text-red-500 leading-none">{commentsStats.negativo}</span><span className="text-[10px] font-bold theme-text-muted uppercase">Negativos</span></div>
-                                                    <div className="flex flex-col text-right"><span className="text-2xl font-black text-slate-500 leading-none">{commentsStats.neutral}</span><span className="text-[10px] font-bold theme-text-muted uppercase">Neutrales</span></div>
-                                                </div>
-                                                <div className="h-4 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden flex shadow-inner">
-                                                    <div className="h-full bg-red-500 transition-all duration-1000 ease-out" style={{ width: mounted ? `${(commentsStats.negativo / commentsStats.totalSentiment) * 100}%` : '0%' }}></div>
-                                                    <div className="h-full bg-slate-400 dark:bg-slate-500 transition-all duration-1000 ease-out delay-300" style={{ width: mounted ? `${(commentsStats.neutral / commentsStats.totalSentiment) * 100}%` : '0%' }}></div>
-                                                </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 space-y-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm">
+                                            <h4 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-4 flex items-center gap-2"><PieChart className="w-4 h-4 text-purple-500"/> Análisis de Sentimiento</h4>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex flex-col"><span className="text-2xl font-black text-red-500 leading-none">{commentsStats.negativo}</span><span className="text-[10px] font-bold theme-text-muted uppercase">Negativos</span></div>
+                                                <div className="flex flex-col text-right"><span className="text-2xl font-black text-slate-500 leading-none">{commentsStats.neutral}</span><span className="text-[10px] font-bold theme-text-muted uppercase">Neutrales</span></div>
                                             </div>
-                                            <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center gap-4">
-                                                <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><MapPin className="w-6 h-6"/></div>
-                                                <div><p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-0.5">Campus con más Alertas</p><p className="text-xl font-bold theme-text-main truncate">{commentsStats.topCampus}</p></div>
+                                            <div className="h-4 w-full bg-black/5 dark:bg-white/5 rounded-full overflow-hidden flex shadow-inner">
+                                                <div className="h-full bg-red-500 transition-all duration-1000 ease-out" style={{ width: mounted ? `${(commentsStats.negativo / commentsStats.totalSentiment) * 100}%` : '0%' }}></div>
+                                                <div className="h-full bg-slate-400 dark:bg-slate-500 transition-all duration-1000 ease-out delay-300" style={{ width: mounted ? `${(commentsStats.neutral / commentsStats.totalSentiment) * 100}%` : '0%' }}></div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1">Acciones Rápidas</h3>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <ActionBtn onClick={() => navigate('nuevo-comentario')} icon={<MessageSquare className="w-5 h-5 text-blue-500"/>} title="Capturar Comentarios" desc="Crea un registro de mensajes." bgIcon="bg-blue-500/10" />
-                                                <ActionBtn onClick={() => navigate('historial-comentario')} icon={<Clock className="w-5 h-5 text-slate-500"/>} title="Historial Comentarios" desc="Consulta registros anteriores." bgIcon="bg-slate-500/10" />
-                                            </div>
+                                        <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center gap-4">
+                                            <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><MapPin className="w-6 h-6"/></div>
+                                            <div><p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-0.5">Campus con más Alertas</p><p className="text-xl font-bold theme-text-main truncate">{commentsStats.topCampus}</p></div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col h-full">
-                                        <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1 flex items-center gap-2"><Clock className="w-4 h-4"/> Actividad Reciente</h3>
-                                        <div className="theme-bg-container theme-border border rounded-2xl overflow-hidden shadow-sm flex-1 flex flex-col p-2 min-h-[16rem]">
-                                            {comments.length === 0 ? (
-                                                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center"><MessageSquare className="w-8 h-8 theme-text-muted opacity-30 mb-3" /><p className="theme-text-muted text-sm">Sin reportes de comentarios.</p></div>
-                                            ) : (
-                                                <div className="flex-1 overflow-y-auto space-y-2">
-                                                    {comments.slice(0, 5).map((com: any) => (
-                                                        <button type="button" key={com.id} onClick={() => setPreviewModal({isOpen: true, type: 'comment', data: com})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-blue-500 border border-transparent transition-colors cursor-pointer group">
-                                                            <div className="flex justify-between items-start mb-1">
-                                                                <p className="text-sm font-bold theme-text-main truncate group-hover:text-blue-500 transition-colors">Reporte del {com.fechaInicio}</p>
-                                                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{com.contenido}</span>
-                                                            </div>
-                                                            <p className="text-xs theme-text-muted truncate">Finaliza: {com.fechaFin}</p>
-                                                        </button>
-                                                    ))}
-                                                    <button type="button" onClick={() => navigate('historial-comentario')} className="w-full mt-2 py-2 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">Ver historial completo</button>
-                                                </div>
-                                            )}
+                                    <div>
+                                        <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1">Acciones Rápidas</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {/* 🔥 FIX: Candadito para no-admins */}
+                                            <ActionBtn onClick={() => navigate('nuevo-comentario')} icon={isAdmin ? <MessageSquare className="w-5 h-5 text-blue-500"/> : <Lock className="w-5 h-5 text-gray-400"/>} title="Capturar Comentarios" desc={isAdmin ? "Crea un registro de mensajes." : "Solo Administrador."} bgIcon={isAdmin ? "bg-blue-500/10" : "bg-gray-500/10"} />
+                                            <ActionBtn onClick={() => navigate('historial-comentario')} icon={<Clock className="w-5 h-5 text-slate-500"/>} title="Historial Comentarios" desc="Consulta registros anteriores." bgIcon="bg-slate-500/10" />
                                         </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col h-full">
+                                    <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1 flex items-center gap-2"><Clock className="w-4 h-4"/> Actividad Reciente</h3>
+                                    <div className="theme-bg-container theme-border border rounded-2xl overflow-hidden shadow-sm flex-1 flex flex-col p-2 min-h-[16rem]">
+                                        {comments.length === 0 ? (
+                                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center"><MessageSquare className="w-8 h-8 theme-text-muted opacity-30 mb-3" /><p className="theme-text-muted text-sm">Sin reportes de comentarios.</p></div>
+                                        ) : (
+                                            <div className="flex-1 overflow-y-auto space-y-2">
+                                                {comments.slice(0, 5).map((com: any) => (
+                                                    <button type="button" key={com.id} onClick={() => setPreviewModal({isOpen: true, type: 'comment', data: com})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-blue-500 border border-transparent transition-colors cursor-pointer group">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <p className="text-sm font-bold theme-text-main truncate group-hover:text-blue-500 transition-colors">Reporte del {com.fechaInicio}</p>
+                                                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md uppercase bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{com.contenido}</span>
+                                                        </div>
+                                                        <p className="text-xs theme-text-muted truncate">Finaliza: {com.fechaFin}</p>
+                                                    </button>
+                                                ))}
+                                                <button type="button" onClick={() => navigate('historial-comentario')} className="w-full mt-2 py-2 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors">Ver historial completo</button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-                        )
+                        </div>
                     )}
                 </div>
 

@@ -12,6 +12,8 @@ const inputStyles = "w-full p-3 rounded-xl theme-bg-low border theme-border them
 const radioLabelStyles = "flex items-center gap-2 text-sm font-medium theme-text-main cursor-pointer";
 const editorStyles = `.wysiwyg-content ul { list-style-type: disc !important; padding-left: 1.5rem !important; margin: 0.5rem 0; } .wysiwyg-content ol { list-style-type: decimal !important; padding-left: 1.5rem !important; margin: 0.5rem 0; }`;
 
+const CAMPUS_OPTIONS = ['Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'];
+
 const EditorToolbar = ({ onCommand }: { onCommand: (cmd: string, val?: string) => void }) => {
     const optionStyles = "bg-white text-black dark:bg-gray-800 dark:text-white";
     return (
@@ -103,7 +105,7 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAct
                             <div className="space-y-1.5"><label htmlFor="nri-total" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Volumen (Total Incidencias)</label><input id="nri-total" type="number" min="1" required value={formData.totalIncidencias} onChange={(e) => setFormData({...formData, totalIncidencias: parseInt(e.target.value)})} className={inputStyles} /></div>
                             <div className="space-y-1.5"><label htmlFor="nri-usuario" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Identidad (Usuario)</label><input id="nri-usuario" type="text" required placeholder="@usuario o Nombre público" value={formData.usuario} onChange={(e) => setFormData({...formData, usuario: e.target.value})} className={inputStyles} /></div>
                             <div className="space-y-1.5"><label htmlFor="nri-medio" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Medio / Red Social</label><select id="nri-medio" value={formData.medio} onChange={(e) => setFormData({...formData, medio: e.target.value})} className={inputStyles}><option value="Facebook Comentario">Facebook Comentario</option><option value="TikTok">TikTok</option><option value="FB Grupos">FB Grupos</option><option value="LinkedIn">LinkedIn</option><option value="Facebook DM">Facebook DM</option><option value="Instagram DM">Instagram DM</option></select></div>
-                            <div className="space-y-1.5"><label htmlFor="nri-campus" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Campus Implicado</label><select id="nri-campus" value={formData.campus} onChange={(e) => setFormData({...formData, campus: e.target.value})} className={inputStyles}>{['Atizapán', 'Coacalco', 'Cuautitlán Izcalli', 'Ecatepec', 'Tecamac', 'Tultepec', 'Zumpango', 'Tizayuca', 'Querétaro: la Joya', 'Querétaro: el Marqués', 'Huehuetoca', 'Chalco'].map(c => <option key={c}>{c}</option>)}</select></div>
+                            <div className="space-y-1.5"><label htmlFor="nri-campus" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Campus Implicado</label><select id="nri-campus" value={formData.campus} onChange={(e) => setFormData({...formData, campus: e.target.value})} className={inputStyles}>{CAMPUS_OPTIONS.map(c => <option key={c}>{c}</option>)}</select></div>
                             <div className="space-y-1.5"><label htmlFor="nri-area" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Área Responsable</label><select id="nri-area" value={formData.area} onChange={(e) => setFormData({...formData, area: e.target.value})} className={inputStyles}><option value="Operaciones">Operaciones</option><option value="Legal">Legal</option><option value="Comercial - Call Center">Comercial - Call Center</option></select></div>
                             <div className="space-y-1.5 lg:col-span-3 border-t theme-border pt-4 mt-2"><label htmlFor="nri-riesgo" className="text-xs font-bold theme-text-muted uppercase tracking-wider">Nivel de Riesgo Operativo</label><select id="nri-riesgo" value={formData.riesgo} onChange={(e) => setFormData({...formData, riesgo: e.target.value})} className={`${inputStyles} font-bold ${formData.riesgo === 'Critico' ? 'text-red-500 bg-red-500/5 border-red-500/30' : formData.riesgo === 'Alto' ? 'text-orange-500 bg-orange-500/5 border-orange-500/30' : ''}`}><option value="Bajo">Bajo (Controlable)</option><option value="Medio">Medio (Atención Requerida)</option><option value="Alto">Alto (Alerta Escalada)</option><option value="Critico">Crítico (Peligro Inminente)</option></select></div>
                         </div>
@@ -152,7 +154,7 @@ export const NewRRSSIncidentView = ({ isAdmin, showToast, navigate, user, logAct
                     <div className="pt-8 flex flex-col sm:flex-row items-center justify-end gap-4 border-t-2 border-gray-200 dark:border-gray-800">
                         <button type="button" onClick={() => navigate('dashboard')} className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Cancelar y Volver</button>
                         <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-black bg-orange-600 text-white hover:bg-orange-500 hover:-translate-y-0.5 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:hover:translate-y-0">
-                            {isSubmitting ? 'Guardando en la nube...' : <><Save className="w-5 h-5"/> Guardar Incidente RRSS</>}
+                            {isSubmitting ? 'Guardando en la nube...' : <><Save className="w-5 h-5"/> Consolidar Incidente Oficial</>}
                         </button>
                     </div>
                 </form>
@@ -173,11 +175,13 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
     const [pagePerMonth, setPagePerMonth] = useState<Record<string, number>>({});
     const itemsPerPage = 30;
+    
+    // Estados del Modal de Exportación
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportType, setExportType] = useState('all'); 
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
-    
+    const [exportCampus, setExportCampus] = useState('');
     const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
@@ -197,6 +201,11 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
         setPagePerMonth({});
     }, [searchTerm, filterYear]);
 
+    // 🔥 FIX: Resetea el campus si el usuario cambia el año o mes para evitar selecciones fantasma
+    useEffect(() => {
+        setExportCampus('');
+    }, [exportType, exportYear, exportMonth]);
+
     const availableYears = useMemo(() => {
         const years = new Set(rrssIncidents.map((i: any) => i.fecha ? i.fecha.split('-')[0] : null).filter(Boolean));
         return Array.from(years).sort((a: any, b: any) => b.localeCompare(a));
@@ -211,6 +220,18 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
         );
         return Array.from(months).sort((a: any, b: any) => b.localeCompare(a));
     }, [rrssIncidents, exportYear]);
+
+    // 🔥 FIX: Extracción inteligente de campus basada en la fecha seleccionada
+    const availableCampusesForExport = useMemo(() => {
+        let filtered = rrssIncidents;
+        if (exportType === 'year' && exportYear) {
+            filtered = rrssIncidents.filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear);
+        } else if (exportType === 'month' && exportYear && exportMonth) {
+            filtered = rrssIncidents.filter((i: any) => i.fecha && i.fecha.startsWith(`${exportYear}-${exportMonth}`));
+        }
+        const campuses = new Set(filtered.map((i: any) => i.campus).filter(Boolean));
+        return Array.from(campuses).sort((a: any, b: any) => a.localeCompare(b));
+    }, [rrssIncidents, exportType, exportYear, exportMonth]);
 
     const filteredIncidents = useMemo(() => {
         return rrssIncidents.filter((inc: any) => {
@@ -298,14 +319,17 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
         if (exportType === 'year') {
             if (!exportYear) return showToast('Selecciona un año para exportar', true);
             dataToExport = rrssIncidents.filter((i: any) => i.fecha && i.fecha.split('-')[0] === exportYear);
-            filenameSuffix = exportYear;
+            if (exportCampus) dataToExport = dataToExport.filter((i: any) => i.campus === exportCampus);
+            filenameSuffix = exportCampus ? `${exportYear}_${exportCampus}` : exportYear;
+
         } else if (exportType === 'month') {
             if (!exportYear || !exportMonth) return showToast('Selecciona año y mes para exportar', true);
             dataToExport = rrssIncidents.filter((i: any) => i.fecha && i.fecha.startsWith(`${exportYear}-${exportMonth}`));
-            filenameSuffix = `${exportYear}_${exportMonth}`;
+            if (exportCampus) dataToExport = dataToExport.filter((i: any) => i.campus === exportCampus);
+            filenameSuffix = exportCampus ? `${exportYear}_${exportMonth}_${exportCampus}` : `${exportYear}_${exportMonth}`;
         }
 
-        if (dataToExport.length === 0) return showToast('No hay datos registrados en esa fecha', true);
+        if (dataToExport.length === 0) return showToast('No hay datos registrados con esos filtros', true);
 
         setIsExporting(true);
 
@@ -458,7 +482,7 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
                 </div>
             </div>
 
-            {/* MODAL DE EXPORTACIÓN INTELIGENTE */}
+            {/* MODAL DE EXPORTACIÓN INTELIGENTE CON FILTRO CAMPUS */}
             {isExportModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
@@ -477,13 +501,21 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
                                 <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'year' ? 'border-orange-500 bg-orange-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
                                     <div className="flex items-center gap-3">
                                         <input type="radio" name="exportType" checked={exportType === 'year'} onChange={() => { setExportType('year'); if(!exportYear && availableYears.length) setExportYear(String(availableYears[0])); }} className="w-4 h-4 text-orange-500" />
-                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Año</p><p className="text-xs theme-text-muted">Descarga un año en específico.</p></div>
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Año y Campus</p><p className="text-xs theme-text-muted">Descarga un año y campus en específico.</p></div>
                                     </div>
                                     {exportType === 'year' && (
-                                        <div className="ml-7 fade-in">
+                                        <div className="ml-7 flex flex-col gap-3 fade-in mt-2">
                                             <select aria-label="Seleccionar año" value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={inputStyles}>
                                                 <option value="" disabled>Selecciona un año</option>
                                                 {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                            </select>
+                                            <select aria-label="Seleccionar campus" value={exportCampus} onChange={(e) => setExportCampus(e.target.value)} className={inputStyles}>
+                                                <option value="">Todos los Campus</option>
+                                                {availableCampusesForExport.length > 0 ? (
+                                                    availableCampusesForExport.map((c: any) => <option key={c} value={c}>{c}</option>)
+                                                ) : (
+                                                    <option value="none" disabled>No hay campus en esta fecha</option>
+                                                )}
                                             </select>
                                         </div>
                                     )}
@@ -492,17 +524,27 @@ export const HistorialRRSSView = ({ showToast, isAdmin, updateRrssIncident, dele
                                 <label className={`flex flex-col gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${exportType === 'month' ? 'border-orange-500 bg-orange-500/5' : 'theme-border theme-bg-low hover:border-gray-400'}`}>
                                     <div className="flex items-center gap-3">
                                         <input type="radio" name="exportType" checked={exportType === 'month'} onChange={() => { setExportType('month'); if(!exportYear && availableYears.length) setExportYear(String(availableYears[0])); }} className="w-4 h-4 text-orange-500" />
-                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes</p><p className="text-xs theme-text-muted">Descarga un mes y año específico.</p></div>
+                                        <div><p className="text-sm font-bold theme-text-main">Filtrar por Mes y Campus</p><p className="text-xs theme-text-muted">Descarga un mes, año y campus específico.</p></div>
                                     </div>
                                     {exportType === 'month' && (
-                                        <div className="ml-7 flex gap-3 fade-in">
-                                            <select aria-label="Seleccionar año" value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={`${inputStyles} w-1/2`}>
-                                                <option value="" disabled>Año</option>
-                                                {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
-                                            </select>
-                                            <select aria-label="Seleccionar mes" value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={`${inputStyles} w-1/2`}>
-                                                <option value="" disabled>Mes</option>
-                                                {availableMonthsForExport.map((m: any) => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                        <div className="ml-7 flex flex-col gap-3 fade-in mt-2">
+                                            <div className="flex gap-3">
+                                                <select aria-label="Seleccionar año" value={exportYear} onChange={(e) => setExportYear(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                    <option value="" disabled>Año</option>
+                                                    {availableYears.map((y: any) => <option key={y} value={y}>{y}</option>)}
+                                                </select>
+                                                <select aria-label="Seleccionar mes" value={exportMonth} onChange={(e) => setExportMonth(e.target.value)} className={`${inputStyles} w-1/2`}>
+                                                    <option value="" disabled>Mes</option>
+                                                    {availableMonthsForExport.map((m: any) => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                                </select>
+                                            </div>
+                                            <select aria-label="Seleccionar campus" value={exportCampus} onChange={(e) => setExportCampus(e.target.value)} className={inputStyles}>
+                                                <option value="">Todos los Campus</option>
+                                                {availableCampusesForExport.length > 0 ? (
+                                                    availableCampusesForExport.map((c: any) => <option key={c} value={c}>{c}</option>)
+                                                ) : (
+                                                    <option value="none" disabled>No hay campus en esta fecha</option>
+                                                )}
                                             </select>
                                         </div>
                                     )}
