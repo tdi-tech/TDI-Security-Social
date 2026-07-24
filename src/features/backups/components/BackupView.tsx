@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock, Eye, EyeOff, FileJson, Server } from 'lucide-react';
+import { Database, Download, UploadCloud, ShieldAlert, CheckCircle2, AlertCircle, Key, Lock, Eye, EyeOff, FileJson, Server, Ticket } from 'lucide-react';
 import CryptoJS from 'crypto-js';
 import { collection, onSnapshot, setDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
@@ -20,6 +20,7 @@ export const BackupView = ({ showToast }: any) => {
     const [incidents, setIncidents] = useState<any[]>([]);
     const [rrssIncidents, setRrssIncidents] = useState<any[]>([]);
     const [comments, setComments] = useState<any[]>([]);
+    const [tickets, setTickets] = useState<any[]>([]);
 
     useEffect(() => {
         const unsubIncidents = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'incidents'), (snap) => {
@@ -31,7 +32,10 @@ export const BackupView = ({ showToast }: any) => {
         const unsubComments = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), (snap) => {
             const data: any[] = []; snap.forEach(doc => data.push({ id: doc.id, ...doc.data() })); setComments(data);
         });
-        return () => { unsubIncidents(); unsubRrss(); unsubComments(); };
+        const unsubTickets = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tickets'), (snap) => {
+            const data: any[] = []; snap.forEach(doc => data.push({ id: doc.id, ...doc.data() })); setTickets(data);
+        });
+        return () => { unsubIncidents(); unsubRrss(); unsubComments(); unsubTickets(); };
     }, []);
 
     const handleExportAll = async () => {
@@ -42,12 +46,13 @@ export const BackupView = ({ showToast }: any) => {
 
         try {
             const backupData = {
-                version: "2.1",
+                version: "3.3",
                 exportDate: new Date().toISOString(),
                 modules: {
                     hackeos: incidents || [],
                     rrss: rrssIncidents || [],
-                    comentarios: comments || []
+                    comentarios: comments || [],
+                    tickets: tickets || []
                 }
             };
 
@@ -131,8 +136,8 @@ export const BackupView = ({ showToast }: any) => {
         showToast('Iniciando restauración en la nube...');
 
         try {
-            let restoredHackeos = 0; let restoredRrss = 0; let restoredComments = 0;
-            const { hackeos, rrss, comentarios } = backupInfo.modules;
+            let restoredHackeos = 0; let restoredRrss = 0; let restoredComments = 0; let restoredTickets = 0;
+            const { hackeos, rrss, comentarios, tickets: backupTickets } = backupInfo.modules;
 
             if (hackeos && Array.isArray(hackeos)) {
                 for (const item of hackeos) {
@@ -155,7 +160,14 @@ export const BackupView = ({ showToast }: any) => {
                 }
             }
 
-            showToast(`Restauración exitosa: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios`);
+            if (backupTickets && Array.isArray(backupTickets)) {
+                for (const item of backupTickets) {
+                    const exists = tickets.some((i: any) => i.id === item.id);
+                    if (!exists) { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', item.id), item); restoredTickets++; }
+                }
+            }
+
+            showToast(`Restauración exitosa: +${restoredHackeos} Hackeos, +${restoredRrss} RRSS, +${restoredComments} Comentarios, +${restoredTickets} Tickets`);
             setBackupInfo(null);
             
             setTimeout(() => window.location.reload(), 1500);
@@ -185,7 +197,7 @@ export const BackupView = ({ showToast }: any) => {
                 </div>
             </div>
 
-            {/* Layout Plano en 2 Columnas (Sin Cards cerradas) */}
+            {/* Layout Plano en 2 Columnas */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 px-4 sm:px-8">
                 
                 {/* COLUMNA IZQUIERDA: EXPORTACIÓN */}
@@ -307,7 +319,7 @@ export const BackupView = ({ showToast }: any) => {
                 </div>
             </div>
 
-            {/* CONFIRMACIÓN DE RESTAURACIÓN (Aparece abajo centrado) */}
+            {/* CONFIRMACIÓN DE RESTAURACIÓN */}
             {backupInfo && (
                 <div className="px-4 sm:px-8 fade-in">
                     <div className="border-t theme-border pt-12">
@@ -320,10 +332,12 @@ export const BackupView = ({ showToast }: any) => {
                                 <p className="text-sm theme-text-muted">Fecha de extracción: <strong className="theme-text-main">{new Date(backupInfo.exportDate).toLocaleString()}</strong></p>
                             </div>
                             
-                            <div className="grid grid-cols-3 gap-6 py-6 border-y theme-border text-center">
+                            {/* Grid actualizado a 4 columnas para visualizar Tickets */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-6 border-y theme-border text-center">
                                 <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.hackeos?.length || 0}</span><span className="text-xs uppercase font-bold text-red-500 tracking-wider">Hackeos</span></div>
                                 <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.rrss?.length || 0}</span><span className="text-xs uppercase font-bold text-orange-500 tracking-wider">Crisis RRSS</span></div>
                                 <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.comentarios?.length || 0}</span><span className="text-xs uppercase font-bold text-blue-500 tracking-wider">Comentarios</span></div>
+                                <div><span className="block text-3xl font-black theme-text-main">{backupInfo.modules?.tickets?.length || 0}</span><span className="text-xs uppercase font-bold text-purple-500 tracking-wider">Tickets</span></div>
                             </div>
                             
                             <div className="space-y-4">

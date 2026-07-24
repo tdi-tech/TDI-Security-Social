@@ -113,8 +113,6 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
     return (
         <>
             <div className="max-w-5xl mx-auto space-y-10 fade-in pb-16">
-                
-                {/* HERO HEADER CORPORATIVO */}
                 <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
                         <ShieldAlert className="w-48 h-48" />
@@ -131,8 +129,6 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-8 px-2 sm:px-8">
-                    
-                    {/* SECCIÓN 1: DATOS BÁSICOS */}
                     <div className="space-y-4">
                         <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
                             <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">1</span> 
@@ -163,7 +159,6 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
                         </div>
                     </div>
 
-                    {/* SECCIÓN 2: IMPACTO Y ALCANCE */}
                     <div className="space-y-4 pt-4">
                         <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
                             <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">2</span> 
@@ -190,7 +185,6 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
                         </div>
                     </div>
 
-                    {/* SECCIÓN 3: ACCIONES Y ERRADICACIÓN */}
                     <div className="space-y-4 pt-4">
                         <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
                             <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">3</span> 
@@ -208,7 +202,6 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
                         </div>
                     </div>
 
-                    {/* SECCIÓN 4: CIERRE Y LECCIONES */}
                     <div className="space-y-4 pt-4">
                         <h3 className="text-xl font-black theme-text-main flex items-center gap-2 border-b-2 border-gray-200 dark:border-gray-800 pb-3">
                             <span className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center text-sm">4</span> 
@@ -222,7 +215,6 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
                         </div>
                     </div>
 
-                    {/* BOTONES DE ACCIÓN */}
                     <div className="pt-8 flex flex-col sm:flex-row items-center justify-end gap-4 border-t-2 border-gray-200 dark:border-gray-800">
                         <button type="button" onClick={() => navigate('dashboard')} className="w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Cancelar y Volver</button>
                         <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-black bg-[var(--primary)] text-white hover:brightness-110 hover:-translate-y-0.5 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:hover:translate-y-0">
@@ -235,7 +227,8 @@ export const NewIncidentView = ({ isAdmin, user, showToast, navigate, logAction 
     );
 };
 
-export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModalOpen, isAdmin }: any) => {
+// 🔥 FIX: Ahora HistorialView administra su propio estado local de los modales y recibe las funciones de acción
+export const HistorialView = ({ showToast, isAdmin, toggleIncidentStatus, updateIncident, deleteIncident }: any) => {
     const [incidents, setIncidents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -247,8 +240,12 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
     const [exportType, setExportType] = useState('all');
     const [exportYear, setExportYear] = useState('');
     const [exportMonth, setExportMonth] = useState('');
-    
     const [isExporting, setIsExporting] = useState(false);
+
+    // 🔥 FIX: Estados locales para el modal de detalles y edición
+    const [selectedIncident, setSelectedIncident] = useState<any>(null);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [isEditOpen, setIsEditOpen] = useState(false);
 
     useEffect(() => {
         setIsLoading(true);
@@ -434,7 +431,7 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
                                                             <div className="border-t theme-border bg-[var(--surface)]">
                                                                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                                     {paginatedMonthItems.map((inc: any) => (
-                                                                        <button type="button" key={inc.id} onClick={() => { setSelectedIncidentId(inc.id); setDetailModalOpen(true); }} className="text-left p-5 theme-bg-container rounded-xl border theme-border shadow-sm hover:border-[var(--error)] transition-colors cursor-pointer group flex flex-col h-full border-l-4 border-l-[var(--error)]">
+                                                                        <button type="button" key={inc.id} onClick={() => { setSelectedIncident(inc); setIsDetailOpen(true); }} className="text-left p-5 theme-bg-container rounded-xl border theme-border shadow-sm hover:border-[var(--error)] transition-colors cursor-pointer group flex flex-col h-full border-l-4 border-l-[var(--error)]">
                                                                             <div className="flex items-start gap-3 mb-3">
                                                                                 <div className="w-10 h-10 rounded-lg theme-bg-low flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--error)] transition-colors"><ShieldAlert className="w-5 h-5 text-[var(--error)] group-hover:text-white transition-colors" /></div>
                                                                                 <div className="flex-1 min-w-0">
@@ -471,6 +468,7 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
                 )}
             </div>
 
+            {/* MODAL INTELIGENTE DE EXPORTACIÓN */}
             {isExportModalOpen && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
@@ -531,6 +529,23 @@ export const HistorialView = ({ showToast, setSelectedIncidentId, setDetailModal
                     </div>
                 </div>
             )}
+
+            {/* 🔥 FIX: Modales renderizados de forma autónoma dentro del historial */}
+            <DetailModal 
+                isOpen={isDetailOpen} 
+                onClose={() => setIsDetailOpen(false)} 
+                incident={selectedIncident} 
+                isAdmin={isAdmin} 
+                onToggleStatus={toggleIncidentStatus} 
+                onEdit={() => { setIsDetailOpen(false); setIsEditOpen(true); }} 
+                onDelete={deleteIncident} 
+            />
+            <EditIncidentModal 
+                isOpen={isEditOpen} 
+                onClose={() => setIsEditOpen(false)} 
+                incident={selectedIncident} 
+                onUpdate={updateIncident} 
+            />
         </>
     );
 };
@@ -578,8 +593,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
     return (
         <>
             <div className="max-w-5xl mx-auto space-y-10 fade-in pb-16 print:pb-0">
-                
-                {/* HERO HEADER CORPORATIVO */}
                 <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group no-print">
                     <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
                         <ListChecks className="w-48 h-48" />
@@ -608,7 +621,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
 
                 <h1 className="hidden print:block text-3xl font-bold text-black mb-8 border-b pb-4">Innova Management - Reporte de Mitigación de Crisis</h1>
 
-                {/* PANEL DE PROGRESO GLOBAL */}
                 <div className="p-6 sm:p-8 bg-black/5 dark:bg-white/5 rounded-[1.5rem] border theme-border shadow-inner print:border-gray-300 print:bg-white">
                     <div className="flex justify-between items-end mb-3">
                         <p className="text-sm font-bold theme-text-muted uppercase tracking-wider print:text-black">Estatus Operativo de Contención</p>
@@ -622,7 +634,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
                     </div>
                 </div>
 
-                {/* FASES MULTI-STEP */}
                 <div className="space-y-8">
                     {groupedChecklistData.map((group) => {
                         const groupCompletedCount = group.items.filter(i => checklistState[i.id]).length;
@@ -630,7 +641,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
 
                         return (
                             <div key={group.phase} className={`p-6 sm:p-8 theme-bg-container rounded-[1.5rem] border theme-border shadow-sm border-l-[6px] transition-all print:border-gray-300 print:bg-white print:break-inside-avoid ${isGroupDone ? 'border-l-gray-300 dark:border-l-gray-700 opacity-80 hover:opacity-100' : group.border}`}>
-                                
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b theme-border pb-5">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl transition-colors ${isGroupDone ? 'bg-[var(--success)] text-white' : `${group.bg} ${group.color}`}`}>
@@ -660,8 +670,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
                                                     <IconComponent className={`w-5 h-5 mr-3 flex-shrink-0 transition-colors ${isChecked ? 'text-[var(--success)] print:text-green-600' : 'theme-text-muted print:text-gray-500'}`} />
                                                     <span className={`text-sm font-bold transition-colors ${isChecked ? 'text-[var(--success)] print:text-green-700 line-through' : 'theme-text-main print:text-black'}`}>{item.text}</span>
                                                 </div>
-                                                
-                                                {/* CAMPO DE EVIDENCIA DESPLEGABLE */}
                                                 {isChecked && item.id === 'c1' && (
                                                     <div className="ml-10 mt-4 pt-4 border-t border-[var(--success)]/20 print:border-gray-200 fade-in">
                                                         <label htmlFor="cv-enlace-drive" className="text-xs font-black text-[var(--success)] print:text-black uppercase tracking-wider mb-2 flex items-center gap-2">
@@ -687,7 +695,6 @@ export const ChecklistView = ({ checklistState, setChecklistState, isAdmin, show
                 </div>
             </div>
 
-            {/* MODAL INTERNO DE REINICIO DE CHECKLIST */}
             {showResetModal && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in no-print">
                     <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">

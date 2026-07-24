@@ -3,7 +3,7 @@ import { ConfirmModal, PreviewModal } from '../../shared/components/Modals';
 import type { ConfirmModalState, PreviewModalState } from '../../shared/types/models';
 
 interface ModalContextType {
-    openConfirmModal: (title: string, msg: string, onConfirm: () => void) => void;
+    openConfirmModal: (title: any, msg?: string, onConfirm?: () => void) => void;
     openPreviewModal: (type: 'rrss' | 'comment', data: any) => void;
     closePreviewModal: () => void;
     onNavigateRef: React.MutableRefObject<(path: string) => void>;
@@ -16,8 +16,8 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     const [preview, setPreview] = useState<PreviewModalState>({ isOpen: false, type: '', data: null });
     const onNavigateRef = React.useRef<(path: string) => void>(() => {});
 
-    // 🚨 FIX REACT DOCTOR: Estabilizamos la función para que no rompa las dependencias del memo
-    const openConfirmModal = React.useCallback((title: string, msg: string, onConfirm: () => void) => {
+    // Acepta tanto 3 parámetros sueltos (title, msg, onConfirm) como 1 objeto { title, msg, onConfirm }
+    const openConfirmModal = React.useCallback((title: any, msg: string = '', onConfirm: () => void = () => {}) => {
         setConfirm({ isOpen: true, title, msg, onConfirm });
     }, []);
 
@@ -29,7 +29,6 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
         setPreview({ isOpen: false, type: '', data: null });
     }, []);
 
-    // 🚨 FIX REACT DOCTOR: useMemo para evitar renderizados infinitos en los consumidores
     const contextValue = useMemo(() => ({
         openConfirmModal,
         openPreviewModal,
@@ -45,7 +44,15 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
                 title={confirm.title} 
                 msg={confirm.msg} 
                 onClose={() => setConfirm(prev => ({ ...prev, isOpen: false }))} 
-                onConfirm={() => { confirm.onConfirm(); setConfirm(prev => ({ ...prev, isOpen: false })); }} 
+                onConfirm={() => { 
+                    // 🔥 BLINDAJE INTELIGENTE: Ejecuta la función sin importar si vino suelta o dentro de un objeto
+                    if (typeof confirm.onConfirm === 'function' && confirm.onConfirm.toString() !== '() => {}') {
+                        confirm.onConfirm();
+                    } else if (typeof confirm.title === 'object' && typeof (confirm.title as any)?.onConfirm === 'function') {
+                        (confirm.title as any).onConfirm();
+                    }
+                    setConfirm(prev => ({ ...prev, isOpen: false })); 
+                }} 
             />
             <PreviewModal 
                 state={preview}

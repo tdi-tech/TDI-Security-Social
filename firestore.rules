@@ -141,6 +141,21 @@ service cloud.firestore {
 
     match /artifacts/{appId}/public/data {
 
+      // 🔥 FIX: Lectura pública (if true) habilitada para que el Dashboard muestre datos a lectores no loggeados
+      match /tickets/{ticketId} {
+        allow read: if true; 
+        
+        allow create: if request.resource.data.keys().hasAll([
+          'prioridad', 'tema', 'mensaje', 'plataforma', 'formato', 
+          'objetivo', 'fechaLimite', 'pin', 'estado', 'timestamp'
+        ])
+        && request.resource.data.pin == 'INNOVA-2026'
+        && request.resource.data.estado == 'Pendiente';
+        
+        allow update: if isAnySignedIn();
+        allow delete: if isITAdmin(appId);
+      }
+
       match /users/{userEmail} {
         allow read: if isITAdmin(appId) || isCMAdmin(appId) || (isAuthenticated() && request.auth.token.email == userEmail);
         
@@ -176,7 +191,6 @@ service cloud.firestore {
         allow delete: if isITAdmin(appId) && resource.data.get('isProtected', false) != true;
       }
 
-      // 🔥 LECTURA PÚBLICA ACTIVADA PARA HISTORIALES
       match /incidents/{incidentId} {
         allow read: if true; 
         allow create: if isCMTeam(appId) && isValidIncident() && request.resource.data.id == incidentId;
@@ -184,7 +198,6 @@ service cloud.firestore {
         allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
-      // 🔥 LECTURA PÚBLICA ACTIVADA PARA RRSS
       match /rrss_incidents/{incidentId} {
         allow read: if true; 
         allow create: if isCMTeam(appId) && isValidRRSSIncident();
@@ -192,7 +205,6 @@ service cloud.firestore {
         allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
-      // 🔥 LECTURA PÚBLICA ACTIVADA PARA COMENTARIOS
       match /comments/{commentId} {
         allow read: if true; 
         allow create: if isCMTeam(appId) && isValidCommentReport();
@@ -226,7 +238,7 @@ service cloud.firestore {
           && request.resource.data.expireAt > request.time
           && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
         allow update: if false; 
-        allow delete: if false;
+        allow delete: if isITAdmin(appId);
       }
 
       match /appState/{docId} {

@@ -10,8 +10,15 @@ import { NewCommentView, HistorialCommentView } from '../features/comments/compo
 import { UserManagementView } from '../features/users/components/UserViews';
 import { BackupView } from '../features/backups/components/BackupView';
 import { AuditViews } from '../features/audit/components/AuditViews';
+// Agrega la importación en la parte superior:
+import { SolicitudTicketsView, GestionTicketsView } from '../features/tickets/components/TicketViews';
 
 type AccessLevel = 'PUBLIC' | 'LOGGED_IN' | 'ADMIN_IT' | 'ADMIN_CM_IT';
+
+
+
+
+
 
 interface RouteConfig {
     component: React.FC<any>;
@@ -40,6 +47,9 @@ export const ROUTES: Record<string, RouteConfig> = {
     
     'backups': { component: BackupView, access: 'ADMIN_IT' },
     'auditoria': { component: AuditViews, access: 'ADMIN_IT' },
+    // Agrega dentro del objeto ROUTES:
+    'solicitud-tickets': { component: SolicitudTicketsView, access: 'PUBLIC' },
+    'gestion-tickets': { component: GestionTicketsView, access: 'LOGGED_IN' },
 };
 
 export const AppRouter = ({ currentView, props }: { currentView: string, props: any }) => {

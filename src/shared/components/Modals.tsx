@@ -21,18 +21,24 @@ export const LoginModal = ({ isOpen, onClose, onGoogleLogin }: { isOpen: boolean
     );
 };
 
-export const ConfirmModal = ({ isOpen, title, msg, onConfirm, onClose }: { isOpen: boolean, title: string, msg: string, onConfirm: () => void, onClose: () => void }) => {
+export const ConfirmModal = ({ isOpen, title, msg, onConfirm, onClose }: any) => {
     if (!isOpen) return null;
+
+    // 🔥 BLINDAJE ANTI-CRASH: Extrae texto limpio en caso de recibir un objeto en lugar de un string
+    const displayTitle = typeof title === 'object' ? (title.title || "Confirmar acción") : (title || "Confirmar acción");
+    const displayMsg = typeof msg === 'object' ? (msg.msg || msg.message || "") : (typeof title === 'object' ? (title.msg || title.message || "") : (msg || ""));
+    const handleConfirm = typeof onConfirm === 'function' ? onConfirm : (typeof title === 'object' && typeof title.onConfirm === 'function' ? title.onConfirm : () => {});
+
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
             <div className="relative theme-bg-container theme-border border p-8 rounded-2xl w-full max-w-sm shadow-2xl text-center fade-in">
                 <div className="w-16 h-16 rounded-full bg-[var(--error)]/10 flex items-center justify-center mx-auto mb-4"><AlertTriangle className="w-8 h-8 text-[var(--error)]"/></div>
-                <h3 className="theme-text-main font-bold text-xl mb-2">{title}</h3>
-                <p className="text-sm theme-text-muted mb-8">{msg}</p>
+                <h3 className="theme-text-main font-bold text-xl mb-2">{displayTitle}</h3>
+                <p className="text-sm theme-text-muted mb-8">{displayMsg}</p>
                 <div className="flex justify-center gap-3">
-                    <button onClick={onClose} className="px-6 py-2.5 rounded-lg theme-text-muted hover:theme-text-main theme-bg-low font-medium text-sm transition-colors">Cancelar</button>
-                    <button onClick={onConfirm} className="px-6 py-2.5 bg-[var(--error)] hover:brightness-110 text-white rounded-lg font-bold text-sm shadow-sm transition-transform hover:-translate-y-0.5">Confirmar</button>
+                    <button type="button" onClick={onClose} className="px-6 py-2.5 rounded-lg theme-text-muted hover:theme-text-main theme-bg-low font-medium text-sm transition-colors">Cancelar</button>
+                    <button type="button" onClick={() => { handleConfirm(); if (onClose) onClose(); }} className="px-6 py-2.5 bg-[var(--error)] hover:brightness-110 text-white rounded-lg font-bold text-sm shadow-sm transition-transform hover:-translate-y-0.5">Confirmar</button>
                 </div>
             </div>
         </div>

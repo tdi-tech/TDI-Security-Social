@@ -3,10 +3,28 @@ import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layou
 
 const changelogData = [
     {
+        id: 'cl-v3-3-0',
+        version: 'Versión 3.3.0',
+        date: 'Julio 2026',
+        tag: 'Última Versión',
+        title: 'Módulo de Tickets Emergentes & Gestión Dinámica de Responsables',
+        changes: [
+            { id: 'ch-330-1', type: 'title', text: 'Emisión y Consola Operativa de Tickets' },
+            { id: 'ch-330-2', type: 'feature', text: 'Módulo de Tickets Emergentes: Despliegue de un nuevo canal para solicitudes rápidas de contenido con autenticación mediante PIN corporativo, semáforo de prioridad y editor visual enriquecido.' },
+            { id: 'ch-330-3', type: 'feature', text: 'Gestión Interna de Producción: Consola de control para documentar fechas reales de entrega, notas internas y enlaces de arte final o carpetas en la nube.' },
+            { id: 'ch-330-4', type: 'feature', text: 'Asignación Dinámica de Responsables: Selector personalizado integrado al perfil de Google Workspace que muestra foto y rol de cada miembro del equipo, enviando notificaciones directas y exclusivas al usuario asignado.' },
+            { id: 'ch-330-5', type: 'divider', text: '' },
+            { id: 'ch-330-6', type: 'title', text: 'Blindaje en Base de Datos y Simetría Visual' },
+            { id: 'ch-330-7', type: 'security', text: 'Erradicación de Alertas en Memoria Local: Eliminación absoluta de dependencias en localStorage para el cálculo de alertas. El contador visual ahora se gobierna 100% mediante arreglos de lectura en Firestore.' },
+            { id: 'ch-330-8', type: 'security', text: 'Sellado Doble de Identidad: Verificación simultánea por UID y correo electrónico para garantizar un conteo individual por usuario, eliminando falsos positivos en el menú al guardar metadatos.' },
+            { id: 'ch-330-9', type: 'ui', text: 'Simetría Visual y Portales React: Estandarización milimétrica (grid 2x2 a 48px de altura) en los campos de producción y renderizado de modales mediante ReactDOM.createPortal para un desenfoque que cubre el 100% de la pantalla sin tapar notificaciones emergentes.' }
+        ]
+    },
+    {
         id: 'cl-v3-2-3',
         version: 'Versión 3.2.3',
         date: 'Junio 2026',
-        tag: 'Última Versión',
+        tag: 'Estable',
         title: 'Optimización de Canales Operativos y Filtros de Monitoreo',
         changes: [
             { id: 'ch-323-1', type: 'title', text: 'Unificación de Criterios y Permisos Corporativos' },
@@ -44,7 +62,7 @@ const changelogData = [
             { id: 'ch-321-1', type: 'title', text: 'Políticas de Seguridad de Cero Confianza' },
             { id: 'ch-321-2', type: 'security', text: 'Validación Centralizada: Todo el control de accesos y roles institucionales se procesa directamente en el servidor central, impidiendo manipulaciones externas desde el navegador.' },
             { id: 'ch-321-3', type: 'security', text: 'Protección de Brechas Informativas: Bloqueo perimetral estricto a usuarios no identificados para la visualización de paneles operativos, alertas de incidentes y listas corporativas.' },
-            { id: 'ch-321-4', type: 'security', text: 'Resguardo de Cuentas Fundacionales: Las credenciales y rangos clave de la organización se encuentran protegidos a nivel de infraestructura para evitar cualquier modificación accidental.' },
+            { id: 'ch-321-4', type: 'security', text: 'Resguardo de Cuentas Fundacionales: Las credenciales y rangos clave de la organización se encuentran protegidos a nivel de infraestructura para evitar cualquier modification accidental.' },
             { id: 'ch-321-5', type: 'security', text: 'Vigía Preventivo de Sesión: Lanzamiento de un temporizador automático que concluye de forma segura la sesión tras detectar inactividad prolongada en la estación de trabajo.' },
             { id: 'ch-321-6', type: 'divider', text: '' },
             { id: 'ch-321-7', type: 'title', text: 'Cifrado Corporativo y Eficiencia de Red' },
@@ -81,7 +99,7 @@ const changelogData = [
         changes: [
             { id: 'ch-310-1', type: 'feature', text: 'Rediseño Absoluto del Dashboard: Organización modular mediante pestañas independientes para clasificar la información (Seguridad, Redes y Comentarios).' },
             { id: 'ch-310-2', type: 'feature', text: 'Métricas Visuales de Alto Nivel: Integración de gráficas analíticas automatizadas (Donut Charts, barras de progreso y tendencias de impacto) construidas de forma nativa.' },
-            { id: 'ch-310-3', type: 'ui', text: 'Estructuración Cronológica: Menús e historiales organizados mediante paneles colapsables ordenados por año y mes para agilizar las búsquedas.' },
+            { id: 'ch-310-3', type: 'ui', text: 'Estructuración Cronológica: Menús e historiales organizados mediante panels colapsables ordenados por año y mes para agilizar las búsquedas.' },
             { id: 'ch-310-4', type: 'feature', text: 'Paginación Modular del Servidor: Segmentación fija de registros por pantalla (30 elementos) para mantener el software veloz y reducir el consumo de ancho de banda.' },
             { id: 'ch-310-5', type: 'ui', text: 'Indicadores Visuales Operativos: Distintivos de color de alto contraste para identificar de un vistazo las tendencias de opinión o niveles de riesgo en los reportes.' },
             { id: 'ch-310-6', type: 'feature', text: 'Paneles de Apertura Rápida: Implementación de vistas previas emergentes dentro del tablero para consultar incidentes sin salir de la pantalla de análisis principal.' },
@@ -162,7 +180,6 @@ export const ChangelogView = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 fade-in pb-10">
-            {/* INYECCIÓN DE KEYFRAMES PARA TRANSICIÓN EN CASCADA */}
             <style>{`
                 @keyframes staggerFade {
                     0% { opacity: 0; transform: translateY(20px); }
@@ -170,7 +187,7 @@ export const ChangelogView = () => {
                 }
                 .stagger-item {
                     animation: staggerFade 0.6s ease-out forwards;
-                    opacity: 0; /* Asegura que nazcan invisibles antes de la animación */
+                    opacity: 0;
                 }
             `}</style>
 
@@ -275,7 +292,7 @@ export const ChangelogView = () => {
                         className="flex items-center gap-2 px-6 py-2.5 theme-bg-container border theme-border rounded-xl text-sm font-bold theme-text-main hover:border-[var(--primary)] hover:text-[var(--primary)] shadow-sm transition-all group"
                     >
                         <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                        Cargar versiones anteriores
+                        Cargar versions anteriores
                     </button>
                 </div>
             )}

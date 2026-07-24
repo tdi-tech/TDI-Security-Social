@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDoc, doc } from 'firebase/firestore';
-import { db, appId } from '../services/firebase/config';
+// 🔥 FIX: Importamos auth directamente para verificar la sesión al instante en el login
+import { db, appId, auth } from '../services/firebase/config';
 
 import { useTheme } from './providers/ThemeProvider';
 import { useToast } from './providers/ToastProvider';
@@ -11,10 +12,12 @@ import { useUsersManager } from '../features/users/hooks/useUsersManager';
 import { useIncidents } from '../features/incidents/hooks/useIncidents';
 import { useRRSS } from '../features/rrss/hooks/useRRSS';
 import { useComments } from '../features/comments/hooks/useComments';
+import { useTickets } from '../features/tickets/hooks/useTickets';
 
 import { AppRouter, ROUTES } from './routes';
 import { MainLayout } from '../shared/components/Layout/MainLayout';
 import { LoginModal } from '../shared/components/Modals';
+import { Inactivity } from '../shared/components/Inactivity';
 
 const AppContent = () => {
     const { isDarkMode, toggleTheme } = useTheme();
@@ -36,6 +39,7 @@ const AppContent = () => {
     const { toggleIncidentStatus, updateIncident, deleteIncident } = useIncidents(showToast, openConfirmModal, dummySetDetailModalOpen, logAction);
     const { updateRrssIncident, deleteRrssIncident } = useRRSS(showToast, openConfirmModal, logAction);
     const { updateComment, deleteComment } = useComments(showToast, openConfirmModal, logAction);
+    const { updateTicketStatus, updateTicketInternals, deleteTicket } = useTickets(showToast, openConfirmModal, logAction);
 
     const navigate = useCallback(async (view: string) => {
         const route = ROUTES[view] || ROUTES['dashboard'];
@@ -59,7 +63,23 @@ const AppContent = () => {
         setSidebarOpen(false);
     }, [isAdmin, userRole, showToast]); 
 
-    // 🔥 FIX: Cierre de sesión suave, primero navega y luego destruye la sesión
+    // 🔥 FIX: Redirección inmediata y garantizada al Dashboard tras un inicio de sesión real
+    const handleLogin = useCallback(async () => {
+        try {
+            await loginWithGoogle();
+            // Verificamos con el SDK de Firebase si el usuario autenticó con éxito (cero falsos positivos)
+            if (auth.currentUser) {
+                setLoginModalOpen(false);
+                setCurrentView('dashboard');
+                localStorage.setItem('innova_current_view', 'dashboard');
+                showToast('¡Bienvenido de vuelta a Innova Management!');
+            }
+        } catch (error) {
+            console.error("Inicio de sesión cancelado o fallido:", error);
+        }
+    }, [loginWithGoogle, showToast]);
+
+    // Redirección al Dashboard al cerrar sesión
     const handleLogout = useCallback(() => {
         navigate('dashboard');
         setTimeout(() => {
@@ -96,7 +116,7 @@ const AppContent = () => {
     const handleViewIncident = async (n: any) => {
         setNotifMenuOpen(false);
         try {
-            let colName: any = n.module === 'Hackeos' ? 'incidents' : n.module === 'Incidencia RRSS' ? 'rrss_incidents' : n.module === 'Comentarios' ? 'comments' : '';
+            let colName: any = n.module === 'Hackeos' ? 'incidents' : n.module === 'Incidencia RRSS' ? 'rrss_incidents' : n.module === 'Comentarios' ? 'comments' : n.module === 'Tickets' ? 'tickets' : '';
             if (!colName) return;
             const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, n.incidentId));
             
@@ -104,6 +124,7 @@ const AppContent = () => {
                 const data = { id: docSnap.id, ...docSnap.data() };
                 if (colName === 'incidents') { navigate('historial'); showToast('Apertura rápida. Busca en la lista.'); } 
                 else if (colName === 'rrss_incidents') openPreviewModal('rrss', data);
+                else if (colName === 'tickets') { navigate('gestion-tickets'); showToast('Abriendo consola de gestión.'); }
                 else openPreviewModal('comment', data);
             } else showToast('El registro fue eliminado', true);
         } catch(e) { showToast('Error al conectar con servidor', true); }
@@ -114,7 +135,9 @@ const AppContent = () => {
     const viewProps = {
         isAdmin, user, userRole, showToast, navigate, logAction, appUsers, checklistState, setChecklistState,
         updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser, isDarkMode, toggleTheme, userPrefs, updateUserPrefs,
-        toggleIncidentStatus, updateIncident, deleteIncident, updateRrssIncident, deleteRrssIncident, updateComment, deleteComment
+        toggleIncidentStatus, updateIncident, deleteIncident, updateRrssIncident, deleteRrssIncident, updateComment, deleteComment,
+        updateTicketStatus, updateTicketInternals, deleteTicket,
+        openConfirmModal
     };
 
     return (
@@ -128,7 +151,8 @@ const AppContent = () => {
             openLoginModal={() => setLoginModalOpen(true)} logoutAdmin={handleLogout}
         >
             <AppRouter currentView={currentView} props={viewProps} />
-            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={loginWithGoogle} />
+            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={handleLogin} />
+            <Inactivity onLogout={handleLogout} />
         </MainLayout>
     );
 };

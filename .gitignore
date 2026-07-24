@@ -13,6 +13,7 @@ lerna-debug.log*
 # Dependencias y Builds
 # =========================================
 node_modules/
+.pnpm-store/
 dist/
 dist-ssr/
 *.local

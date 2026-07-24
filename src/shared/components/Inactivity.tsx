@@ -72,7 +72,7 @@ export const Inactivity = ({ onLogout }: InactivityProps) => {
     if (!showModal) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4 fade-in no-print">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[99999] flex items-center justify-center p-4 fade-in no-print">
             <div className="theme-bg-container border theme-border rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-scale">
                 <div className="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
                     <AlertTriangle className="w-7 h-7" />

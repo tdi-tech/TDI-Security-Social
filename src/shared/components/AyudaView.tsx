@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
     HelpCircle, ShieldAlert, Database, Users, FileText, 
-    AlertTriangle, MessageSquareWarning, Info, Lock, Settings
+    AlertTriangle, MessageSquareWarning, Info, Lock, Settings,
+    Ticket // 🔥 FIX: Agregamos el icono para el apartado de Tickets
 } from 'lucide-react';
 
 const helpTopics = [
@@ -17,7 +18,7 @@ const helpTopics = [
                     <strong>Innova Management</strong> es una plataforma de gestión de crisis y seguridad diseñada bajo una arquitectura <em>Zero-Trust</em> (Cero Confianza). 
                 </p>
                 <p className="theme-text-muted">
-                    El sistema está dividido en tres módulos operativos principales (Hackeos, Crisis en RRSS y Comentarios) y módulos administrativos para el control total de la información.
+                    El sistema cuenta con módulos operativos para monitoreo (Hackeos, RRSS, Comentarios) y un sistema emergente de Tickets para la gestión y asignación de contenidos de producción.
                 </p>
             </div>
         )
@@ -36,22 +37,22 @@ const helpTopics = [
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo. Acceso total a incidentes. Permite pre-registrar y deshabilitar usuarios (sin modificar roles IT).</p>
+                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo. Acceso total a incidentes y consola de gestión de tickets. Permite pre-registrar y deshabilitar usuarios operativos.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel básico operativo. Capacidad de crear y editar incidentes sin acceso al panel de usuarios.</p>
+                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Capacidad de crear y editar incidentes, así como ser asignado como responsable en la producción de tickets.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
-                    <p><strong className="theme-text-main">Lector:</strong> Visualización de Dashboard y protocolos. Sin permisos de escritura.</p>
+                    <p><strong className="theme-text-main">Lector:</strong> Visualización de Dashboard y protocolos. Permite emitir solicitudes en el módulo de Tickets Emergentes autenticándose con PIN corporativo.</p>
                 </li>
             </ul>
         )
     },
     {
         id: 'modulos',
-        title: 'Gestión de Reportes',
+        title: 'Gestión de Reportes & Tickets',
         icon: <FileText className="w-6 h-6 text-emerald-500" />,
         badge: 'Operativo',
         badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
@@ -76,6 +77,14 @@ const helpTopics = [
                     <div>
                         <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Comentarios</p>
                         <p className="theme-text-muted text-xs">Reportes unificados de interacción comunitaria y trazabilidad de quejas.</p>
+                    </div>
+                </div>
+                {/* 🔥 FIX: Nueva sección explicando el módulo operativo de Tickets */}
+                <div className="flex gap-3 items-start group/item pt-1 border-t theme-border/40">
+                    <Ticket className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
+                    <div>
+                        <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Tickets (Emergentes)</p>
+                        <p className="theme-text-muted text-xs">Canal de solicitud de contenidos protegido por PIN. Permite al equipo asignar responsables directos, fechas reales de entrega y ligas de arte en la nube con notificaciones dirigidas.</p>
                     </div>
                 </div>
             </div>

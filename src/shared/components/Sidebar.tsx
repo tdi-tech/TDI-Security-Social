@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     LayoutDashboard, Leaf, ShieldAlert, FileText, ListChecks, Users, BookOpen, 
     AlertTriangle, Settings, HelpCircle, Smartphone, MessageSquareWarning, 
-    ChevronDown, ChevronRight, History, Cloud, CloudOff, Database
+    ChevronDown, ChevronRight, History, Cloud, CloudOff, Database, Ticket
 } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db, appId, auth } from '../../services/firebase/config';
 
-// 🚨 FIX REACT DOCTOR: Extracción a nivel de módulo para evitar renderizados fantasma
 const NavBtn = ({ id, icon: Icon, label, currentView, navigate }: any) => (
     <button 
         onClick={() => navigate(id)}
@@ -20,27 +21,36 @@ const NavBtn = ({ id, icon: Icon, label, currentView, navigate }: any) => (
     </button>
 );
 
-const SubNavBtn = ({ id, icon: Icon, label, currentView, navigate, requireAdmin, isAdmin }: any) => {
+const SubNavBtn = ({ id, icon: Icon, label, currentView, navigate, requireAdmin, isAdmin, badgeCount }: any) => {
     if (requireAdmin && !isAdmin) return null;
     
     return (
         <button 
             onClick={() => navigate(id)}
-            className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all pl-8 ${
+            className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-sm font-medium transition-all pl-8 ${
                 currentView === id 
                 ? 'bg-[var(--primary)]/10 text-[var(--primary)] font-bold' 
                 : 'theme-text-muted hover:theme-bg-low hover:theme-text-main'
             }`}
         >
-            <Icon className="w-4 h-4 opacity-70" />
-            {label}
+            <div className="flex items-center gap-3">
+                <Icon className="w-4 h-4 opacity-70" />
+                <span>{label}</span>
+            </div>
+            {badgeCount > 0 && (
+                <span className="relative flex h-5 w-5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-5 w-5 bg-purple-600 text-white text-[10px] font-black items-center justify-center shadow-md">
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                </span>
+            )}
         </button>
     );
 };
 
-const DropdownGroup = ({ id, icon: Icon, label, children, openGroup, toggleGroup, currentView }: any) => {
+const DropdownGroup = ({ id, icon: Icon, label, children, openGroup, toggleGroup, currentView, badgeCount }: any) => {
     const isOpen = openGroup === id;
-    // Extraemos si algún hijo está activo clonando los hijos para leer sus props con cuidado
     let isActive = false;
     React.Children.forEach(children, (child: any) => {
         if (child && child.props && child.props.id === currentView) {
@@ -60,7 +70,17 @@ const DropdownGroup = ({ id, icon: Icon, label, children, openGroup, toggleGroup
                     <Icon className={`w-5 h-5 ${isActive ? 'text-[var(--primary)]' : ''}`} />
                     <span className={isActive ? 'text-[var(--primary)]' : ''}>{label}</span>
                 </div>
-                {isOpen ? <ChevronDown className="w-4 h-4 opacity-50 transition-transform" /> : <ChevronRight className="w-4 h-4 opacity-50 transition-transform" />}
+                <div className="flex items-center gap-2">
+                    {badgeCount > 0 && !isOpen && (
+                        <span className="relative flex h-5 w-5 items-center justify-center">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-5 w-5 bg-purple-600 text-white text-[10px] font-black items-center justify-center shadow-md">
+                                {badgeCount > 99 ? '99+' : badgeCount}
+                            </span>
+                        </span>
+                    )}
+                    {isOpen ? <ChevronDown className="w-4 h-4 opacity-50 transition-transform" /> : <ChevronRight className="w-4 h-4 opacity-50 transition-transform" />}
+                </div>
             </button>
             
             <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
@@ -74,7 +94,7 @@ const DropdownGroup = ({ id, icon: Icon, label, children, openGroup, toggleGroup
     );
 };
 
-export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus, userRole }: any) => {
+export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, isAdmin, cloudStatus, userRole, user }: any) => {
     
     const isDisconnected = cloudStatus.includes('Desconectado');
     const isError = cloudStatus.includes('Error');
@@ -88,8 +108,38 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         if (['protocolo', 'nuevo', 'checklist', 'historial', 'glosario'].includes(view)) return 'hackeos';
         if (['protocolo-rss', 'nuevo-rss', 'historial-rss'].includes(view)) return 'rss';
         if (['nuevo-comentario', 'historial-comentario'].includes(view)) return 'comentarios';
+        if (['solicitud-tickets', 'gestion-tickets'].includes(view)) return 'tickets';
         return 'hackeos'; 
     });
+
+    const [newTicketsCount, setNewTicketsCount] = useState(0);
+
+    // 🔥 FIX: Eliminado el bloqueo if (!user). Ahora toma auth.currentUser si user llega undefined.
+    useEffect(() => {
+        if (!isAdmin) {
+            setNewTicketsCount(0);
+            return;
+        }
+        
+        const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tickets'), (snap) => {
+            let count = 0;
+            const currentUser = user || auth.currentUser;
+            
+            snap.forEach((doc) => {
+                const data = doc.data();
+                const isReadByCurrentUser = currentUser && (data.readBy || []).some((id: string) => 
+                    (currentUser.uid && id === currentUser.uid) || (currentUser.email && id === currentUser.email)
+                );
+                
+                // SOLO se suma si el ticket está 'Pendiente' y el administrador loggeado aún no lo ha visto
+                if (data.estado === 'Pendiente' && !isReadByCurrentUser) {
+                    count++;
+                }
+            });
+            setNewTicketsCount(count);
+        });
+        return () => unsub();
+    }, [isAdmin, user]);
 
     const toggleGroup = (group: string) => {
         setOpenGroup(openGroup === group ? '' : group);
@@ -109,7 +159,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     </div>
                     <div>
                         <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas</h1>
-                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.2.3</p>
+                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.3.0</p>
                     </div>
                 </div>
                 
@@ -135,6 +185,11 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
                         <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
                         <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                    </DropdownGroup>
+
+                    <DropdownGroup id="tickets" icon={Ticket} label="Emergentes" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView} badgeCount={newTicketsCount}>
+                        {!isAdmin && <SubNavBtn id="solicitud-tickets" icon={AlertTriangle} label="Solicitar Ticket" currentView={currentView} navigate={navigate} />}
+                        {isAdmin && <SubNavBtn id="gestion-tickets" icon={FileText} label="Gestionar Tickets" currentView={currentView} navigate={navigate} badgeCount={newTicketsCount} />}
                     </DropdownGroup>
 
                     <div className="my-2 border-t theme-border opacity-50"></div>

@@ -7,7 +7,6 @@ import {
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
 
-// 🚨 FIX REACT DOCTOR: Función pura movida afuera del componente
 const playSynthesizedNotification = () => {
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -49,7 +48,6 @@ export const ConfigView = ({
     isDarkMode, toggleTheme, userRole, userPrefs, updateUserPrefs, showToast
 }: any) => {
 
-    // 🚨 FIX REACT DOCTOR: Inicialización perezosa (lazy init) en lugar de usar un useEffect al montar
     const [cacheSize, setCacheSize] = useState(() => {
         let total = 0;
         for (let x in localStorage) {
@@ -65,26 +63,26 @@ export const ConfigView = ({
     const [globalTracesCount, setGlobalTracesCount] = useState<number | null>(null);
     const [isPurgeModalOpen, setIsPurgeModalOpen] = useState(false);
 
-    // Evitamos el crasheo si userPrefs aún no se hidrata desde useAuthSession
     const prefs = userPrefs || { sound: true, security: true, rrss: true, comments: true };
 
     const cleanRole = userRole?.toUpperCase()?.trim() || '';
     const isITAdmin = cleanRole === 'ADMIN_IT';
     const isCMUser = cleanRole === 'ADMIN_CM' || cleanRole === 'EDITOR_CM';
 
-    // 🚨 FIX REACT DOCTOR: Usamos useCallback para estabilizar la función y cumplir con las dependencias
+    // 🔥 FIX: Sumamos la colección 'tickets' al conteo de Registros Operativos seguros
     const fetchGlobalServerStats = useCallback(async () => {
         if (!isITAdmin) return;
         try {
-            const [hackeos, rrss, coms, notifs, logsAudit] = await Promise.all([
+            const [hackeos, rrss, coms, tickets, notifs, logsAudit] = await Promise.all([
                 getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'incidents')),
                 getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents')),
                 getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'comments')),
+                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'tickets')),
                 getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'notifications')),
                 getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auditLogs'))
             ]);
             
-            setGlobalOperativeCount(hackeos.size + rrss.size + coms.size);
+            setGlobalOperativeCount(hackeos.size + rrss.size + coms.size + tickets.size);
             setGlobalTracesCount(notifs.size + logsAudit.size);
         } catch (error) {
             console.error("Error al consultar el servidor:", error);
@@ -110,6 +108,7 @@ export const ConfigView = ({
         showToast('Memoria caché local liberada correctamente.');
     };
 
+    // 🔥 FIX: La purga se mantiene estrictamente aislada a notificaciones y auditLogs
     const handlePurgeTraces = async () => {
         setIsPurgeModalOpen(false);
         setIsPurging(true);
@@ -260,7 +259,11 @@ export const ConfigView = ({
                                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 theme-bg-low border border-red-500/30 rounded-xl transition-colors bg-red-500/5">
                                     <div className="flex items-center gap-3 w-full sm:w-auto">
                                         <div className="p-2 bg-red-500/10 rounded-lg text-red-500"><Trash2 className="w-5 h-5"/></div>
-                                        <div><p className="text-sm font-bold theme-text-main text-red-500 dark:text-red-400">Purgar Servidor Global</p><p className="text-[11px] text-red-500/70 dark:text-red-400/70 max-w-xs leading-tight mt-0.5">Elimina notificaciones y logs del Radar de Intrusos. No afecta historiales.</p></div>
+                                        <div>
+                                            <p className="text-sm font-bold theme-text-main text-red-500 dark:text-red-400">Purgar Servidor Global</p>
+                                            {/* 🔥 FIX: Leyenda actualizada especificando que los tickets están a salvo */}
+                                            <p className="text-[11px] text-red-500/70 dark:text-red-400/70 max-w-xs leading-tight mt-0.5">Elimina notificaciones y logs de auditoría. No afecta historiales ni tickets emergentes.</p>
+                                        </div>
                                     </div>
                                     <button type="button" onClick={() => { if (globalTracesCount === 0 || globalTracesCount === null) { showToast('El servidor ya está limpio.'); return; } setIsPurgeModalOpen(true); }} disabled={isPurging || globalTracesCount === 0 || globalTracesCount === null} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-500 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">{isPurging ? 'Purgando Servidor...' : 'Vaciar Servidor'}</button>
                                 </div>
@@ -280,7 +283,8 @@ export const ConfigView = ({
                         <div className="p-6 space-y-4">
                             <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-3">
                                 <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">¿Estás seguro de que deseas vaciar por completo las notificaciones operativas y todos los registros forenses del **Radar de Intrusos**? Los expedientes permanecerán intactos.</p>
+                                {/* 🔥 FIX: Texto del modal confirmando protección de historiales y tickets */}
+                                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">¿Estás seguro de que deseas vaciar por completo las notificaciones operativas y todos los registros forenses del **Radar de Intrusos**? Los expedientes e historiales de tickets permanecerán intactos.</p>
                             </div>
                         </div>
                         <div className="p-4 border-t theme-border bg-black/5 dark:bg-white/5 flex gap-3 justify-end">
