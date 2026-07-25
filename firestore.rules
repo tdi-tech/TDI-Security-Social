@@ -6,6 +6,7 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null
         && request.auth.token.email != null
+        && request.auth.token.email.matches('.*@tierradeideas\\.mx$')
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
@@ -66,7 +67,7 @@ service cloud.firestore {
       && data.plataforma is string
       && data.vector is string
       && data.descripcion is string
-      && data.impacto in ['Bajo', 'Medio', 'Alto', 'Crítico'] 
+      && data.impacto in ['Bajo', 'Medio', 'Alto', 'Crítico', 'Critico'] 
       && data.estado in ['Abierto', 'Resuelto']
       && (!('vistas' in data) || data.vistas is number)
       && (!('interacciones' in data) || data.interacciones is number)
@@ -80,7 +81,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
         'totalIncidencias', 'fecha', 'usuario', 'medio', 'campus', 'riesgo', 
         'descripcion', 'area', 'comentarios', 'enlacePublicacion', 'enlaceDrive', 
-        'reporteTexto', 'autor', 'timestamp'
+        'reporteTexto', 'autor', 'timestamp', 'id'
       ])
       && data.keys().hasAll([
         'totalIncidencias', 'fecha', 'usuario', 'medio', 'campus', 'riesgo', 'descripcion', 'autor', 'timestamp'
@@ -90,9 +91,10 @@ service cloud.firestore {
       && data.usuario is string
       && data.medio is string
       && data.campus is string
-      && data.riesgo in ['Bajo', 'Medio', 'Alto', 'Critico'] 
+      && data.riesgo in ['Bajo', 'Medio', 'Alto', 'Critico', 'Crítico'] 
       && data.autor is string
       && data.timestamp is string
+      && (!('id' in data) || data.id is string)
       && (!('area' in data) || data.area is string)
       && (!('comentarios' in data) || data.comentarios is string)
       && (!('enlacePublicacion' in data) || data.enlacePublicacion is string)
@@ -104,7 +106,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
         'fechaInicio', 'fechaFin', 'contenido', 'evidencia', 'comentariosList', 
-        'autor', 'timestamp'
+        'autor', 'timestamp', 'id'
       ])
       && data.keys().hasAll([
         'fechaInicio', 'fechaFin', 'contenido', 'comentariosList', 'autor', 'timestamp'
@@ -115,6 +117,7 @@ service cloud.firestore {
       && data.comentariosList is list
       && data.autor is string
       && data.timestamp is string
+      && (!('id' in data) || data.id is string)
       && (!('evidencia' in data) || data.evidencia is string);
     }
 
@@ -141,19 +144,31 @@ service cloud.firestore {
 
     match /artifacts/{appId}/public/data {
 
-      // 🔥 FIX: Lectura pública (if true) habilitada para que el Dashboard muestre datos a lectores no loggeados
+      match /firewall_locks/{lockId} {
+        allow read, write: if true;
+      }
+
       match /tickets/{ticketId} {
         allow read: if true; 
         
-        allow create: if request.resource.data.keys().hasAll([
+        allow create: if request.resource.data.keys().hasOnly([
           'prioridad', 'tema', 'mensaje', 'plataforma', 'formato', 
-          'objetivo', 'fechaLimite', 'pin', 'estado', 'timestamp'
+          'objetivo', 'fechaLimite', 'pin', 'estado', 'timestamp',
+          'autor', 'fechaEntregaReal', 'linkArte', 'notasInternas',
+          'responsable', 'readBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'prioridad', 'tema', 'mensaje', 'plataforma', 'formato', 
+          'objetivo', 'fechaLimite', 'pin', 'estado', 'timestamp', 'readBy'
         ])
         && request.resource.data.pin == 'INNOVA-2026'
-        && request.resource.data.estado == 'Pendiente';
+        && request.resource.data.estado == 'Pendiente'
+        && request.resource.data.readBy == []
+        && request.resource.data.get('responsable', '') == ''
+        && request.resource.data.get('notasInternas', '') == '';
         
-        allow update: if isAnySignedIn();
-        allow delete: if isITAdmin(appId);
+        allow update: if isCMTeam(appId);
+        allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
       match /users/{userEmail} {
@@ -193,7 +208,7 @@ service cloud.firestore {
 
       match /incidents/{incidentId} {
         allow read: if true; 
-        allow create: if isCMTeam(appId) && isValidIncident() && request.resource.data.id == incidentId;
+        allow create: if isCMTeam(appId) && isValidIncident();
         allow update: if isCMTeam(appId) && isValidIncident() && request.resource.data.id == resource.data.id && request.resource.data.fecha == resource.data.fecha && request.resource.data.autor == resource.data.autor;
         allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
@@ -215,14 +230,18 @@ service cloud.firestore {
       match /notifications/{notificationId} {
         allow read: if isAnySignedIn();
         allow create: if userExists(appId) && isValidNotification() && request.resource.data.userId == request.auth.uid;
-        allow update: if userExists(appId) && isValidNotification() && request.resource.data.userId == resource.data.userId && request.resource.data.action == resource.data.action && request.resource.data.timestamp == resource.data.timestamp;
-        allow delete: if isITAdmin(appId);
+        allow update: if userExists(appId) && (
+          isCMTeam(appId) || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy', 'deletedBy'])
+          )
+        );
+        allow delete: if isITAdmin(appId) || (isAnySignedIn() && resource.data.userId == request.auth.uid);
       }
 
+      // 🔥 BLINDAJE DE AUDITORÍA TOTAL: Permite registrar alarmas de autenticados y de lectores/IPs anónimos
       match /auditLogs/{logId} {
         allow read: if isITAdmin(appId);
-        allow create: if isAuthenticated()
-          && request.resource.data.keys().hasOnly([
+        allow create: if request.resource.data.keys().hasOnly([
             'ip', 'pais', 'fecha', 'uid', 'email',
             'provider', 'userAgent', 'accion', 'expireAt'
           ])
@@ -233,10 +252,12 @@ service cloud.firestore {
           && request.resource.data.uid is string
           && request.resource.data.provider is string
           && request.resource.data.accion is string
-          && request.resource.data.uid == request.auth.uid 
-          && request.resource.data.email == request.auth.token.email
           && request.resource.data.expireAt > request.time
-          && request.resource.data.expireAt <= request.time + duration.value(14, 'd');
+          && request.resource.data.expireAt <= request.time + duration.value(14, 'd')
+          && (
+            (request.auth != null && request.resource.data.uid == request.auth.uid) ||
+            (request.auth == null && request.resource.data.uid == 'anonymous_attacker')
+          );
         allow update: if false; 
         allow delete: if isITAdmin(appId);
       }

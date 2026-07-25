@@ -9,6 +9,7 @@ import {
 import { collection, addDoc, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db, appId, auth } from '../../../services/firebase/config';
 import DOMPurify from 'dompurify';
+import { useTickets } from '../hooks/useTickets';
 
 const inputStyles = "w-full p-3 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all text-sm";
 const gridInputExactClass = "w-full h-12 px-3.5 rounded-xl theme-bg-low border theme-border theme-text-main focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all text-xs font-semibold box-border flex items-center";
@@ -36,9 +37,11 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
         prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: 'Instagram',
         objetivo: '', fechaLimite: '', pin: '', formato: ''
     });
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPin, setShowPin] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
+
+    // 🔥 CONECTADO AL SERVIDOR EN TIEMPO REAL: Extraemos el contador y bloqueo del hook
+    const { createTicket, isSubmitting, ticketRemainingAttempts, ticketLockoutUntil } = useTickets(showToast, null);
 
     const execCommand = (command: string, value: string = '') => {
         document.execCommand(command, false, value);
@@ -53,22 +56,16 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.pin.trim()) return showToast('Por favor ingresa el PIN corporativo.', true);
-        setIsSubmitting(true);
-        try {
-            const cleanHTML = DOMPurify.sanitize(editorRef.current ? editorRef.current.innerHTML : formData.formato);
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tickets'), {
-                ...formData, formato: cleanHTML, estado: 'Pendiente', timestamp: new Date().toISOString(),
-                fechaEntregaReal: '', linkArte: '', notasInternas: '', autor: 'Innova Cliente (Web)',
-                responsable: '', readBy: []
-            });
-            showToast('¡Ticket emergente enviado con éxito a producción!');
+        
+        const cleanHTML = DOMPurify.sanitize(editorRef.current ? editorRef.current.innerHTML : formData.formato);
+        const success = await createTicket({ ...formData, formato: cleanHTML });
+        if (success) {
             setFormData({ prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: 'Instagram', objetivo: '', fechaLimite: '', pin: '', formato: '' });
             if (editorRef.current) editorRef.current.innerHTML = '';
-        } catch (error: any) {
-            showToast('Acceso denegado: El PIN corporativo es incorrecto.', true);
         }
-        setIsSubmitting(false);
     };
+
+    const isLocked = ticketLockoutUntil !== null && Date.now() < ticketLockoutUntil;
 
     return (
         <>
@@ -90,27 +87,52 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6 px-2 sm:px-6">
-                    <div className="p-6 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className={`p-6 border rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
+                        isLocked 
+                        ? 'bg-red-500/10 border-red-500/40' 
+                        : ticketRemainingAttempts <= 2 
+                        ? 'bg-yellow-500/10 border-yellow-500/40' 
+                        : 'bg-purple-500/10 border-purple-500/30'
+                    }`}>
                         <div className="flex items-center gap-3">
-                            <div className="p-3 bg-purple-500 text-white rounded-xl shadow-md"><Lock className="w-5 h-5"/></div>
+                            <div className={`p-3 rounded-xl shadow-md text-white ${isLocked ? 'bg-red-500' : 'bg-purple-500'}`}>
+                                <Lock className="w-5 h-5"/>
+                            </div>
                             <div>
-                                <h4 className="font-bold theme-text-main text-sm">Autenticación de Cliente</h4>
-                                <p className="text-xs theme-text-muted">Ingresa tu PIN de seguridad asignado por Tierra de Ideas.</p>
+                                <h4 className="font-bold theme-text-main text-sm flex items-center gap-2">
+                                    Autenticación de Cliente
+                                    {/* 🔥 AQUÍ ESTÁ EL CONTADOR VISUAL EN VIVO */}
+                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
+                                        isLocked ? 'bg-red-500 text-white animate-pulse' :
+                                        ticketRemainingAttempts <= 2 ? 'bg-yellow-500 text-black' : 'bg-purple-500/20 text-purple-500'
+                                    }`}>
+                                        {isLocked ? '🔒 BLOQUEADO EN SERVIDOR' : `${ticketRemainingAttempts} de 5 intentos`}
+                                    </span>
+                                </h4>
+                                <p className="text-xs theme-text-muted">
+                                    {isLocked 
+                                        ? 'Has superado el límite de intentos en el servidor. Tu IP fue bloqueada por 30 min.'
+                                        : 'Ingresa tu PIN de seguridad asignado por Tierra de Ideas.'}
+                                </p>
                             </div>
                         </div>
                         <div className="relative flex items-center w-full sm:w-56">
                             <input 
                                 type={showPin ? "text" : "password"} 
-                                placeholder="PIN Corporativo" 
+                                placeholder={isLocked ? "BLOQUEADO" : "PIN Corporativo"} 
                                 required 
+                                disabled={isLocked || isSubmitting}
                                 value={formData.pin} 
                                 onChange={(e) => setFormData({...formData, pin: e.target.value})} 
-                                className={`${inputStyles} w-full text-center font-mono tracking-widest text-base font-bold bg-white dark:bg-gray-900 border-purple-500/50 pr-10`} 
+                                className={`${inputStyles} w-full text-center font-mono tracking-widest text-base font-bold bg-white dark:bg-gray-900 border-purple-500/50 pr-10 ${
+                                    isLocked ? 'opacity-50 cursor-not-allowed border-red-500 text-red-500' : ''
+                                }`} 
                             />
                             <button 
                                 type="button" 
+                                disabled={isLocked}
                                 onClick={() => setShowPin(!showPin)}
-                                className="absolute right-3 text-gray-400 hover:text-purple-500 transition-colors focus:outline-none"
+                                className="absolute right-3 text-gray-400 hover:text-purple-500 transition-colors focus:outline-none disabled:opacity-30"
                                 title={showPin ? "Ocultar PIN" : "Mostrar PIN"}
                             >
                                 {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -122,7 +144,7 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Semáforo de Prioridad</label>
-                                <select value={formData.prioridad} onChange={(e) => setFormData({...formData, prioridad: e.target.value})} className={`${inputStyles} font-bold`}>
+                                <select disabled={isLocked} value={formData.prioridad} onChange={(e) => setFormData({...formData, prioridad: e.target.value})} className={`${inputStyles} font-bold`}>
                                     <option value="🟢 Baja">🟢 Baja</option>
                                     <option value="🟡 Media">🟡 Media</option>
                                     <option value="🟠 Alta">🟠 Alta</option>
@@ -131,36 +153,42 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Plataforma</label>
-                                <select value={formData.plataforma} onChange={(e) => setFormData({...formData, plataforma: e.target.value})} className={inputStyles}>
+                                <select disabled={isLocked} value={formData.plataforma} onChange={(e) => setFormData({...formData, plataforma: e.target.value})} className={inputStyles}>
                                     {PLATAFORMAS_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Fecha Límite / Salida</label>
-                                <input type="date" required value={formData.fechaLimite} onChange={(e) => setFormData({...formData, fechaLimite: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} />
+                                <input disabled={isLocked} type="date" required value={formData.fechaLimite} onChange={(e) => setFormData({...formData, fechaLimite: e.target.value})} className={`${inputStyles} [color-scheme:light] dark:[color-scheme:dark]`} />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Tema de la publicación</label><input type="text" required placeholder="Ej: Apertura de inscripciones ciclo escolar..." value={formData.tema} onChange={(e) => setFormData({...formData, tema: e.target.value})} className={inputStyles} /></div>
-                            <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Objetivo del contenido</label><input type="text" required placeholder="Ej: Tráfico a landing page, captación de leads..." value={formData.objetivo} onChange={(e) => setFormData({...formData, objetivo: e.target.value})} className={inputStyles} /></div>
+                            <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Tema de la publicación</label><input disabled={isLocked} type="text" required placeholder="Ej: Apertura de inscripciones ciclo escolar..." value={formData.tema} onChange={(e) => setFormData({...formData, tema: e.target.value})} className={inputStyles} /></div>
+                            <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Objetivo del contenido</label><input disabled={isLocked} type="text" required placeholder="Ej: Tráfico a landing page, captación de leads..." value={formData.objetivo} onChange={(e) => setFormData({...formData, objetivo: e.target.value})} className={inputStyles} /></div>
                         </div>
 
-                        <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mensaje o Copy Sugerido</label><textarea rows={3} required placeholder="Redacta el mensaje principal que se debe comunicar..." value={formData.mensaje} onChange={(e) => setFormData({...formData, mensaje: e.target.value})} className={`${inputStyles} resize-none leading-relaxed`}></textarea></div>
+                        <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mensaje o Copy Sugerido</label><textarea disabled={isLocked} rows={3} required placeholder="Redacta el mensaje principal que se debe comunicar..." value={formData.mensaje} onChange={(e) => setFormData({...formData, mensaje: e.target.value})} className={`${inputStyles} resize-none leading-relaxed`}></textarea></div>
 
                         <div className="space-y-1.5 pt-2">
                             <label className="text-xs font-bold theme-text-muted uppercase tracking-wider flex justify-between items-center">Formato Especificado (Editor Visual)<span className="font-normal text-purple-500">Requerimientos visuales o de guion</span></label>
-                            <div className="border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden bg-[var(--surface)] shadow-inner">
+                            <div className={`border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden bg-[var(--surface)] shadow-inner ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}>
                                 <EditorToolbar onCommand={execCommand} />
-                                <div ref={editorRef} contentEditable onBlur={handleEditorBlur} className="w-full p-4 theme-bg-low theme-text-main outline-none min-h-[160px] max-h-[350px] overflow-y-auto text-sm leading-relaxed custom-scrollbar wysiwyg-content" data-placeholder="Detalla si es Reel 30s, Carrusel de 5 slides, Video con dron, etc..."></div>
+                                <div ref={editorRef} contentEditable={!isLocked} onBlur={handleEditorBlur} className="w-full p-4 theme-bg-low theme-text-main outline-none min-h-[160px] max-h-[350px] overflow-y-auto text-sm leading-relaxed custom-scrollbar wysiwyg-content" data-placeholder="Detalla si es Reel 30s, Carrusel de 5 slides, Video con dron, etc..."></div>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex justify-end pt-4">
-                        <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-black bg-purple-600 text-white hover:bg-purple-500 shadow-lg transition-all disabled:opacity-50">
-                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : <Send className="w-5 h-5"/>}
-                            {isSubmitting ? 'Verificando firewall...' : 'Emitir Ticket a Producción'}
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting || isLocked} 
+                            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-black text-white shadow-lg transition-all ${
+                                isLocked ? 'bg-red-500 hover:bg-red-600 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 disabled:opacity-50'
+                            }`}
+                        >
+                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : isLocked ? <Lock className="w-5 h-5"/> : <Send className="w-5 h-5"/>}
+                            {isSubmitting ? 'Verificando firewall...' : isLocked ? 'Acceso Bloqueado en Servidor (30 min)' : 'Emitir Ticket a Producción'}
                         </button>
                     </div>
                 </form>
@@ -173,7 +201,6 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // 🔥 BLINDAJE 1: Tipado explícito (u: any) para el compilador estricto
     const selectedUser = users.find((u: any) => (u.displayName || u.email) === selectedValue);
 
     useEffect(() => {
@@ -197,7 +224,6 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
                                 <img src={selectedUser.photoURL} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-purple-500/50" />
                             ) : (
                                 <div className="w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">
-                                    {/* 🔥 BLINDAJE 2: Evita crash visual si el usuario no tiene nombre registrado */}
                                     {(selectedUser.displayName || selectedUser.email || 'U').charAt(0).toUpperCase()}
                                 </div>
                             )}
@@ -219,7 +245,6 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
                         <div className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-[10px]">-</div>
                         <span>-- Sin asignar --</span>
                     </div>
-                    {/* 🔥 BLINDAJE 1: Tipado explícito (u: any) */}
                     {users.map((u: any) => {
                         const val = u.displayName || u.email;
                         const isSelected = val === selectedValue;
@@ -234,7 +259,6 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
                                         <img src={u.photoURL} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0 border border-purple-500/30" />
                                     ) : (
                                         <div className="w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                                            {/* 🔥 BLINDAJE 2: Fallback seguro de avatar */}
                                             {(val || 'U').charAt(0).toUpperCase()}
                                         </div>
                                     )}
@@ -257,7 +281,6 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [filterEstado, setFilterEstado] = useState('Todos');
 
-    // 🔥 BLINDAJE 1: Tipado explícito (u: any)
     const activeTeamUsers = useMemo(() => {
         return (appUsers || []).filter((u: any) => !u.disabled);
     }, [appUsers]);
@@ -273,7 +296,6 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
                 arr.push({ id: d.id, ...data });
                 
                 if (currentUser && data.estado === 'Pendiente') {
-                    // 🔥 BLINDAJE 3: Previene caída si currentUser no tiene uid temporalmente en la recarga
                     const isAlreadyRead = (data.readBy || []).some((id: string) => 
                         (currentUser?.uid && id === currentUser.uid) || (currentUser?.email && id === currentUser.email)
                     );
@@ -292,7 +314,6 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
         return () => unsub();
     }, [user]);
 
-    // 🔥 BLINDAJE 1: Tipado explícito (t: any)
     const filteredTickets = useMemo(() => {
         if (filterEstado === 'Todos') return tickets;
         return tickets.filter((t: any) => t.estado === filterEstado);
@@ -382,7 +403,6 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
                 <div className="text-center py-16 theme-bg-container rounded-2xl border theme-border"><Ticket className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No hay tickets registrados bajo el filtro actual.</p></div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* 🔥 BLINDAJE 1: Tipado explícito (t: any) y (u: any) en la línea del error del build */}
                     {filteredTickets.map((t: any) => {
                         const assignedObj = activeTeamUsers.find((u: any) => (u.displayName || u.email) === t.responsable);
                         return (

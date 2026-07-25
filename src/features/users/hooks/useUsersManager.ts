@@ -1,85 +1,135 @@
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
-import { safeFirestoreOperation } from '../../../services/firebase/audit.service';
-import { updateDocument } from '../../../services/firebase/core.service';
 
-export const useUsersManager = (user: any, userRole: string, showToast: any, setConfirmModal: any) => {
+export const useUsersManager = (user: any, userRole: any, showToast: any, openConfirmModal?: any) => {
     const [appUsers, setAppUsers] = useState<any[]>([]);
-    
-    // 🚨 FIX REACT DOCTOR (Bug): Derivación de estado síncrona, sin useEffect
-    const [prevRole, setPrevRole] = useState(userRole);
-    if (userRole !== prevRole) {
-        setPrevRole(userRole);
-        if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
-            setAppUsers([]);
-        }
-    }
+    const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
     useEffect(() => {
-        if (!user || user.isAnonymous) return;
-        if (userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') return;
-
-        const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-        const unsubAllUsers = onSnapshot(usersRef, (snap) => {
-            const uList: any[] = [];
-            snap.forEach(d => uList.push(d.data()));
-            setAppUsers(uList);
-        }, () => {});
-
-        return () => unsubAllUsers();
-    }, [user, userRole]);
-
-    const updateUserRole = async (email: string, newRole: string) => {
-        try {
-            await updateDocument('users', email, { role: newRole }, `Modificar rol de ${email} a ${newRole}`);
-            showToast('Rol actualizado exitosamente');
-        } catch (e: any) { 
-            showToast(e.code === 'permission-denied' ? 'Acceso bloqueado: No tienes permisos.' : 'Acción denegada.', true);
+        // 🔥 ESCUDO ANTI-F5 PARA LECTORES: Si estás desconectado, no consultamos Firestore y no sale error en pantalla
+        if (!user || !user.uid) {
+            setAppUsers([]);
+            setIsLoadingUsers(false);
+            return;
         }
-    };
 
-    const toggleUserStatus = async (email: string, currentStatus: boolean) => {
-        try {
-            await updateDocument('users', email, { disabled: !currentStatus }, `${!currentStatus ? 'Deshabilitar' : 'Habilitar'} cuenta de ${email}`);
-            showToast(!currentStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada');
-        } catch (e: any) { 
-            showToast(e.code === 'permission-denied' ? 'Acceso bloqueado: No tienes permisos.' : 'Acción denegada.', true);
+        setIsLoadingUsers(true);
+        const unsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snapshot) => {
+            const usersList: any[] = [];
+            snapshot.forEach((d) => {
+                usersList.push({ id: d.id, ...d.data() });
+            });
+            setAppUsers(usersList);
+            setIsLoadingUsers(false);
+        }, (error) => {
+            // Si el backend rechaza por regla 403 al recargar, lo ignoramos en silencio sin alarmar al usuario
+            if (error.code !== 'permission-denied') {
+                showToast('Error al cargar la lista de usuarios', true);
+            }
+            setIsLoadingUsers(false);
+        });
+
+        return () => unsub();
+    }, [user, showToast]);
+
+    const addManualUser = useCallback(async (email: string, role: string) => {
+        const cleanEmail = email.trim().toLowerCase();
+        if (!cleanEmail || !cleanEmail.includes('@')) {
+            showToast('Por favor ingresa un correo electrónico válido', true);
+            return;
         }
-    };
 
-    const deleteUserRecord = (email: string) => {
-        setConfirmModal({
-            isOpen: true, title: 'Eliminar Usuario', msg: `¿Seguro que deseas eliminar el acceso de ${email}?`,
-            onConfirm: async () => {
-                try {
-                    await safeFirestoreOperation(async () => {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', email));
-                    }, `Eliminar usuario permanentemente: ${email}`);
-                    showToast('Usuario eliminado del sistema');
-                } catch (e: any) { 
-                    showToast(e.code === 'permission-denied' ? 'Bloqueo: No puedes eliminar este usuario.' : 'Acción denegada.', true); 
+        try {
+            const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', cleanEmail);
+            
+            await setDoc(userDocRef, {
+                email: cleanEmail,
+                displayName: cleanEmail.split('@')[0],
+                photoURL: null,
+                role: role,
+                disabled: false,
+                isProtected: false,
+                lastLogin: new Date().toISOString(), 
+                preferences: {}
+            });
+
+            showToast(`¡Usuario ${cleanEmail} pre-registrado como ${role}!`);
+        } catch (error: any) {
+            showToast('Error al pre-registrar usuario: Permisos insuficientes o datos inválidos', true);
+        }
+    }, [showToast]);
+
+    const updateUserRole = useCallback(async (email: string, newRole: string) => {
+        try {
+            const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', email);
+            await updateDoc(userDocRef, { role: newRole });
+            showToast(`Rol actualizado a ${newRole}`);
+        } catch (error: any) {
+            if (error.code === 'permission-denied') {
+                showToast('Acceso bloqueado: No tienes permisos.', true);
+                import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
+                    logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de modificar rol al usuario ${email}`);
+                }).catch(err => console.error("Error al disparar auditoría:", err));
+            } else {
+                showToast('Error al actualizar el rol del usuario', true);
+            }
+        }
+    }, [showToast]);
+
+    const toggleUserStatus = useCallback(async (email: string, currentStatus: boolean) => {
+        const newStatus = !currentStatus;
+        try {
+            const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', email);
+            await updateDoc(userDocRef, { disabled: newStatus });
+            showToast(newStatus ? 'Cuenta deshabilitada' : 'Cuenta habilitada correctamente');
+        } catch (error: any) {
+            if (error.code === 'permission-denied') {
+                showToast('Acceso bloqueado: No tienes permisos.', true);
+                import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
+                    logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de cambiar estado al usuario ${email}`);
+                }).catch(err => console.error("Error al disparar auditoría:", err));
+            } else {
+                showToast('Error al cambiar el estado del usuario', true);
+            }
+        }
+    }, [showToast]);
+
+    const deleteUserRecord = useCallback((email: string) => {
+        const executeDelete = async () => {
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', email);
+                await deleteDoc(userDocRef);
+                showToast('Usuario eliminado del sistema');
+            } catch (error: any) {
+                if (error.code === 'permission-denied') {
+                    showToast('Acceso bloqueado: No tienes permisos.', true);
+                    import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
+                        logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de eliminar al usuario ${email}`);
+                    }).catch(err => console.error("Error al disparar auditoría:", err));
+                } else {
+                    showToast('No tienes permisos para eliminar este usuario', true);
                 }
             }
-        });
-    };
+        };
 
-    const addManualUser = async (email: string, role: string) => {
-        if (!email.endsWith('@tierradeideas.mx')) return showToast('Solo correos @tierradeideas.mx', true);
-        try {
-            // 🚨 FIX REACT DOCTOR (Seguridad): Abstrayendo la inyección del rol mediante core.service
-            await updateDocument('users', email, {
-                email: email.trim().toLowerCase(), 
-                displayName: email.split('@')[0], 
-                photoURL: '', 
-                role: role, 
-                disabled: false
-            }, `Pre-registrar usuario: ${email}`);
-            showToast(`Usuario pre-registrado correctamente.`);
-        } catch (e: any) { 
-            showToast(e.code === 'permission-denied' ? 'Bloqueo: No tienes privilegios.' : 'Acción denegada.', true); 
+        if (openConfirmModal) {
+            openConfirmModal(
+                "¿Eliminar usuario permanentemente?",
+                `Estás a punto de revocar todos los accesos y eliminar el registro de ${email}. ¿Deseas continuar?`,
+                executeDelete
+            );
+        } else {
+            executeDelete();
         }
-    };
+    }, [showToast, openConfirmModal]);
 
-    return { appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser };
+    return {
+        appUsers,
+        isLoadingUsers,
+        addManualUser,
+        updateUserRole,
+        toggleUserStatus,
+        deleteUserRecord
+    };
 };

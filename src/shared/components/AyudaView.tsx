@@ -2,7 +2,7 @@ import React from 'react';
 import { 
     HelpCircle, ShieldAlert, Database, Users, FileText, 
     AlertTriangle, MessageSquareWarning, Info, Lock, Settings,
-    Ticket // 🔥 FIX: Agregamos el icono para el apartado de Tickets
+    Ticket, Zap
 } from 'lucide-react';
 
 const helpTopics = [
@@ -15,10 +15,10 @@ const helpTopics = [
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <p>
-                    <strong>Innova Management</strong> es una plataforma de gestión de crisis y seguridad diseñada bajo una arquitectura <em>Zero-Trust</em> (Cero Confianza). 
+                    <strong>Innova Management</strong> es una plataforma de gestión de crisis y seguridad corporativa diseñada bajo una arquitectura <em>Zero-Trust</em> (Cero Confianza). 
                 </p>
                 <p className="theme-text-muted">
-                    El sistema cuenta con módulos operativos para monitoreo (Hackeos, RRSS, Comentarios) y un sistema emergente de Tickets para la gestión y asignación de contenidos de producción.
+                    El sistema cuenta con módulos operativos para monitoreo (Hackeos, RRSS, Comentarios) y un ecosistema de Tickets para el flujo de producción de contenidos, protegido por firewalls en servidor y sincronización en tiempo real.
                 </p>
             </div>
         )
@@ -33,19 +33,19 @@ const helpTopics = [
             <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto. Gestión de Backups, Auditoría Avanzada y administración total de usuarios.</p>
+                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto del sistema. Gestión de Backups cifrados, Auditoría SIEM forense, purga de rastros y administración total de usuarios.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo. Acceso total a incidentes y consola de gestión de tickets. Permite pre-registrar y deshabilitar usuarios operativos.</p>
+                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo y gestión gerencial. Acceso total a incidentes y a la consola de Gestión de Tickets. Permite pre-registrar y deshabilitar usuarios operativos.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Capacidad de crear y editar incidentes, así como ser asignado como responsable en la producción de tickets.</p>
+                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Capacidad de crear y editar incidentes, así como ser asignado y gestionar metadatos en la producción de tickets.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
-                    <p><strong className="theme-text-main">Lector:</strong> Visualización de Dashboard y protocolos. Permite emitir solicitudes en el módulo de Tickets Emergentes autenticándose con PIN corporativo.</p>
+                    <p><strong className="theme-text-main">Lector / Cliente Externo:</strong> Visualización de Dashboard y protocolos. Acceso al módulo público de Solicitud de Tickets autenticándose bajo PIN corporativo (restringido en nivel <em>GUEST_ONLY</em> para usuarios sin sesión interna).</p>
                 </li>
             </ul>
         )
@@ -79,14 +79,32 @@ const helpTopics = [
                         <p className="theme-text-muted text-xs">Reportes unificados de interacción comunitaria y trazabilidad de quejas.</p>
                     </div>
                 </div>
-                {/* 🔥 FIX: Nueva sección explicando el módulo operativo de Tickets */}
                 <div className="flex gap-3 items-start group/item pt-1 border-t theme-border/40">
                     <Ticket className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
                     <div>
-                        <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Tickets (Emergentes)</p>
-                        <p className="theme-text-muted text-xs">Canal de solicitud de contenidos protegido por PIN. Permite al equipo asignar responsables directos, fechas reales de entrega y ligas de arte en la nube con notificaciones dirigidas.</p>
+                        <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Tickets Emergentes & Consola</p>
+                        <p className="theme-text-muted text-xs">Canal de solicitud protegido con PIN corporativo y editor visual. La consola interna permite asignar responsables directos vinculados a Google Workspace, registrar fechas reales de entrega y ligas de arte en la nube con alertas dirigidas.</p>
                     </div>
                 </div>
+            </div>
+        )
+    },
+    {
+        id: 'firewall',
+        title: 'Firewall Backend & Seguridad Zero-Trust',
+        icon: <Zap className="w-6 h-6 text-amber-500" />,
+        badge: 'Ciberseguridad',
+        badgeColor: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+        content: (
+            <div className="space-y-3 theme-text-main text-sm leading-relaxed">
+                <p className="theme-text-muted">
+                    La plataforma ejecuta un escudo activo en servidor que evalúa cada petición antes de procesarla en la base de datos:
+                </p>
+                <ul className="space-y-2 text-xs p-3 theme-bg-low rounded-xl border theme-border">
+                    <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 flex-shrink-0"></div><span className="theme-text-main"><strong>Rate Limit (60s):</strong> Bloqueo de velocidad contra spam en envíos repetidos de formularios.</span></li>
+                    <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 flex-shrink-0"></div><span className="theme-text-main"><strong>Bloqueo por Fuerza Bruta (30 min):</strong> Suspensión automática e inmutable al acumular 5 intentos fallidos en el PIN de Tickets o en el Login corporativo.</span></li>
+                    <li className="flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 flex-shrink-0"></div><span className="theme-text-main"><strong>Sincronización en Vivo:</strong> Los estados de bloqueo y contadores de intentos restantes se reflejan en tiempo real entre pestañas del navegador.</span></li>
+                </ul>
             </div>
         )
     },
@@ -138,7 +156,7 @@ const helpTopics = [
     },
     {
         id: 'auditoria',
-        title: 'Radar de Intrusos (SIEM)',
+        title: 'Radar de Intrusos (SIEM Forense)',
         icon: <Lock className="w-6 h-6 text-red-500" />,
         badge: 'Exclusivo IT',
         badgeColor: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -146,12 +164,12 @@ const helpTopics = [
         content: (
             <div className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <p className="theme-text-muted">
-                    Módulo de seguridad forense y auditoría avanzada. Funciona silenciosamente atrapando accesos denegados (Error 403) a nivel de servidor.
+                    Módulo de auditoría SIEM que atrapa intentos ilegales, accesos denegados (Error 403), ataques de fuerza bruta y violaciones de rate limit o dominio al instante.
                 </p>
                 <ul className="space-y-2 text-xs mt-3 p-3 theme-bg-low rounded-xl border theme-border">
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Captura:</span> IP, País, UserAgent y Acción.</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Retención:</span> Inmutable por 14 días (TTL Cloud).</li>
-                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Exportación:</span> Descarga forense a formato CSV.</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Captura:</span> IP pública real, País, UserAgent, UID y detalle del ataque (incluso de atacantes anónimos sin sesión).</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Retención:</span> Inmutable por 14 días (TTL en Google Cloud).</li>
+                    <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]"></div><span className="font-bold theme-text-main">Exportación:</span> Descarga forense a formato CSV sin alterar cuotas del servidor.</li>
                 </ul>
             </div>
         )
@@ -177,7 +195,7 @@ export const AyudaView = ({ isAdmin }: { isAdmin: boolean }) => {
                 </div>
             </div>
 
-            {/* Grid de Tarjetas con Hover Sobrio y Elegante */}
+            {/* Grid de Tarjetas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                 {helpTopics.map((topic) => {
                     if (topic.requireAdmin && !isAdmin) return null;

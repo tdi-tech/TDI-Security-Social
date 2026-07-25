@@ -65,10 +65,8 @@ export const AuditViews: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // 🔥 Helper para acortar las acciones largas en la UI (remueve el @dominio)
   const formatActionStr = (text: string) => {
     if (!text) return 'Desconocido';
-    // Busca correos con dominio tierradeideas.mx y deja solo el @usuario
     return text.replace(/([a-zA-Z0-9._-]+)@tierradeideas\.mx/g, '@$1');
   };
 
@@ -148,9 +146,17 @@ export const AuditViews: React.FC = () => {
                       <p className="text-[10px] theme-text-muted font-mono mt-0.5 truncate max-w-[150px]" title={log.uid}>{log.uid}</p>
                     </td>
                     <td className="px-5 py-4">
-                      {/* 🔥 Usamos formatActionStr y whitespace-normal para que el texto sea corto y se ajuste si es necesario */}
+                      {/* 🔥 FIX COLOR PSICOLOGÍA: Ampliado para atrapar bloqueos de firewall, DDOS y fuerza bruta de anónimos */}
                       <span className={`inline-flex items-center gap-2 border px-3 py-2 rounded-xl text-xs font-bold shadow-sm whitespace-normal max-w-sm leading-relaxed ${
-                        log.accion.includes('403') || log.accion.toLowerCase().includes('bloqueo')
+                        log.accion.includes('403') || 
+                        log.accion.toLowerCase().includes('bloqueo') || 
+                        log.accion.toLowerCase().includes('alerta') || 
+                        log.accion.toLowerCase().includes('ilegal') || 
+                        log.accion.toLowerCase().includes('violación') ||
+                        log.accion.toLowerCase().includes('firewall') ||
+                        log.accion.toLowerCase().includes('ddos') ||
+                        log.accion.toLowerCase().includes('brute-force') ||
+                        log.accion.toLowerCase().includes('anónimo')
                         ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' 
                         : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                       }`}>

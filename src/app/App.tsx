@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDoc, doc } from 'firebase/firestore';
-// 🔥 FIX: Importamos auth directamente para verificar la sesión al instante en el login
 import { db, appId, auth } from '../services/firebase/config';
 
 import { useTheme } from './providers/ThemeProvider';
@@ -31,7 +30,7 @@ const AppContent = () => {
     const [notifTab, setNotifTab] = useState('unread');
     const [loginModalOpen, setLoginModalOpen] = useState(false);
 
-    const { user, isAdmin, userRole, cloudStatus, loginWithGoogle, logoutAdmin, userPrefs, updateUserPrefs, prefsRef } = useAuthSession(showToast, setLoginModalOpen);
+    const { user, isAdmin, userRole, cloudStatus, loginWithGoogle, logoutAdmin, userPrefs, updateUserPrefs, prefsRef, loginRemainingAttempts } = useAuthSession(showToast, setLoginModalOpen);
     const { checklistState, setChecklistState, notifications, logAction, markAsRead, hideNotification } = useGlobalEvents(user, prefsRef, showToast);
     const { appUsers, updateUserRole, toggleUserStatus, deleteUserRecord, addManualUser } = useUsersManager(user, userRole, showToast, openConfirmModal);
     
@@ -41,34 +40,43 @@ const AppContent = () => {
     const { updateComment, deleteComment } = useComments(showToast, openConfirmModal, logAction);
     const { updateTicketStatus, updateTicketInternals, deleteTicket } = useTickets(showToast, openConfirmModal, logAction);
 
+    // 🔥 NAVEGACIÓN COHERENTE: Validamos primero la existencia de sesión (!user) para evitar falsas alarmas de asincronía
     const navigate = useCallback(async (view: string) => {
         const route = ROUTES[view] || ROUTES['dashboard'];
         const access = route.access;
 
-        if (access === 'LOGGED_IN' && !isAdmin) {
+        // 1. Si la vista requiere estar logueado (cualquiera que no sea PUBLIC ni GUEST_ONLY) y NO hay usuario:
+        if (access !== 'PUBLIC' && access !== 'GUEST_ONLY' && !user) {
             showToast('Debes iniciar sesión para acceder a esta sección.', true);
             return setLoginModalOpen(true);
         }
+
+        // 2. Si ya estás logueado e intentas entrar a una zona exclusiva de invitados (solicitud-tickets):
+        if (access === 'GUEST_ONLY' && user) {
+            showToast('Ya tienes sesión activa. Redirigiendo a tu consola de gestión.', true);
+            return navigate('gestion-tickets');
+        }
+
+        // 3. Permisos granulares por rol para usuarios que ya iniciaron sesión:
         if (access === 'ADMIN_IT' && userRole !== 'ADMIN_IT') {
             const { logAuditEvent } = await import('../services/firebase/audit.service');
             await logAuditEvent(`Violación RBAC: Acceso restringido (/${view})`);
             return showToast('Acceso denegado. Exclusivo para Administrador de IT.', true);
         }
         if (access === 'ADMIN_CM_IT' && userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
-            return showToast('Acceso denegado. Tu rol no tiene permisos.', true);
+            return showToast('Acceso denegado. Tu rol no tiene permisos para esta área.', true);
         }
 
         setCurrentView(view); 
         localStorage.setItem('innova_current_view', view); 
         setSidebarOpen(false);
-    }, [isAdmin, userRole, showToast]); 
+    }, [user, userRole, showToast]); 
 
-    // 🔥 FIX: Redirección inmediata y garantizada al Dashboard tras un inicio de sesión real
     const handleLogin = useCallback(async () => {
         try {
             await loginWithGoogle();
-            // Verificamos con el SDK de Firebase si el usuario autenticó con éxito (cero falsos positivos)
-            if (auth.currentUser) {
+            const currentEmail = auth.currentUser?.email || '';
+            if (auth.currentUser && currentEmail.endsWith('@tierradeideas.mx')) {
                 setLoginModalOpen(false);
                 setCurrentView('dashboard');
                 localStorage.setItem('innova_current_view', 'dashboard');
@@ -79,7 +87,6 @@ const AppContent = () => {
         }
     }, [loginWithGoogle, showToast]);
 
-    // Redirección al Dashboard al cerrar sesión
     const handleLogout = useCallback(() => {
         navigate('dashboard');
         setTimeout(() => {
@@ -94,9 +101,14 @@ const AppContent = () => {
 
     useEffect(() => {
         if (cloudStatus === 'Conectando...') return;
-        if (!user && !isAdmin && ROUTES[currentView]?.access !== 'PUBLIC') {
+        if (!user && !isAdmin && ROUTES[currentView]?.access !== 'PUBLIC' && ROUTES[currentView]?.access !== 'GUEST_ONLY') {
             setCurrentView('dashboard');
             localStorage.setItem('innova_current_view', 'dashboard');
+        }
+        // 🔥 LIMPIEZA AUTOMÁTICA: Si un usuario logueado fuerza la vista GUEST_ONLY por F5, lo reubicamos en silencio
+        if (user && ROUTES[currentView]?.access === 'GUEST_ONLY') {
+            setCurrentView('gestion-tickets');
+            localStorage.setItem('innova_current_view', 'gestion-tickets');
         }
     }, [user, isAdmin, currentView, cloudStatus]);
 
@@ -151,7 +163,7 @@ const AppContent = () => {
             openLoginModal={() => setLoginModalOpen(true)} logoutAdmin={handleLogout}
         >
             <AppRouter currentView={currentView} props={viewProps} />
-            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={handleLogin} />
+            <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={handleLogin} remainingAttempts={loginRemainingAttempts} />
             <Inactivity onLogout={handleLogout} />
         </MainLayout>
     );

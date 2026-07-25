@@ -17,7 +17,7 @@ Asegúrese de contar con Node.js instalado en su sistema. Ejecute el siguiente c
 npm install
 ```
 
-*(Nota de dependencias críticas: Asegúrese de instalar `dompurify` para la desinfección de código HTML enriquecido usando `npm i dompurify` y `npm i -D @types/dompurify`).*
+*(Nota de dependencias críticas: Asegúrese de instalar `crypto-js` y `dompurify` para el cifrado AES-256 de respaldos y la desinfección de código HTML enriquecido ejecutando `npm i crypto-js dompurify` y sus tipos con `npm i -D @types/crypto-js @types/dompurify`).*
 
 ### 2. Configurar variables de entorno
 Cree un archivo llamado `.env` en la raíz del proyecto e ingrese las credenciales correspondientes de la API de Firebase:
@@ -49,29 +49,35 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 * **Notificaciones Dinámicas:** Campana de alertas inteligente con motor de audio nativo (Web Audio API) y panel de preferencias en la nube para silenciar módulos específicos.
 * **Persistencia de Navegación UX:** Integración de estados basados en `localStorage` coordinados entre la aplicación y el Sidebar para evitar redirecciones accidentales al Dashboard al presionar F5 o refrescar la página.
 * **Optimización Lazy Loading y Skeletons:** Los datos de los historiales solo se consultan al servidor cuando el usuario ingresa a la vista explícitamente. La carga se suaviza mediante animaciones vectoriales limpias, eliminando parpadeos bruscos.
+* **Sincronización en Tiempo Real:** Reemplazo de lecturas estáticas por escuchadores activos (`onSnapshot`), proyectando cambios de estado, contadores del firewall y nuevas incidencias de forma simultánea en todas las pestañas abiertas sin requerir recargas manuales.
 
 ### 1. Seguridad IT, Cumplimiento (Compliance) y SIEM
-* **Radar de Intrusos (SIEM):** Módulo de ciberseguridad avanzado que detecta y registra silenciosamente accesos denegados (Errores 403), capturando la IP, País de origen y UserAgent del atacante. El registro es inmutable y se autodestruye a los 14 días (Google Cloud TTL).
+* **Radar de Intrusos (SIEM Forense):** Módulo de ciberseguridad que detecta y registra silenciosamente accesos denegados (Errores 403), capturando la IP pública real, País de origen y UserAgent del atacante (incluyendo el rastreo de atacantes externos bajo el identificador `anonymous_attacker`). El registro es inmutable y se autodestruye a los 14 días mediante políticas TTL en Google Cloud.
 * **Reporte de Hackeos y Checklist:** Documentación estructurada de vectores de ataque y sala de crisis global con sincronización en tiempo real para tareas de contención.
 * **Vigía de Inactividad Global:** Monitoreo en segundo plano que detecta el abandono de la plataforma, ejecutando la destrucción automática de la sesión por seguridad.
-* **Centro de Respaldos Cifrados (Core):** Módulo independiente para el Administrador IT que compila un JSON general de todo el ecosistema y lo **encripta mediante criptografía AES-256**. Su motor inverso inyecta inteligentemente registros borrados omitiendo duplicaciones, previa validación de contraseña.
+* **Centro de Respaldos Cifrados (Core):** Módulo independiente para el Administrador IT que compila un JSON general de todo el ecosistema y lo **encripta mediante criptografía AES-256** usando `crypto-js`. Su motor inverso inyecta inteligentemente registros borrados omitiendo duplicaciones, previa validación de contraseña.
 
-### 2. Reputación y Crisis RRSS
+### 2. Módulo de Tickets Emergentes & Consola de Producción
+* **Emisión de Solicitudes:** Canal público para clientes y lectores autenticado exclusivamente mediante PIN corporativo de seguridad, equipado con semáforo de prioridad (Baja a Crítica), fechas límite y editor visual WYSIWYG purificado.
+* **Consola Operativa de Gestión:** Panel interno de control que permite a los equipos documentar fechas reales de entrega, enlaces de arte final o carpetas de Drive y notas internas de avance.
+* **Asignación Dinámica de Responsables:** Selector personalizado conectado a los perfiles de Google Workspace que muestra fotografía y rol de cada miembro, disparando notificaciones directas y alertas de asignación exclusivas al usuario seleccionado.
+
+### 3. Reputación, Crisis RRSS y Comentarios
 * **Gestión de Contingencias:** Herramienta enfocada en la detección de picos inusuales de alertas en canales digitales oficiales.
-* **Reportes WYSIWYG Purificados:** Editor de texto enriquecido integrado, resguardado con la librería DOMPurify para prevenir vulnerabilidades de inyección de código (XSS) al momento de renderizar bitácoras oficiales.
-
-### 3. Interacciones y Comentarios
-* **Trazabilidad de Quejas:** Registro de ataques focalizados organizados por campus y tipo de contenido (Orgánico/Pautado), evaluando la respuesta del equipo mediante análisis de sentimiento (Sentiment).
+* **Reportes WYSIWYG Purificados:** Editor de texto enriquecido integrado, resguardado con la librería `DOMPurify` para prevenir vulnerabilidades de inyección de código (XSS) al momento de renderizar bitácoras oficiales.
+* **Trazabilidad de Quejas:** Registro de ataques focalizados organizados por campus y tipo de contenido (Orgánico/Pautado), evaluando la respuesta del equipo mediante análisis de sentimiento.
 
 ---
 
-## Seguridad Perimetral, Roles y Exportación
+## Seguridad Perimetral, Firewall Zero-Trust y Exportación
 
-* **Arquitectura Zero-Trust (Backend Rules):** Toda validación de roles y permisos se ejecuta en el servidor (Firebase Security Rules). La plataforma restringe operaciones críticas de lectura/escritura a usuarios anónimos o no autorizados, rechazando de raíz cualquier manipulación desde el cliente.
-* **Control de Accesos Basado en Roles (RBAC):** Sistema dinámico sin credenciales expuestas. Maneja 4 niveles (Lector, Editor CM, Administrador CM y Administrador IT) con protección automática para superusuarios fundadores y separación de flujos de trabajo (UI).
-* **Protocolos Flat Design:** Manuales operativos y matrices de roles estructurados en formato de lectura editorial sin el uso redundante de tarjetas anidadas, incluyendo un *Timeline* fluido para el comité de incidentes.
+* **Firewall Backend & Rate Limit de Servidor:** Protección anti-spam con enfriamiento estricto de 60 segundos por IP/Email entre peticiones. Cuenta con un sistema de castigo inmutable en Firestore que bloquea automáticamente la IP por 30 minutos al acumular 5 intentos fallidos en el PIN de Tickets o en el Login corporativo.
+* **Blindaje de Rutas y Dominio (GUEST_ONLY):** Restricción de acceso de nivel infraestructura que rechaza cualquier correo ajeno a `@tierradeideas.mx`. Incorpora el nivel de acceso granular `GUEST_ONLY`, el cual intercepta, expulsa y reubica en silencio a usuarios logueados que intenten manipular el DOM o alterar el `localStorage` para forzar la entrada a vistas públicas.
+* **Arquitectura Zero-Trust (Backend Rules):** Toda validación de roles y permisos se ejecuta directamente en el servidor (Firebase Security Rules). La plataforma restringe operaciones críticas de lectura/escritura a usuarios no autorizados, rechazando de raíz cualquier manipulación desde el cliente.
+* **Control de Accesos Basado en Roles (RBAC):** Sistema dinámico sin credenciales expuestas. Maneja 4 niveles (Lector, Editor CM, Administrador CM y Administrador IT) con protección automática para superusuarios fundadores y separación de flujos de trabajo en interfaz.
+* **Simetría Visual y Portales React:** Estandarización milimétrica en grillas de captura y renderizado de modales mediante `ReactDOM.createPortal` para un desenfoque de fondo que cubre el 100% de la pantalla sin bloquear notificaciones emergentes.
 * **Exportación Inteligente Universal:**
-  * **CSV Dinámico:** Descarga masiva filtrable optimizada para Excel, ahora equipada con *feedback* visual (Spinners) de peticiones asíncronas a la base de datos.
+  * **CSV Dinámico:** Descarga masiva filtrable optimizada para Excel, equipada con *feedback* visual (Spinners) de peticiones asíncronas a la base de datos.
   * **Documentos Word (.docx):** Generación nativa basada en XML para descargar reportes con texto enriquecido.
   * **Reportes Ejecutivos PDF:** Sistema de impresión limpio y formateado directo desde el Dashboard.
 
@@ -79,7 +85,7 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 
 ## Stack Tecnológico
 
-* **Core:** React 18 + TypeScript
+* **Core:** React 19 + TypeScript
 * **Build Tool:** Vite
 * **Seguridad y Limpieza:** `crypto-js` (Cifrado AES-256) y `DOMPurify` (Prevención XSS)
 * **Estilos y UX/UI:** Tailwind CSS (Arquitectura corporativa Flat-Design y Dark/Light Mode nativo)

@@ -7,17 +7,18 @@ const changelogData = [
         version: 'Versión 3.3.0',
         date: 'Julio 2026',
         tag: 'Última Versión',
-        title: 'Módulo de Tickets Emergentes & Gestión Dinámica de Responsables',
+        title: 'Módulo de Tickets Emergentes & Firewall Zero-Trust',
         changes: [
             { id: 'ch-330-1', type: 'title', text: 'Emisión y Consola Operativa de Tickets' },
             { id: 'ch-330-2', type: 'feature', text: 'Módulo de Tickets Emergentes: Despliegue de un nuevo canal para solicitudes rápidas de contenido con autenticación mediante PIN corporativo, semáforo de prioridad y editor visual enriquecido.' },
             { id: 'ch-330-3', type: 'feature', text: 'Gestión Interna de Producción: Consola de control para documentar fechas reales de entrega, notas internas y enlaces de arte final o carpetas en la nube.' },
             { id: 'ch-330-4', type: 'feature', text: 'Asignación Dinámica de Responsables: Selector personalizado integrado al perfil de Google Workspace que muestra foto y rol de cada miembro del equipo, enviando notificaciones directas y exclusivas al usuario asignado.' },
             { id: 'ch-330-5', type: 'divider', text: '' },
-            { id: 'ch-330-6', type: 'title', text: 'Blindaje en Base de Datos y Simetría Visual' },
-            { id: 'ch-330-7', type: 'security', text: 'Erradicación de Alertas en Memoria Local: Eliminación absoluta de dependencias en localStorage para el cálculo de alertas. El contador visual ahora se gobierna 100% mediante arreglos de lectura en Firestore.' },
-            { id: 'ch-330-8', type: 'security', text: 'Sellado Doble de Identidad: Verificación simultánea por UID y correo electrónico para garantizar un conteo individual por usuario, eliminando falsos positivos en el menú al guardar metadatos.' },
-            { id: 'ch-330-9', type: 'ui', text: 'Simetría Visual y Portales React: Estandarización milimétrica (grid 2x2 a 48px de altura) en los campos de producción y renderizado de modales mediante ReactDOM.createPortal para un desenfoque que cubre el 100% de la pantalla sin tapar notificaciones emergentes.' }
+            { id: 'ch-330-6', type: 'title', text: 'Firewall Backend, SIEM Forense & Blindaje Zero-Trust' },
+            { id: 'ch-330-7', type: 'security', text: 'Firewall Backend & Rate Limit de Servidor: Control de enfriamiento de 60 segundos por IP/Email para evitar spam en formularios y bloqueo automático inmutable de 30 minutos en Firestore al superar 5 intentos fallidos de PIN o Login.' },
+            { id: 'ch-330-8', type: 'security', text: 'Auditoría Forense de Anónimos (SIEM): Evolución del Radar de Intrusos para registrar ataques de fuerza bruta, violaciones de rate limit y rechazos de dominio de usuarios sin sesión, capturando su IP real, país y UserAgent en Firestore.' },
+            { id: 'ch-330-9', type: 'security', text: 'Blindaje de Rutas y Dominio (GUEST_ONLY): Restricción estricta al dominio @tierradeideas.mx e implementación del nivel de acceso GUEST_ONLY que expulsa y reubica automáticamente a usuarios logueados que intenten forzar vistas públicas editando el localStorage.' },
+            { id: 'ch-330-10', type: 'ui', text: 'Sincronización de Contadores en Tiempo Real: Reemplazo de consultas estáticas por escuchadores activos (onSnapshot), proyectando los intentos restantes y estados de bloqueo en vivo entre múltiples pestañas del navegador sin necesidad de recargar la página.' }
         ]
     },
     {

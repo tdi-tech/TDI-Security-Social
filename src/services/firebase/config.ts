@@ -18,34 +18,27 @@ export const db = getFirestore(app);
 export const appId = 'tdi-secure-social';
 
 /**
- * 🛡️ CONTEXTO DE RED SEGURO (ipInfo API)
- * Ejecuta una consulta asíncrona y pasiva en segundo plano para obtener
- * los metadatos de ubicación e IP reales del cliente sin exponer el backend.
+ * 🛡️ CONTEXTO DE RED SEGURO (ipQuery API)
+ * Extrae IP, país y región en segundo plano de forma 100% gratuita,
+ * sin necesidad de tokens ni variables sensibles expuestas en Vite.
  */
 export async function getNetworkContext() {
   try {
-    const token = import.meta.env.VITE_VARIABLE_IP_INFO;
-    
-    // Si la variable está vacía o no se encuentra, saltamos directamente al fallback seguro
-    if (!token) {
-      return { ip: "127.0.0.1", country: "Local/Proxy", region: "Local" };
-    }
-
-    const res = await fetch(`https://ipinfo.io/json?token=${token}`);
+    const res = await fetch('https://api.ipquery.io/?format=json');
     
     if (!res.ok) {
-      throw new Error("Error de respuesta en ipInfo");
+      throw new Error("Error en servicio de IP");
     }
 
     const data = await res.json();
     
     return {
       ip: data.ip || "0.0.0.0",
-      country: data.country || "Desconocido",
-      region: data.region || "Desconocida"
+      country: data.location?.country || data.country || "Desconocido",
+      region: data.location?.state || data.region || "Desconocida"
     };
   } catch (e) {
-    // Fallback de contingencia en caso de bloqueos por AdBlockers o caídas del servicio externo
+    // Fallback de contingencia en caso de bloqueos locales o adblockers
     return { ip: "127.0.0.1", country: "Local/Proxy", region: "Local" };
   }
 }

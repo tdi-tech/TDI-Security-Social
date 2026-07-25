@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db, appId } from '../../../services/firebase/config';
+import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db, appId, getNetworkContext } from '../../../services/firebase/config';
 import { loginWithGoogleDomain, logoutUser, subscribeToAuthChanges } from '../../../services/firebase/auth.service';
 import type { User } from 'firebase/auth';
 import type { UserRole, UserSession } from '../../../shared/types/models';
@@ -11,12 +11,85 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
     const [userRole, setUserRole] = useState<UserRole>('');
     const [cloudStatus, setCloudStatus] = useState('Conectando...');
     
+    // 🔥 ESTADOS DEL FIREWALL BACKEND PARA INICIOS DE SESIÓN
+    const [loginRemainingAttempts, setLoginRemainingAttempts] = useState(5);
+    const [isLoginLocked, setIsLoginLocked] = useState(false);
+
     const [userPrefs, setUserPrefs] = useState<any>(null);
     const prefsRef = useRef<any>(null);
+
+    // 🔥 ESCUDO EN TIEMPO REAL: Escucha los bloqueos de la IP en Firestore al instante en todas las pestañas
+    useEffect(() => {
+        let unsub: (() => void) | undefined;
+        getNetworkContext().then((net) => {
+            const lockId = `login_${net.ip ? net.ip.replace(/\./g, '_') : "anon"}`;
+            const lockRef = doc(db, 'artifacts', appId, 'public', 'data', 'firewall_locks', lockId);
+            
+            unsub = onSnapshot(lockRef, (lockSnap) => {
+                if (lockSnap.exists()) {
+                    const data = lockSnap.data();
+                    if (data.lockoutUntil && Date.now() < new Date(data.lockoutUntil).getTime()) {
+                        setIsLoginLocked(true);
+                        setLoginRemainingAttempts(0);
+                    } else {
+                        const rem = Math.max(0, 5 - (data.failedAttempts || 0));
+                        setLoginRemainingAttempts(rem);
+                        setIsLoginLocked(false);
+                    }
+                } else {
+                    setLoginRemainingAttempts(5);
+                    setIsLoginLocked(false);
+                }
+            });
+        }).catch(() => {});
+
+        return () => { if (unsub) unsub(); };
+    }, []);
 
     useEffect(() => {
         const unsubscribe = subscribeToAuthChanges(async (firebaseUser: User | null) => {
             if (firebaseUser) {
+                // 🔥 FIREWALL DE DOMINIO BLINDADO: Primero auditamos y contamos el fallo en el servidor, DESPUÉS cerramos sesión
+                if (!firebaseUser.email?.endsWith('@tierradeideas.mx')) {
+                    try {
+                        const net = await getNetworkContext().catch(() => ({ ip: "unknown_client" }));
+                        const lockId = `login_${net.ip ? net.ip.replace(/\./g, '_') : "anon"}`;
+                        const lockRef = doc(db, 'artifacts', appId, 'public', 'data', 'firewall_locks', lockId);
+                        const lockSnap = await getDoc(lockRef).catch(() => null);
+                        const lockData = lockSnap && lockSnap.exists() ? lockSnap.data() : {};
+                        
+                        const currentFails = (lockData.failedAttempts || 0) + 1;
+                        const rem = Math.max(0, 5 - currentFails);
+                        setLoginRemainingAttempts(rem);
+                        
+                        let updatePayload: any = { failedAttempts: currentFails, lastIp: net.ip || "unknown", type: 'login_domain_violation' };
+                        if (currentFails >= 5) {
+                            const lockoutTime = Date.now() + (30 * 60 * 1000);
+                            updatePayload.lockoutUntil = new Date(lockoutTime).toISOString();
+                            setIsLoginLocked(true);
+                            showToast('🚨 5 intentos fallidos: Tu IP ha sido bloqueada temporalmente por 30 minutos.', true);
+                        } else {
+                            showToast(`Acceso denegado: Exclusivo @tierradeideas.mx. Quedan ${rem} intento(s).`, true);
+                        }
+                        await setDoc(lockRef, updatePayload, { merge: true });
+                        
+                        // Disparamos auditoría MIENTRAS el token sigue activo para que Firestore Rules permita guardar
+                        const { logAuditEvent } = await import('../../../services/firebase/audit.service');
+                        await logAuditEvent(`Alerta RBAC/Firewall: Intento de login ajeno al dominio por ${firebaseUser.email}`);
+                    } catch (err) {
+                        console.error("Error registrando bloqueo en firewall:", err);
+                    } finally {
+                        // Expulsamos al usuario una vez que el backend ya registró el ataque
+                        await logoutUser();
+                        setUser(null);
+                        setIsAdmin(false);
+                        setUserRole('');
+                        setCloudStatus('Desconectado');
+                    }
+                    return;
+                }
+
+                // SI EL CORREO ES CORRECTO Y AUTORIZADO:
                 const session: UserSession = {
                     uid: firebaseUser.uid,
                     email: firebaseUser.email,
@@ -26,46 +99,51 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
                 };
                 setUser(session);
 
-                if (firebaseUser.email) {
-                    try {
-                        const selfRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', firebaseUser.email);
-                        const selfSnap = await getDoc(selfRef);
+                try {
+                    const selfRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', firebaseUser.email);
+                    const selfSnap = await getDoc(selfRef);
 
-                        if (!selfSnap.exists()) {
-                            await setDoc(selfRef, {
-                                email: firebaseUser.email,
-                                displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-                                photoURL: firebaseUser.photoURL,
-                                lastLogin: new Date().toISOString()
-                            }, { merge: true });
-                            setIsAdmin(false);
-                            setUserRole('');
-                            const defaultPrefs = { sound: true, security: true, rrss: true, comments: true };
-                            setUserPrefs(defaultPrefs);
-                            prefsRef.current = defaultPrefs;
-                        } else {
-                            const data = selfSnap.data();
-                            if (data.disabled) {
-                                await logoutUser();
-                                showToast('Tu cuenta ha sido deshabilitada. Contacta a TI.', true);
-                                return;
-                            }
-                            
-                            await setDoc(selfRef, { lastLogin: new Date().toISOString() }, { merge: true });
-                            
-                            const role = data.role as UserRole;
-                            setUserRole(role || '');
-                            setIsAdmin(['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM'].includes(role));
-
-                            const loadedPrefs = data.preferences || { sound: true, security: true, rrss: true, comments: true };
-                            setUserPrefs(loadedPrefs);
-                            prefsRef.current = loadedPrefs;
+                    if (!selfSnap.exists()) {
+                        await setDoc(selfRef, {
+                            email: firebaseUser.email,
+                            displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+                            photoURL: firebaseUser.photoURL,
+                            lastLogin: new Date().toISOString()
+                        }, { merge: true });
+                        setIsAdmin(false);
+                        setUserRole('');
+                        const defaultPrefs = { sound: true, security: true, rrss: true, comments: true };
+                        setUserPrefs(defaultPrefs);
+                        prefsRef.current = defaultPrefs;
+                    } else {
+                        const data = selfSnap.data();
+                        if (data.disabled) {
+                            await logoutUser();
+                            showToast('Tu cuenta ha sido deshabilitada. Contacta a TI.', true);
+                            return;
                         }
-                    } catch (error) {
-                        console.error("Error validando perfil", error);
+                        
+                        await setDoc(selfRef, { lastLogin: new Date().toISOString() }, { merge: true });
+                        
+                        const role = data.role as UserRole;
+                        setUserRole(role || '');
+                        setIsAdmin(['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM'].includes(role));
+
+                        const loadedPrefs = data.preferences || { sound: true, security: true, rrss: true, comments: true };
+                        setUserPrefs(loadedPrefs);
+                        prefsRef.current = loadedPrefs;
                     }
+                    
+                    // Al iniciar sesión exitosamente, limpiamos su registro de fallos en la nube
+                    const net = await getNetworkContext().catch(() => ({ ip: "unknown" }));
+                    const lockId = `login_${net.ip ? net.ip.replace(/\./g, '_') : "anon"}`;
+                    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'firewall_locks', lockId), { failedAttempts: 0, lockoutUntil: null }, { merge: true }).catch(() => {});
+                    setLoginRemainingAttempts(5);
+                    setIsLoginLocked(false);
+                } catch (error) {
+                    console.error("Error validando perfil", error);
                 }
-                // 🔥 FIX: Restaurado a tu texto original para que el Sidebar funcione bien
+                
                 setCloudStatus('Conectado a Firebase');
             } else {
                 setUser(null);
@@ -81,12 +159,21 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
     }, [showToast]);
 
     const loginWithGoogle = async () => {
+        if (isLoginLocked) {
+            return showToast('🚨 Firewall: Acceso bloqueado por seguridad por intentos fallidos previos.', true);
+        }
         try {
             await loginWithGoogleDomain();
-            setLoginModalOpen(false);
-            showToast('Sesión iniciada exitosamente');
+            // 🔥 FIX: Eliminamos el toast prematuro. La bienvenida la da App.tsx cuando el correo se aprueba.
         } catch (error: any) {
-            showToast(error.message || 'Error al iniciar sesión', true);
+            if (error.code === 'auth/too-many-requests') {
+                showToast('🚨 Demasiados intentos fallidos. Tu acceso fue bloqueado temporalmente por Google Security.', true);
+                import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
+                    logAuditEvent('Alerta DDoS: Google cortó tráfico por exceso de peticiones de Login (too-many-requests)');
+                }).catch(() => {});
+            } else {
+                showToast(error.message || 'Error al iniciar sesión', true);
+            }
         }
     };
 
@@ -112,6 +199,7 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
 
     return { 
         user, isAdmin, userRole, cloudStatus, 
-        loginWithGoogle, logoutAdmin, userPrefs, updateUserPrefs, prefsRef 
+        loginWithGoogle, logoutAdmin, userPrefs, updateUserPrefs, prefsRef,
+        loginRemainingAttempts, isLoginLocked
     };
 };
