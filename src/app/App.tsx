@@ -164,7 +164,8 @@ const AppContent = () => {
         >
             <AppRouter currentView={currentView} props={viewProps} />
             <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={handleLogin} remainingAttempts={loginRemainingAttempts} />
-            <Inactivity onLogout={handleLogout} />
+            {/* 🔥 CORREGIDO: El vigía de inactividad se activa SÓLO cuando existe cualquier sesión logueada (user o isAdmin) y se apaga al cerrar sesión */}
+            {(user || isAdmin) && <Inactivity onLogout={handleLogout} />}
         </MainLayout>
     );
 };
