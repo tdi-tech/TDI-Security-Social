@@ -35,6 +35,11 @@ service cloud.firestore {
     function isITAdmin(appId) { return hasRole(appId, 'ADMIN_IT'); }
     function isCMAdmin(appId) { return hasRole(appId, 'ADMIN_CM'); }
     function isCMEditor(appId) { return hasRole(appId, 'EDITOR_CM'); }
+    
+    // 🔥 NUEVO ROL: Identificado aisladamente
+    function isContentEditor(appId) { return hasRole(appId, 'EDITOR_CONTENT'); }
+    
+    // 🔥 isCMTeam se mantiene igual: Excluye al Content Editor para proteger Hackeos, RRSS y Comentarios
     function isCMTeam(appId) { return isITAdmin(appId) || isCMAdmin(appId) || isCMEditor(appId); }
 
     function isValidUser() {
@@ -44,7 +49,8 @@ service cloud.firestore {
           && data.email is string
           && data.displayName is string
           && (!('photoURL' in data) || data.photoURL is string || data.photoURL == null)
-          && (!('role' in data) || (data.role is string && data.role in ['READER', 'EDITOR_CM', 'ADMIN_CM', 'ADMIN_IT']))
+          // 🔥 Aceptamos el nuevo rol en la base de datos
+          && (!('role' in data) || (data.role is string && data.role in ['READER', 'EDITOR_CM', 'EDITOR_CONTENT', 'ADMIN_CM', 'ADMIN_IT']))
           && (!('disabled' in data) || data.disabled is bool)
           && (!('isProtected' in data) || data.isProtected is bool)
           && (!('preferences' in data) || data.preferences is map)
@@ -167,7 +173,13 @@ service cloud.firestore {
         && request.resource.data.get('responsable', '') == ''
         && request.resource.data.get('notasInternas', '') == '';
         
-        allow update: if isCMTeam(appId);
+        // 🔥 REGLA DE MODIFICACIÓN ESTRICTA (Tickets):
+        allow update: if isITAdmin(appId) || isCMAdmin(appId) || (
+          (isCMEditor(appId) || isContentEditor(appId))
+          // Los Editores solo pueden guardar si no alteran el campo 'responsable'
+          && request.resource.data.get('responsable', '') == resource.data.get('responsable', '')
+        );
+        
         allow delete: if isITAdmin(appId) || isCMAdmin(appId);
       }
 
@@ -181,7 +193,7 @@ service cloud.firestore {
           && isValidUser()
         ) || isITAdmin(appId) || (
           isCMAdmin(appId)
-          && request.resource.data.role != 'ADMIN_IT'
+          && request.resource.data.get('role', '') != 'ADMIN_IT'
           && request.resource.data.isProtected != true
           && isValidUser()
         );
@@ -196,10 +208,11 @@ service cloud.firestore {
           && resource.data.get('isProtected', false) != true
           && isValidUser()
         ) || (
+          // 🔥 PERMISOS ADMIN_CM: Puede cambiar roles, pero NO puede designar a un ADMIN_IT ni editar a uno existente
           isCMAdmin(appId)
           && resource.data.get('isProtected', false) != true
           && resource.data.role != 'ADMIN_IT'
-          && request.resource.data.role == resource.data.role
+          && request.resource.data.get('role', '') != 'ADMIN_IT'
           && isValidUser()
         );
 
@@ -231,7 +244,7 @@ service cloud.firestore {
         allow read: if isAnySignedIn();
         allow create: if userExists(appId) && isValidNotification() && request.resource.data.userId == request.auth.uid;
         allow update: if userExists(appId) && (
-          isCMTeam(appId) || (
+          isCMTeam(appId) || isContentEditor(appId) || (
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy', 'deletedBy'])
           )
         );

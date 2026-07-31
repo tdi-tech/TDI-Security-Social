@@ -40,24 +40,29 @@ const AppContent = () => {
     const { updateComment, deleteComment } = useComments(showToast, openConfirmModal, logAction);
     const { updateTicketStatus, updateTicketInternals, deleteTicket } = useTickets(showToast, openConfirmModal, logAction);
 
-    // 🔥 NAVEGACIÓN COHERENTE: Validamos primero la existencia de sesión (!user) para evitar falsas alarmas de asincronía
     const navigate = useCallback(async (view: string) => {
         const route = ROUTES[view] || ROUTES['dashboard'];
         const access = route.access;
 
-        // 1. Si la vista requiere estar logueado (cualquiera que no sea PUBLIC ni GUEST_ONLY) y NO hay usuario:
         if (access !== 'PUBLIC' && access !== 'GUEST_ONLY' && !user) {
             showToast('Debes iniciar sesión para acceder a esta sección.', true);
             return setLoginModalOpen(true);
         }
 
-        // 2. Si ya estás logueado e intentas entrar a una zona exclusiva de invitados (solicitud-tickets):
         if (access === 'GUEST_ONLY' && user) {
             showToast('Ya tienes sesión activa. Redirigiendo a tu consola de gestión.', true);
             return navigate('gestion-tickets');
         }
 
-        // 3. Permisos granulares por rol para usuarios que ya iniciaron sesión:
+        // 🔥 BLINDAJE PARA EDITOR_CONTENT: TS Bypass (as string)
+        if ((userRole as string) === 'EDITOR_CONTENT') {
+            const allowedViews = ['dashboard', 'gestion-tickets', 'roles', 'ayuda', 'config'];
+            if (!allowedViews.includes(view)) {
+                showToast('Acceso denegado. Tu rol (Editor Content) no tiene permisos para esta área.', true);
+                return navigate('dashboard');
+            }
+        }
+
         if (access === 'ADMIN_IT' && userRole !== 'ADMIN_IT') {
             const { logAuditEvent } = await import('../services/firebase/audit.service');
             await logAuditEvent(`Violación RBAC: Acceso restringido (/${view})`);
@@ -105,7 +110,6 @@ const AppContent = () => {
             setCurrentView('dashboard');
             localStorage.setItem('innova_current_view', 'dashboard');
         }
-        // 🔥 LIMPIEZA AUTOMÁTICA: Si un usuario logueado fuerza la vista GUEST_ONLY por F5, lo reubicamos en silencio
         if (user && ROUTES[currentView]?.access === 'GUEST_ONLY') {
             setCurrentView('gestion-tickets');
             localStorage.setItem('innova_current_view', 'gestion-tickets');
@@ -121,7 +125,12 @@ const AppContent = () => {
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    const validNotifications = notifications.filter((n: any) => n.userId !== user?.uid && !(n.deletedBy && n.deletedBy.includes(user?.uid)));
+    // 🔥 FILTRO DE NOTIFICACIONES PARA EDITOR_CONTENT: TS Bypass (as string)
+    const validNotifications = notifications.filter((n: any) => {
+        if (n.userId === user?.uid || (n.deletedBy && n.deletedBy.includes(user?.uid))) return false;
+        if ((userRole as string) === 'EDITOR_CONTENT' && n.type !== 'ticket_assign') return false;
+        return true;
+    });
     const unreadNotifications = validNotifications.filter((n: any) => !(n.readBy && n.readBy.includes(user?.uid)));
     const readNotifications = validNotifications.filter((n: any) => (n.readBy && n.readBy.includes(user?.uid)));
 
@@ -142,7 +151,12 @@ const AppContent = () => {
         } catch(e) { showToast('Error al conectar con servidor', true); }
     };
 
-    const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' : userRole === 'ADMIN_CM' ? 'Administrador CM' : userRole === 'EDITOR_CM' ? 'Editor CM' : 'Administrador';
+    // 🔥 ETIQUETA VISUAL: TS Bypass (as string)
+    const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' 
+                          : userRole === 'ADMIN_CM' ? 'Administrador CM' 
+                          : userRole === 'EDITOR_CM' ? 'Editor CM' 
+                          : (userRole as string) === 'EDITOR_CONTENT' ? 'Editor Content'
+                          : 'Administrador';
 
     const viewProps = {
         isAdmin, user, userRole, showToast, navigate, logAction, appUsers, checklistState, setChecklistState,
@@ -164,7 +178,6 @@ const AppContent = () => {
         >
             <AppRouter currentView={currentView} props={viewProps} />
             <LoginModal isOpen={loginModalOpen} onClose={() => setLoginModalOpen(false)} onGoogleLogin={handleLogin} remainingAttempts={loginRemainingAttempts} />
-            {/* 🔥 CORREGIDO: El vigía de inactividad se activa SÓLO cuando existe cualquier sesión logueada (user o isAdmin) y se apaga al cerrar sesión */}
             {(user || isAdmin) && <Inactivity onLogout={handleLogout} />}
         </MainLayout>
     );

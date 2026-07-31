@@ -67,9 +67,10 @@ export const ConfigView = ({
 
     const cleanRole = userRole?.toUpperCase()?.trim() || '';
     const isITAdmin = cleanRole === 'ADMIN_IT';
-    const isCMUser = cleanRole === 'ADMIN_CM' || cleanRole === 'EDITOR_CM';
+    
+    // 🔥 CORRECCIÓN: Definimos claramente quién puede ver el panel de Notificaciones
+    const canViewNotifications = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM', 'EDITOR_CONTENT'].includes(cleanRole);
 
-    // 🔥 FIX: Sumamos la colección 'tickets' al conteo de Registros Operativos seguros
     const fetchGlobalServerStats = useCallback(async () => {
         if (!isITAdmin) return;
         try {
@@ -108,7 +109,6 @@ export const ConfigView = ({
         showToast('Memoria caché local liberada correctamente.');
     };
 
-    // 🔥 FIX: La purga se mantiene estrictamente aislada a notificaciones y auditLogs
     const handlePurgeTraces = async () => {
         setIsPurgeModalOpen(false);
         setIsPurging(true);
@@ -178,7 +178,8 @@ export const ConfigView = ({
                         </div>
                     </div>
 
-                    {(isCMUser || isITAdmin) && (
+                    {/* 🔥 CORRECCIÓN: Restablecido el permiso para que ADMIN_IT y el resto lo vean */}
+                    {canViewNotifications && (
                         <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
                             <h3 className="text-sm font-bold theme-text-main mb-4 uppercase tracking-wider flex items-center gap-2">
                                 <Bell className="w-4 h-4 text-orange-500" /> Notificaciones
@@ -261,7 +262,6 @@ export const ConfigView = ({
                                         <div className="p-2 bg-red-500/10 rounded-lg text-red-500"><Trash2 className="w-5 h-5"/></div>
                                         <div>
                                             <p className="text-sm font-bold theme-text-main text-red-500 dark:text-red-400">Purgar Servidor Global</p>
-                                            {/* 🔥 FIX: Leyenda actualizada especificando que los tickets están a salvo */}
                                             <p className="text-[11px] text-red-500/70 dark:text-red-400/70 max-w-xs leading-tight mt-0.5">Elimina notificaciones y logs de auditoría. No afecta historiales ni tickets emergentes.</p>
                                         </div>
                                     </div>
@@ -283,7 +283,6 @@ export const ConfigView = ({
                         <div className="p-6 space-y-4">
                             <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-3">
                                 <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                                {/* 🔥 FIX: Texto del modal confirmando protección de historiales y tickets */}
                                 <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">¿Estás seguro de que deseas vaciar por completo las notificaciones operativas y todos los registros forenses del **Radar de Intrusos**? Los expedientes e historiales de tickets permanecerán intactos.</p>
                             </div>
                         </div>

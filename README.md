@@ -58,8 +58,8 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 * **Centro de Respaldos Cifrados (Core):** Módulo independiente para el Administrador IT que compila un JSON general de todo el ecosistema y lo **encripta mediante criptografía AES-256** usando `crypto-js`. Su motor inverso inyecta inteligentemente registros borrados omitiendo duplicaciones, previa validación de contraseña.
 
 ### 2. Módulo de Tickets Emergentes & Consola de Producción
-* **Emisión de Solicitudes:** Canal público para clientes y lectores autenticado exclusivamente mediante PIN corporativo de seguridad, equipado con semáforo de prioridad (Baja a Crítica), fechas límite y editor visual WYSIWYG purificado.
-* **Consola Operativa de Gestión:** Panel interno de control que permite a los equipos documentar fechas reales de entrega, enlaces de arte final o carpetas de Drive y notas internas de avance.
+* **Emisión de Solicitudes:** Canal público para clientes y lectores autenticado exclusivamente mediante PIN corporativo de seguridad, equipado con semáforo de prioridad (Baja a Crítica), fechas límite, selector interactivo de múltiples plataformas y editor visual WYSIWYG purificado.
+* **Consola Operativa de Gestión:** Panel interno de control que permite a los equipos documentar fechas reales de entrega, enlaces de arte final o carpetas de Drive y notas internas de avance. Cuenta con un sistema de eliminación por lotes interactivo (Selección Múltiple) exclusivo para la administración.
 * **Asignación Dinámica de Responsables:** Selector personalizado conectado a los perfiles de Google Workspace que muestra fotografía y rol de cada miembro, disparando notificaciones directas y alertas de asignación exclusivas al usuario seleccionado.
 
 ### 3. Reputación, Crisis RRSS y Comentarios
@@ -74,10 +74,10 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 * **Firewall Backend & Rate Limit de Servidor:** Protección anti-spam con enfriamiento estricto de 60 segundos por IP/Email entre peticiones. Cuenta con un sistema de castigo inmutable en Firestore que bloquea automáticamente la IP por 30 minutos al acumular 5 intentos fallidos en el PIN de Tickets o en el Login corporativo.
 * **Blindaje de Rutas y Dominio (GUEST_ONLY):** Restricción de acceso de nivel infraestructura que rechaza cualquier correo ajeno a `@tierradeideas.mx`. Incorpora el nivel de acceso granular `GUEST_ONLY`, el cual intercepta, expulsa y reubica en silencio a usuarios logueados que intenten manipular el DOM o alterar el `localStorage` para forzar la entrada a vistas públicas.
 * **Arquitectura Zero-Trust (Backend Rules):** Toda validación de roles y permisos se ejecuta directamente en el servidor (Firebase Security Rules). La plataforma restringe operaciones críticas de lectura/escritura a usuarios no autorizados, rechazando de raíz cualquier manipulación desde el cliente.
-* **Control de Accesos Basado en Roles (RBAC):** Sistema dinámico sin credenciales expuestas. Maneja 4 niveles (Lector, Editor CM, Administrador CM y Administrador IT) con protección automática para superusuarios fundadores y separación de flujos de trabajo en interfaz.
+* **Control de Accesos Basado en Roles (RBAC):** Sistema dinámico sin credenciales expuestas. Maneja 5 niveles escalonados (Lector, Editor Content, Editor CM, Administrador CM y Administrador IT) con protección automática para superusuarios fundadores y un ecosistema de vistas castradas e independientes según el perfil operativo.
 * **Simetría Visual y Portales React:** Estandarización milimétrica en grillas de captura y renderizado de modales mediante `ReactDOM.createPortal` para un desenfoque de fondo que cubre el 100% de la pantalla sin bloquear notificaciones emergentes.
 * **Exportación Inteligente Universal:**
-  * **CSV Dinámico:** Descarga masiva filtrable optimizada para Excel, equipada con *feedback* visual (Spinners) de peticiones asíncronas a la base de datos.
+  * **CSV Dinámico con Filtros Server-Side:** Descarga masiva optimizada para Excel que consulta directamente a la base de datos para ofrecer segmentación dinámica mediante años y meses reales que cuentan con registros. Incluye soporte para spinners de carga asíncrona.
   * **Documentos Word (.docx):** Generación nativa basada en XML para descargar reportes con texto enriquecido.
   * **Reportes Ejecutivos PDF:** Sistema de impresión limpio y formateado directo desde el Dashboard.
 

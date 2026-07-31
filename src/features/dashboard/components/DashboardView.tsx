@@ -11,7 +11,7 @@ import { StatCard, ActionBtn } from '../../../shared/components/UIComponents';
 import { DetailModal, EditIncidentModal } from '../../incidents/components/HackViews';
 
 export const DashboardView = ({ 
-    isAdmin, user, navigate, showToast, 
+    isAdmin, user, userRole, navigate, showToast, 
     toggleIncidentStatus, updateIncident, deleteIncident 
 }: any) => {
 
@@ -22,13 +22,18 @@ export const DashboardView = ({
     const [isLoading, setIsLoading] = useState(true);
     const [isExportingPDF, setIsExportingPDF] = useState(false);
 
-    const [activeTab, setActiveTab] = useState('seguridad');
+    const isEditorContent = userRole === 'EDITOR_CONTENT';
+    const [activeTab, setActiveTab] = useState(isEditorContent ? 'tickets' : 'seguridad');
     const [mounted, setMounted] = useState(false);
     
     const [previewModal, setPreviewModal] = useState<{isOpen: boolean, type: string, data: any}>({isOpen: false, type: '', data: null});
     const [selectedHackeo, setSelectedHackeo] = useState<any>(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
+
+    useEffect(() => {
+        if (isEditorContent) setActiveTab('tickets');
+    }, [isEditorContent]);
 
     useEffect(() => {
         const u = auth.currentUser;
@@ -223,9 +228,13 @@ export const DashboardView = ({
                 
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
                     <div className="flex flex-col sm:flex-row items-center gap-2 p-1.5 bg-black/5 dark:bg-white/5 border theme-border rounded-xl w-full md:w-fit shadow-inner overflow-x-auto">
-                        <button type="button" onClick={() => setActiveTab('seguridad')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'seguridad' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><ShieldAlert className="w-4 h-4 text-red-500" /> Seguridad IT</button>
-                        <button type="button" onClick={() => setActiveTab('rrss')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'rrss' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Megaphone className="w-4 h-4 text-orange-500" /> Reputación RRSS</button>
-                        <button type="button" onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4 text-blue-500" /> Comentarios</button>
+                        {!isEditorContent && (
+                            <>
+                                <button type="button" onClick={() => setActiveTab('seguridad')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'seguridad' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><ShieldAlert className="w-4 h-4 text-red-500" /> Seguridad IT</button>
+                                <button type="button" onClick={() => setActiveTab('rrss')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'rrss' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Megaphone className="w-4 h-4 text-orange-500" /> Reputación RRSS</button>
+                                <button type="button" onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4 text-blue-500" /> Comentarios</button>
+                            </>
+                        )}
                         <button type="button" onClick={() => setActiveTab('tickets')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'tickets' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Ticket className="w-4 h-4 text-purple-500" /> Tickets</button>
                     </div>
                     <button type="button" onClick={handleDownloadReport} disabled={isExportingPDF} className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--primary)] text-white hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
@@ -236,7 +245,7 @@ export const DashboardView = ({
 
                 <div className="space-y-6">
                     {/* TRACTO: SEGURIDAD Y ACCESOS */}
-                    {activeTab === 'seguridad' && (
+                    {activeTab === 'seguridad' && !isEditorContent && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard title="Total Registros" value={hackStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
@@ -308,7 +317,7 @@ export const DashboardView = ({
                     )}
 
                     {/* TRACTO: REPUTACIÓN RRSS */}
-                    {activeTab === 'rrss' && (
+                    {activeTab === 'rrss' && !isEditorContent && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard title="Crisis Registradas" value={rrssStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
@@ -372,7 +381,7 @@ export const DashboardView = ({
                     )}
 
                     {/* TRACTO: COMENTARIOS */}
-                    {activeTab === 'comentarios' && (
+                    {activeTab === 'comentarios' && !isEditorContent && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard title="Reportes Creados" value={commentsStats.totalReportes} color="purple" icon={<FileText className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
@@ -471,7 +480,6 @@ export const DashboardView = ({
                                     
                                     <div>
                                         <h3 className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-3 ml-1">Acciones Rápidas</h3>
-                                        {/* 🔥 FIX: EXCLUSIÓN ESTRICTA - Lectores SOLO ven Solicitar Ticket. Autenticados SOLO ven Gestionar Tickets */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {!user ? (
                                                 <ActionBtn onClick={() => navigate('solicitud-tickets')} icon={<Send className="w-5 h-5 text-purple-500"/>} title="Solicitar Ticket" desc="Formulario para Innovaschools." bgIcon="bg-purple-500/10" />
@@ -513,7 +521,6 @@ export const DashboardView = ({
                     )}
                 </div>
 
-                {/* MODAL DE VISTA RÁPIDA (PREVIEW) PARA RRSS, COMENTARIOS Y TICKETS */}
                 {previewModal.isOpen && previewModal.data && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 fade-in">
                         <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col">
@@ -571,11 +578,6 @@ export const DashboardView = ({
                 )}
             </div>
 
-            {/* MODALES EXCLUSIVOS DEL DASHBOARD (PARA SEGURIDAD/HACKEOS) */}
-            <DetailModal isOpen={detailModalOpen} onClose={() => setDetailModalOpen(false)} incident={selectedHackeo} isAdmin={isAdmin} onToggleStatus={toggleIncidentStatus} onEdit={() => { setDetailModalOpen(false); setEditModalOpen(true); }} onDelete={deleteIncident} />
-            <EditIncidentModal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)} incident={selectedHackeo} onUpdate={updateIncident} />
-
-            {/* VISTA OCULTA DE IMPRESIÓN */}
             <div className="hidden print-report-container p-8 max-w-4xl mx-auto">
                 <div className="border-b-2 border-gray-800 pb-4 mb-8">
                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">INNOVA MANAGEMENT</h1>

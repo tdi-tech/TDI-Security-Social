@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { collection, addDoc, doc, updateDoc, deleteDoc, arrayUnion, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, deleteDoc, arrayUnion, getDoc, setDoc, onSnapshot, getDocs, query } from 'firebase/firestore';
 import { db, appId, auth, getNetworkContext } from '../../../services/firebase/config';
 import { logAuditEvent, logSecurityBlock } from '../../../services/firebase/audit.service';
 
@@ -10,7 +10,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
     const [ticketRemainingAttempts, setTicketRemainingAttempts] = useState(5);
     const [ticketLockoutUntil, setTicketLockoutUntil] = useState<number | null>(null);
 
-    // 🔥 ESCUDO EN TIEMPO REAL: Sincronización en vivo con firewall_locks usando onSnapshot
     useEffect(() => {
         let unsub: (() => void) | undefined;
         getNetworkContext().then((net) => {
@@ -58,7 +57,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
             const lockData = lockSnap.exists() ? lockSnap.data() : {};
             const now = Date.now();
 
-            // 1. VERIFICACIÓN BACKEND: ¿Bloqueo de 30 minutos activo?
             if (lockData.lockoutUntil) {
                 const lockoutTime = new Date(lockData.lockoutUntil).getTime();
                 if (now < lockoutTime) {
@@ -70,7 +68,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 }
             }
 
-            // 2. VERIFICACIÓN BACKEND: Rate Limit de 60 segundos
             if (lockData.lastSubmissionTime && (now - lockData.lastSubmissionTime < 60 * 1000)) {
                 const segRestantes = Math.ceil((60 * 1000 - (now - lockData.lastSubmissionTime)) / 1000);
                 showToast(`⚡ Rate Limit de Servidor: Espera ${segRestantes}s para enviar otro ticket.`, true);
@@ -79,7 +76,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 return false;
             }
 
-            // 🔥 ESQUEMA EN ESPAÑOL EXACTO para cumplir con firestore.rules
             const payload = {
                 ...ticketData,
                 estado: 'Pendiente',
@@ -220,7 +216,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 }
             }
 
-            if (logAction) await logAction('Actualizó metadatos y responsable de ticket', 'Tickets', 'update', ticketId);
             showToast('¡Metadatos internos y responsable guardados!');
             return true;
         } catch (error: any) {
@@ -232,7 +227,7 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
             }
             return false;
         }
-    }, [showToast, logAction]);
+    }, [showToast]);
 
     const deleteTicket = useCallback((id: string, onSuccess?: () => void) => {
         if (openConfirmModal) {
@@ -257,12 +252,105 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
         }
     }, [openConfirmModal, showToast]);
 
+    const deleteMultipleTickets = useCallback((ids: string[], onSuccess?: () => void) => {
+        if (openConfirmModal) {
+            openConfirmModal(
+                "¿Eliminar Tickets Seleccionados?",
+                `Estás a punto de purgar ${ids.length} ticket(s) de producción permanentemente. ¿Deseas continuar?`,
+                async () => {
+                    try {
+                        await Promise.all(ids.map(id => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', id))));
+                        showToast(`${ids.length} tickets eliminados del sistema`);
+                        if (onSuccess) onSuccess();
+                    } catch (error: any) {
+                        if (error.code === 'permission-denied') {
+                            showToast('Sin permisos para eliminar algunos tickets', true);
+                            await logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de eliminación masiva en Tickets`);
+                        } else {
+                            showToast('Error al eliminar tickets', true);
+                        }
+                    }
+                }
+            );
+        }
+    }, [openConfirmModal, showToast]);
+
+    // 🔥 EXTRACCIÓN AL BACKEND: Validación y generación segura del CSV desde Firestore
+    const exportTicketsCSV = useCallback(async (csvFilter: any) => {
+        try {
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'tickets'));
+            const querySnapshot = await getDocs(q);
+            let filtrados: any[] = [];
+            
+            querySnapshot.forEach((d) => {
+                filtrados.push({ id: d.id, ...d.data() });
+            });
+
+            if (csvFilter.tipo !== 'Todo') {
+                filtrados = filtrados.filter(t => {
+                    if (!t.timestamp) return false;
+                    const d = new Date(t.timestamp);
+                    const tYear = d.getFullYear().toString();
+                    const tMonth = (d.getMonth() + 1).toString().padStart(2, '0');
+
+                    if (csvFilter.tipo === 'Anio' && tYear !== csvFilter.anio) return false;
+                    if (csvFilter.tipo === 'Mes' && (tYear !== csvFilter.anio || tMonth !== csvFilter.mes)) return false;
+                    return true;
+                });
+            }
+            
+            if (csvFilter.semaforo !== 'Todos') {
+                filtrados = filtrados.filter(t => t.prioridad && t.prioridad.includes(csvFilter.semaforo));
+            }
+
+            if (filtrados.length === 0) {
+                showToast('No hay tickets en la base de datos que coincidan con estos filtros.', true);
+                return false;
+            }
+
+            const headers = ['ID_Ticket', 'Prioridad', 'Plataformas', 'Tema', 'Estado', 'Fecha Limite', 'Responsable', 'Fecha Entrega Real', 'Link Arte', 'Notas Internas', 'Fecha Emision'];
+            
+            const rows = filtrados.map(t => {
+                const plats = Array.isArray(t.plataforma) ? t.plataforma.join(' | ') : t.plataforma;
+                return [
+                    t.id, 
+                    t.prioridad, 
+                    `"${plats}"`, 
+                    `"${(t.tema||'').replace(/"/g, '""')}"`, 
+                    t.estado, 
+                    t.fechaLimite,
+                    t.responsable || 'Sin asignar', 
+                    t.fechaEntregaReal || '', 
+                    `"${(t.linkArte||'').replace(/"/g, '""')}"`,
+                    `"${(t.notasInternas||'').replace(/"/g, '""')}"`, 
+                    t.timestamp
+                ].join(',');
+            });
+
+            const csvContent = "\uFEFF" + [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Reporte_Tickets_${csvFilter.tipo}_${Date.now()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('CSV Inteligente generado y validado con el servidor.');
+            return true;
+        } catch (error) {
+            showToast('Error de conexión al generar el reporte.', true);
+            return false;
+        }
+    }, [showToast]);
+
     return { 
         createTicket, 
         isSubmitting, 
         updateTicketStatus, 
         updateTicketInternals, 
         deleteTicket,
+        deleteMultipleTickets,
+        exportTicketsCSV,
         ticketRemainingAttempts,
         ticketLockoutUntil
     };

@@ -4,7 +4,7 @@ import {
     Save, Download, Trash2, Ticket, Printer, X, Edit3, Link as LinkIcon, 
     Search, ChevronDown, ChevronRight, ChevronLeft, FileText, Loader2, 
     Calendar, AlertTriangle, CheckCircle2, Clock, Send, Lock, ExternalLink,
-    Eye, EyeOff, Users, Check
+    Eye, EyeOff, Users, Check, Filter, CheckSquare
 } from 'lucide-react';
 import { collection, addDoc, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db, appId, auth } from '../../../services/firebase/config';
@@ -33,14 +33,16 @@ const EditorToolbar = ({ onCommand }: { onCommand: (cmd: string, val?: string) =
 };
 
 export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
-    const [formData, setFormData] = useState({
-        prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: 'Instagram',
+    const [formData, setFormData] = useState<{
+        prioridad: string, tema: string, mensaje: string, plataforma: string[],
+        objetivo: string, fechaLimite: string, pin: string, formato: string
+    }>({
+        prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: ['Instagram'],
         objetivo: '', fechaLimite: '', pin: '', formato: ''
     });
     const [showPin, setShowPin] = useState(false);
     const editorRef = useRef<HTMLDivElement>(null);
 
-    // 🔥 CONECTADO AL SERVIDOR EN TIEMPO REAL: Extraemos el contador y bloqueo del hook
     const { createTicket, isSubmitting, ticketRemainingAttempts, ticketLockoutUntil } = useTickets(showToast, null);
 
     const execCommand = (command: string, value: string = '') => {
@@ -56,11 +58,12 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.pin.trim()) return showToast('Por favor ingresa el PIN corporativo.', true);
+        if (formData.plataforma.length === 0) return showToast('Por favor selecciona al menos una plataforma.', true);
         
         const cleanHTML = DOMPurify.sanitize(editorRef.current ? editorRef.current.innerHTML : formData.formato);
         const success = await createTicket({ ...formData, formato: cleanHTML });
         if (success) {
-            setFormData({ prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: 'Instagram', objetivo: '', fechaLimite: '', pin: '', formato: '' });
+            setFormData({ prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: ['Instagram'], objetivo: '', fechaLimite: '', pin: '', formato: '' });
             if (editorRef.current) editorRef.current.innerHTML = '';
         }
     };
@@ -101,7 +104,6 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
                             <div>
                                 <h4 className="font-bold theme-text-main text-sm flex items-center gap-2">
                                     Autenticación de Cliente
-                                    {/* 🔥 AQUÍ ESTÁ EL CONTADOR VISUAL EN VIVO */}
                                     <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase ${
                                         isLocked ? 'bg-red-500 text-white animate-pulse' :
                                         ticketRemainingAttempts <= 2 ? 'bg-yellow-500 text-black' : 'bg-purple-500/20 text-purple-500'
@@ -152,10 +154,31 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Plataforma</label>
-                                <select disabled={isLocked} value={formData.plataforma} onChange={(e) => setFormData({...formData, plataforma: e.target.value})} className={inputStyles}>
-                                    {PLATAFORMAS_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
-                                </select>
+                                <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Plataformas a publicar</label>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                    {PLATAFORMAS_OPTIONS.map(p => (
+                                        <button
+                                            type="button"
+                                            key={p}
+                                            disabled={isLocked}
+                                            onClick={() => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    plataforma: prev.plataforma.includes(p)
+                                                        ? prev.plataforma.filter(x => x !== p)
+                                                        : [...prev.plataforma, p]
+                                                }))
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                                formData.plataforma.includes(p)
+                                                ? 'bg-purple-500 text-white border-purple-500'
+                                                : 'bg-black/5 dark:bg-white/5 theme-text-muted border-transparent hover:border-purple-500/50'
+                                            } disabled:opacity-50`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Fecha Límite / Salida</label>
@@ -197,7 +220,7 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
     );
 };
 
-const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selectedValue: string, users: any[], onSelect: (val: string) => void }) => {
+const CustomResponsableSelector = ({ selectedValue, users, onSelect, disabled }: { selectedValue: string, users: any[], onSelect: (val: string) => void, disabled?: boolean }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -214,8 +237,9 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
     return (
         <div className="relative w-full" ref={containerRef}>
             <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className={`${gridInputExactClass} justify-between cursor-pointer select-none hover:border-purple-500`}
+                onClick={() => { if (!disabled) setIsOpen(!isOpen); }}
+                className={`${gridInputExactClass} justify-between select-none ${disabled ? 'opacity-50 cursor-not-allowed bg-black/5 dark:bg-white/5' : 'cursor-pointer hover:border-purple-500'}`}
+                title={disabled ? "No tienes permisos para reasignar este ticket" : "Seleccionar responsable"}
             >
                 <div className="flex items-center gap-2 truncate">
                     {selectedUser ? (
@@ -233,10 +257,10 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
                         <span className="text-gray-400 text-xs">-- Sin asignar --</span>
                     )}
                 </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />
+                {!disabled && <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} />}
             </div>
 
-            {isOpen && (
+            {isOpen && !disabled && (
                 <div className="absolute z-[100000] top-full left-0 right-0 mt-1 theme-bg-container border theme-border rounded-xl shadow-2xl max-h-52 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
                     <div 
                         onClick={() => { onSelect(''); setIsOpen(false); }}
@@ -274,16 +298,73 @@ const CustomResponsableSelector = ({ selectedValue, users, onSelect }: { selecte
     );
 };
 
-export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateTicketStatus, updateTicketInternals, deleteTicket }: any) => {
+export const GestionTicketsView = ({ showToast, userRole, appUsers, user, updateTicketStatus, updateTicketInternals, deleteTicket, openConfirmModal }: any) => {
     const [tickets, setTickets] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [filterEstado, setFilterEstado] = useState('Todos');
 
+    const canManageAdmin = ['ADMIN_IT', 'ADMIN_CM'].includes(userRole);
+
+    // 🔥 VARIABLES DE ELIMINACIÓN MASIVA (MEJORA UX)
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    
+    // 🔥 EXPORTACIÓN CSV
+    const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+    const [isExportingCSV, setIsExportingCSV] = useState(false);
+    const [csvFilter, setCsvFilter] = useState({ 
+        tipo: 'Todo', 
+        anio: '', 
+        mes: '', 
+        semaforo: 'Todos' 
+    });
+
+    // 🔥 FIX DEL BUG DE BORRADO: Ahora sí pasamos openConfirmModal al hook
+    const { deleteMultipleTickets, exportTicketsCSV } = useTickets(showToast, openConfirmModal);
+
     const activeTeamUsers = useMemo(() => {
         return (appUsers || []).filter((u: any) => !u.disabled);
     }, [appUsers]);
+
+    // 🔥 EXTRACCIÓN DINÁMICA DE FILTROS (Basado en la BD real)
+    const availableYears = useMemo(() => {
+        const years = new Set<string>();
+        tickets.forEach(t => {
+            if (t.timestamp) years.add(new Date(t.timestamp).getFullYear().toString());
+        });
+        const arr = Array.from(years).sort((a, b) => b.localeCompare(a));
+        if (arr.length > 0 && !csvFilter.anio) setCsvFilter(prev => ({...prev, anio: arr[0]}));
+        return arr;
+    }, [tickets, csvFilter.anio]);
+
+    const availableMonths = useMemo(() => {
+        if (!csvFilter.anio) return [];
+        const months = new Set<string>();
+        tickets.forEach(t => {
+            if (t.timestamp) {
+                const d = new Date(t.timestamp);
+                if (d.getFullYear().toString() === csvFilter.anio) {
+                    months.add((d.getMonth() + 1).toString().padStart(2, '0'));
+                }
+            }
+        });
+        const arr = Array.from(months).sort();
+        if (arr.length > 0 && !csvFilter.mes) setCsvFilter(prev => ({...prev, mes: arr[0]}));
+        return arr;
+    }, [tickets, csvFilter.anio, csvFilter.mes]);
+
+    const availablePriorities = useMemo(() => {
+        const prios = new Set<string>();
+        tickets.forEach(t => {
+            if (t.prioridad) {
+                const match = t.prioridad.match(/([a-zA-ZáéíóúÁÉÍÓÚ]+)$/);
+                if (match) prios.add(match[1]);
+            }
+        });
+        return Array.from(prios);
+    }, [tickets]);
 
     useEffect(() => {
         setIsLoading(true);
@@ -329,7 +410,7 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
     };
 
     const handleInstantResponsableChange = async (newVal: string) => {
-        if (!selectedTicket) return;
+        if (!selectedTicket || !canManageAdmin) return;
         setSelectedTicket((prev: any) => ({ ...prev, responsable: newVal }));
         try {
             const updatePayload: any = { responsable: newVal };
@@ -356,9 +437,28 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
     };
 
     const handleDelete = (id: string) => {
+        if (!canManageAdmin) return;
         if (deleteTicket) {
             deleteTicket(id, () => setIsDetailOpen(false));
         }
+    };
+
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const executeBatchDelete = () => {
+        deleteMultipleTickets(selectedIds, () => {
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+        });
+    };
+
+    const handleDownloadCSV = async () => {
+        setIsExportingCSV(true);
+        const success = await exportTicketsCSV(csvFilter);
+        setIsExportingCSV(false);
+        if (success) setIsCsvModalOpen(false);
     };
 
     const getStatusBadge = (estado: string) => {
@@ -371,11 +471,35 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
         }
     };
 
+    const getMonthName = (m: string) => {
+        const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        return names[parseInt(m) - 1] || m;
+    };
+
     return (
-        <div className="space-y-6 fade-in pb-12">
+        <div className="space-y-6 fade-in pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div><h2 className="text-2xl font-bold theme-text-main">Consola de Gestión de Tickets</h2><p className="theme-text-muted text-sm mt-1">Control de flujo, aprobación y tiempos de entrega para Innovaschools.</p></div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                    
+                    {/* 🔥 MEJORA UX: Botón de Selección Múltiple (Solo Admins) */}
+                    {canManageAdmin && tickets.length > 0 && (
+                        <button 
+                            onClick={() => {
+                                setIsSelectionMode(!isSelectionMode);
+                                setSelectedIds([]);
+                            }} 
+                            className={`w-full sm:w-auto px-4 py-2.5 font-bold text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors border ${isSelectionMode ? 'bg-red-500 text-white border-red-500' : 'theme-bg-low theme-text-main border-transparent hover:border-red-500/50'}`}
+                            title={isSelectionMode ? "Cancelar selección" : "Borrar tickets por lotes"}
+                        >
+                            <CheckSquare className="w-4 h-4"/> {isSelectionMode ? 'Cancelar' : 'Selección Múltiple'}
+                        </button>
+                    )}
+
+                    <button onClick={() => setIsCsvModalOpen(true)} className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-500 flex items-center justify-center gap-2 shadow-sm transition-colors">
+                        <Download className="w-4 h-4"/> CSV
+                    </button>
+                    
                     <select value={filterEstado} onChange={(e) => setFilterEstado(e.target.value)} className={`${inputStyles} sm:w-48 font-bold`}>
                         <option value="Todos">Todos los Estados</option>
                         <option value="Pendiente">🟡 Pendientes</option>
@@ -402,28 +526,56 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
             ) : filteredTickets.length === 0 ? (
                 <div className="text-center py-16 theme-bg-container rounded-2xl border theme-border"><Ticket className="w-12 h-12 theme-text-muted mx-auto mb-4 opacity-30" /><p className="theme-text-muted">No hay tickets registrados bajo el filtro actual.</p></div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative">
                     {filteredTickets.map((t: any) => {
                         const assignedObj = activeTeamUsers.find((u: any) => (u.displayName || u.email) === t.responsable);
+                        const plats = Array.isArray(t.plataforma) ? t.plataforma : [t.plataforma];
+                        
+                        // 🔥 LÓGICA VISUAL DEL MODO SELECCIÓN
+                        const isSelected = selectedIds.includes(t.id);
+                        
                         return (
-                            <div key={t.id} onClick={() => { setSelectedTicket(t); setIsDetailOpen(true); }} className="p-5 theme-bg-container rounded-xl border theme-border shadow-sm hover:border-purple-500 transition-all cursor-pointer flex flex-col justify-between h-full border-l-4 border-l-purple-500 group">
+                            <div 
+                                key={t.id} 
+                                onClick={() => { 
+                                    if (isSelectionMode) toggleSelection(t.id); 
+                                    else { setSelectedTicket(t); setIsDetailOpen(true); }
+                                }} 
+                                className={`p-5 rounded-xl border shadow-sm transition-all cursor-pointer flex flex-col justify-between h-full border-l-4 group relative ${
+                                    isSelectionMode 
+                                    ? isSelected 
+                                        ? 'bg-red-500/10 border-red-500 border-l-red-500 scale-[0.98]' 
+                                        : 'theme-bg-container theme-border border-l-gray-300 dark:border-l-gray-700 hover:border-red-500/50'
+                                    : 'theme-bg-container theme-border hover:border-purple-500 border-l-purple-500'
+                                }`}
+                            >
+                                {isSelectionMode && (
+                                    <div className={`absolute top-4 right-4 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-400 dark:border-gray-600'}`}>
+                                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                                    </div>
+                                )}
+                                
                                 <div>
-                                    <div className="flex justify-between items-start mb-2 gap-2">
+                                    <div className="flex justify-between items-start mb-2 gap-2 pr-6">
                                         <span className="text-xs font-bold">{t.prioridad}</span>
                                         <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-md border uppercase ${getStatusBadge(t.estado)}`}>{t.estado}</span>
                                     </div>
-                                    <h3 className="font-bold theme-text-main text-base group-hover:text-purple-500 transition-colors line-clamp-1">{t.tema}</h3>
+                                    <h3 className={`font-bold text-base transition-colors line-clamp-1 ${isSelectionMode && isSelected ? 'text-red-500' : 'theme-text-main group-hover:text-purple-500'}`}>{t.tema}</h3>
                                     <p className="text-xs theme-text-muted line-clamp-2 mt-1 mb-3">{t.mensaje}</p>
                                 </div>
                                 <div className="pt-3 border-t theme-border flex flex-col gap-2 text-[11px] theme-text-muted">
                                     <div className="flex items-center justify-between">
-                                        <span className="font-bold px-2 py-0.5 theme-bg-low rounded">{t.plataforma}</span>
-                                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> Límite: {t.fechaLimite}</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {plats.map((p: string, idx: number) => (
+                                                <span key={idx} className={`font-bold px-2 py-0.5 border rounded text-[9px] ${isSelectionMode && isSelected ? 'bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400' : 'theme-bg-low theme-border'}`}>{p}</span>
+                                            ))}
+                                        </div>
+                                        <span className="flex items-center gap-1 flex-shrink-0 ml-2"><Calendar className="w-3 h-3"/> Límite: {t.fechaLimite}</span>
                                     </div>
                                     {t.responsable && (
-                                        <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium truncate pt-1 border-t theme-border/40">
+                                        <div className={`flex items-center gap-1.5 font-medium truncate pt-1 border-t theme-border/40 ${isSelectionMode && isSelected ? 'text-red-600 dark:text-red-400' : 'text-purple-600 dark:text-purple-400'}`}>
                                             {assignedObj && assignedObj.photoURL ? (
-                                                <img src={assignedObj.photoURL} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0 border border-purple-500/40" />
+                                                <img src={assignedObj.photoURL} alt="" className={`w-4 h-4 rounded-full object-cover flex-shrink-0 border ${isSelectionMode && isSelected ? 'border-red-500/40' : 'border-purple-500/40'}`} />
                                             ) : (
                                                 <Users className="w-3.5 h-3.5 flex-shrink-0"/>
                                             )}
@@ -437,13 +589,94 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
                 </div>
             )}
 
+            {isSelectionMode && canManageAdmin && ReactDOM.createPortal(
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 z-[9999] fade-in">
+                    <span className="font-bold text-sm">{selectedIds.length} ticket(s) seleccionados</span>
+                    <button 
+                        onClick={executeBatchDelete} 
+                        disabled={selectedIds.length === 0}
+                        className="bg-white text-red-600 px-4 py-1.5 rounded-full font-black text-xs hover:scale-105 transition-transform uppercase tracking-wider disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                    >
+                        Eliminar Lote
+                    </button>
+                    <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="p-1 hover:bg-white/20 rounded-full transition-colors" title="Cancelar selección"><X className="w-4 h-4"/></button>
+                </div>,
+                document.body
+            )}
+
+            {/* 🔥 MODAL DE EXPORTACIÓN CON Z-INDEX BAJADO (z-50) PARA QUE EL TOAST SALGA ARRIBA */}
+            {isCsvModalOpen && ReactDOM.createPortal(
+                <div className="fixed inset-0 w-screen h-screen bg-black/70 backdrop-blur-md z-[50] flex items-center justify-center p-4 fade-in">
+                    <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
+                        <div className="p-4 border-b theme-border flex justify-between items-center bg-emerald-500/5">
+                            <div className="flex items-center gap-3"><div className="p-2 bg-emerald-500/20 text-emerald-500 rounded-lg"><Filter className="w-5 h-5"/></div><div><h3 className="font-bold theme-text-main text-base">Filtros de Exportación CSV</h3></div></div>
+                            <button onClick={() => setIsCsvModalOpen(false)} disabled={isExportingCSV} className="p-1.5 theme-text-muted hover:bg-black/10 dark:hover:bg-white/10 rounded-lg disabled:opacity-50"><X className="w-5 h-5"/></button>
+                        </div>
+                        <div className="p-6 space-y-5">
+                            {availableYears.length === 0 ? (
+                                <div className="text-center p-4 theme-bg-low rounded-xl border theme-border">
+                                    <p className="text-sm font-bold theme-text-muted">No hay tickets registrados en la base de datos.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Rango de Tiempo</label>
+                                        <select disabled={isExportingCSV} value={csvFilter.tipo} onChange={(e) => setCsvFilter({...csvFilter, tipo: e.target.value})} className={inputStyles}>
+                                            <option value="Todo">Todo el historial (Ignorar fechas)</option>
+                                            <option value="Anio">Filtrar solo por Año</option>
+                                            <option value="Mes">Filtrar por Mes y Año específico</option>
+                                        </select>
+                                    </div>
+                                    
+                                    {/* 🔥 FILTROS DINÁMICOS BASADOS EN DB REAL */}
+                                    {csvFilter.tipo !== 'Todo' && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Año</label>
+                                                <select disabled={isExportingCSV} value={csvFilter.anio} onChange={(e) => setCsvFilter({...csvFilter, anio: e.target.value})} className={inputStyles}>
+                                                    {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                                                </select>
+                                            </div>
+                                            {csvFilter.tipo === 'Mes' && (
+                                                <div className="space-y-1.5">
+                                                    <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mes</label>
+                                                    <select disabled={isExportingCSV} value={csvFilter.mes} onChange={(e) => setCsvFilter({...csvFilter, mes: e.target.value})} className={inputStyles}>
+                                                        {availableMonths.map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Semáforo de Prioridad</label>
+                                        <select disabled={isExportingCSV} value={csvFilter.semaforo} onChange={(e) => setCsvFilter({...csvFilter, semaforo: e.target.value})} className={inputStyles}>
+                                            <option value="Todos">Todas las prioridades</option>
+                                            {availablePriorities.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="p-4 border-t theme-border bg-black/5 dark:bg-white/5 flex justify-end gap-3">
+                            <button onClick={() => setIsCsvModalOpen(false)} disabled={isExportingCSV} className="px-5 py-2.5 rounded-xl font-bold theme-text-main text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50">Cancelar</button>
+                            <button onClick={handleDownloadCSV} disabled={isExportingCSV || availableYears.length === 0} className="px-6 py-2.5 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-500 flex items-center gap-2 shadow-sm transition-all disabled:opacity-50">
+                                {isExportingCSV ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4"/>} 
+                                {isExportingCSV ? 'Procesando...' : 'Extraer Datos'}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {isDetailOpen && selectedTicket && ReactDOM.createPortal(
-                <div className="fixed inset-0 w-screen h-screen bg-black/70 backdrop-blur-md z-[9999] flex items-center justify-center p-4 fade-in overflow-y-auto">
+                <div className="fixed inset-0 w-screen h-screen bg-black/70 backdrop-blur-md z-[50] flex items-center justify-center p-4 fade-in overflow-y-auto">
                     <div className="theme-bg-container rounded-2xl w-full max-w-2xl shadow-2xl border theme-border flex flex-col max-h-[90vh] overflow-hidden my-auto">
                         <div className="p-5 border-b theme-border flex justify-between items-center bg-purple-500/5">
                             <div className="flex items-center gap-3"><div className="p-2 bg-purple-500/20 text-purple-500 rounded-lg"><Ticket className="w-5 h-5"/></div><div><h3 className="font-bold theme-text-main text-lg">{selectedTicket.tema}</h3><p className="text-xs theme-text-muted">Solicitado por Innovaschools</p></div></div>
                             <div className="flex items-center gap-2">
-                                {isAdmin && <button onClick={() => handleDelete(selectedTicket.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg" title="Eliminar ticket"><Trash2 className="w-5 h-5"/></button>}
+                                {/* 🔥 CANDADO: EL BOTÓN ELIMINAR SOLO SE MUESTRA A ADMINS */}
+                                {canManageAdmin && <button onClick={() => handleDelete(selectedTicket.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg" title="Eliminar ticket"><Trash2 className="w-5 h-5"/></button>}
                                 <button onClick={() => setIsDetailOpen(false)} className="p-2 theme-text-muted hover:theme-text-main rounded-lg" title="Cerrar modal"><X className="w-5 h-5"/></button>
                             </div>
                         </div>
@@ -452,7 +685,11 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
                             <div className="flex flex-wrap gap-3 items-center justify-between p-4 theme-bg-low rounded-xl border theme-border">
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-bold">{selectedTicket.prioridad}</span>
-                                    <span className="text-xs font-bold px-2 py-1 bg-purple-500/10 text-purple-500 rounded">{selectedTicket.plataforma}</span>
+                                    <div className="flex flex-wrap gap-1">
+                                        {(Array.isArray(selectedTicket.plataforma) ? selectedTicket.plataforma : [selectedTicket.plataforma]).map((p: string, idx: number) => (
+                                            <span key={idx} className="text-xs font-bold px-2 py-1 bg-purple-500/10 text-purple-500 rounded border border-purple-500/20">{p}</span>
+                                        ))}
+                                    </div>
                                 </div>
                                 
                                 <div className="flex items-center gap-1.5 px-3 py-1 bg-black/5 dark:bg-white/5 rounded-lg border theme-border text-xs font-bold theme-text-main">
@@ -483,7 +720,8 @@ export const GestionTicketsView = ({ showToast, isAdmin, appUsers, user, updateT
                                         <CustomResponsableSelector 
                                             selectedValue={selectedTicket.responsable || ''} 
                                             users={activeTeamUsers} 
-                                            onSelect={handleInstantResponsableChange} 
+                                            onSelect={handleInstantResponsableChange}
+                                            disabled={!canManageAdmin}
                                         />
                                     </div>
                                     <div className="space-y-1">

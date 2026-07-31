@@ -33,19 +33,23 @@ const helpTopics = [
             <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto del sistema. Gestión de Backups cifrados, Auditoría SIEM forense, purga de rastros y administración total de usuarios.</p>
+                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto del sistema. Gestión de Backups cifrados, Auditoría SIEM forense, purga de rastros y administración total de usuarios y borrado de tickets por lotes.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo y gestión gerencial. Acceso total a incidentes y a la consola de Gestión de Tickets. Permite pre-registrar y deshabilitar usuarios operativos.</p>
+                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo y gestión gerencial. Acceso total a incidentes y a la consola de Gestión de Tickets. Permite pre-registrar usuarios y reasignar responsabilidades.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Capacidad de crear y editar incidentes, así como ser asignado y gestionar metadatos en la producción de tickets.</p>
+                    <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Capacidad de crear y editar incidentes en Hackeos, RRSS y Comentarios, así como documentar avances en tickets asignados.</p>
+                </li>
+                <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    <p><strong className="theme-text-main">EDITOR_CONTENT:</strong> Perfil especializado exclusivo para la consola de Tickets Emergentes. Sin acceso a módulos de seguridad o crisis. Solo gestiona estados y metadatos de tickets asignados.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>
-                    <p><strong className="theme-text-main">Lector / Cliente Externo:</strong> Visualización de Dashboard y protocolos. Acceso al módulo público de Solicitud de Tickets autenticándose bajo PIN corporativo (restringido en nivel <em>GUEST_ONLY</em> para usuarios sin sesión interna).</p>
+                    <p><strong className="theme-text-main">Lector / Cliente Externo:</strong> Visualización de Dashboard analítico y protocolos. Acceso al formulario de Solicitud de Tickets mediante PIN corporativo (restringido en nivel <em>GUEST_ONLY</em>).</p>
                 </li>
             </ul>
         )
@@ -118,15 +122,15 @@ const helpTopics = [
             <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 flex-shrink-0"></span>
-                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Acceso a preferencias de notificación, purga de rastros del servidor y liberación de memoria caché.</p>
+                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Acceso a preferencias de notificación, purga de rastros del servidor, análisis de salud en tiempo real de Firestore y liberación de memoria caché.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 flex-shrink-0"></span>
-                    <p><strong className="theme-text-main">Equipo CM:</strong> Control sobre tema visual y personalización de alertas sonoras por módulo operativo.</p>
+                    <p><strong className="theme-text-main">Equipo Operativo (CM / Content):</strong> Control exclusivo sobre su tema visual e interruptores independientes para silenciar alertas sonoras o visuales por módulo.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mt-1.5 flex-shrink-0"></span>
-                    <p><strong className="theme-text-main">Lectores:</strong> Acceso exclusivo al cambio de Tema (Claro/Oscuro).</p>
+                    <p><strong className="theme-text-main">Lectores Externos:</strong> Acceso únicamente al cambio global de Tema (Claro/Oscuro).</p>
                 </li>
             </ul>
         )

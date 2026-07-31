@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    LayoutDashboard, Leaf, ShieldAlert, FileText, ListChecks, Users, BookOpen, 
+    LayoutDashboard, ShieldAlert, FileText, ListChecks, Users, BookOpen, 
     AlertTriangle, Settings, HelpCircle, Smartphone, MessageSquareWarning, 
     ChevronDown, ChevronRight, History, Cloud, CloudOff, Database, Ticket
 } from 'lucide-react';
@@ -109,14 +109,18 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         if (['protocolo-rss', 'nuevo-rss', 'historial-rss'].includes(view)) return 'rss';
         if (['nuevo-comentario', 'historial-comentario'].includes(view)) return 'comentarios';
         if (['solicitud-tickets', 'gestion-tickets'].includes(view)) return 'tickets';
-        return 'hackeos'; 
+        return 'tickets'; // Default general a tickets para que siempre abra
     });
 
     const [newTicketsCount, setNewTicketsCount] = useState(0);
 
-    // 🔥 FIX: Eliminado el bloqueo if (!user). Ahora toma auth.currentUser si user llega undefined.
+    // 🔥 CONSTANTES DE ROL PARA FILTRAR VISIBILIDAD
+    const isInternalUser = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM', 'EDITOR_CONTENT'].includes(userRole);
+    const isEditorContent = userRole === 'EDITOR_CONTENT';
+    const isITAdmin = userRole === 'ADMIN_IT';
+
     useEffect(() => {
-        if (!isAdmin) {
+        if (!isInternalUser) {
             setNewTicketsCount(0);
             return;
         }
@@ -131,7 +135,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     (currentUser.uid && id === currentUser.uid) || (currentUser.email && id === currentUser.email)
                 );
                 
-                // SOLO se suma si el ticket está 'Pendiente' y el administrador loggeado aún no lo ha visto
                 if (data.estado === 'Pendiente' && !isReadByCurrentUser) {
                     count++;
                 }
@@ -139,13 +142,11 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
             setNewTicketsCount(count);
         });
         return () => unsub();
-    }, [isAdmin, user]);
+    }, [isInternalUser, user]);
 
     const toggleGroup = (group: string) => {
         setOpenGroup(openGroup === group ? '' : group);
     };
-
-    const isITAdmin = userRole?.toUpperCase()?.trim() === 'ADMIN_IT';
 
     return (
         <>
@@ -155,7 +156,16 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                 
                 <div className="p-6 flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-xl bg-[var(--primary)] flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Leaf className="w-6 h-6 text-white" />
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            viewBox="0 0 24 24" 
+                            className="w-6 h-6 text-white"
+                            fill="currentColor"
+                        >
+                            <path d="M11.57,1.72s1.99,4.81,2.21,9.54c.35,7.65-1.53,12.6-1.53,12.6.8-.46,4.2-3.37,6.5-7.48,2.3-4.11,2.91-7.91,2.91-7.91C17.43,3.69,11.57,1.72,11.57,1.72Z" />
+                            <path d="M11.27,9.05s-3.77-2.39-8.49-1.01c0,0,1.19,9.39,9.47,15.82,0,0,1.49-7.63-.98-14.81Z" />
+                            <path d="M10.89,7.9s-1.16-3.76-3.72-7.33c0,0-1.66-.4-4.66-.43,0,0-.36,2.46-.04,5.53,0,0,4.12-1.01,8.41,2.24Z" />
+                        </svg>
                     </div>
                     <div>
                         <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas</h1>
@@ -168,34 +178,42 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
-                    <DropdownGroup id="hackeos" icon={ShieldAlert} label="Hackeos" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
-                        <SubNavBtn id="protocolo" icon={BookOpen} label="Protocolo" currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="nuevo" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="checklist" icon={ListChecks} label="Checklist Rápido" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="historial" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="glosario" icon={BookOpen} label="Glosario" currentView={currentView} navigate={navigate} />
-                    </DropdownGroup>
+                    {/* 🔥 OCULTAMOS TODO ESTO PARA EL EDITOR CONTENT */}
+                    {!isEditorContent && (
+                        <>
+                            <DropdownGroup id="hackeos" icon={ShieldAlert} label="Hackeos" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                                <SubNavBtn id="protocolo" icon={BookOpen} label="Protocolo" currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="nuevo" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="checklist" icon={ListChecks} label="Checklist Rápido" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="historial" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="glosario" icon={BookOpen} label="Glosario" currentView={currentView} navigate={navigate} />
+                            </DropdownGroup>
 
-                    <DropdownGroup id="rss" icon={Smartphone} label="Incidencias RRSS" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
-                        <SubNavBtn id="protocolo-rss" icon={BookOpen} label="Protocolo" currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="nuevo-rss" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="historial-rss" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
-                    </DropdownGroup>
+                            <DropdownGroup id="rss" icon={Smartphone} label="Incidencias RRSS" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                                <SubNavBtn id="protocolo-rss" icon={BookOpen} label="Protocolo" currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="nuevo-rss" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="historial-rss" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                            </DropdownGroup>
 
-                    <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
-                        <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
-                        <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
-                    </DropdownGroup>
+                            <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                                <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                                <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                            </DropdownGroup>
+                        </>
+                    )}
 
+                    {/* 🔥 GESTIÓN DE TICKETS Y CONTADOR EN VIVO */}
                     <DropdownGroup id="tickets" icon={Ticket} label="Emergentes" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView} badgeCount={newTicketsCount}>
-                        {!isAdmin && <SubNavBtn id="solicitud-tickets" icon={AlertTriangle} label="Solicitar Ticket" currentView={currentView} navigate={navigate} />}
-                        {isAdmin && <SubNavBtn id="gestion-tickets" icon={FileText} label="Gestionar Tickets" currentView={currentView} navigate={navigate} badgeCount={newTicketsCount} />}
+                        {!isInternalUser && <SubNavBtn id="solicitud-tickets" icon={AlertTriangle} label="Solicitar Ticket" currentView={currentView} navigate={navigate} />}
+                        {isInternalUser && <SubNavBtn id="gestion-tickets" icon={FileText} label="Gestionar Tickets" currentView={currentView} navigate={navigate} badgeCount={newTicketsCount} />}
                     </DropdownGroup>
 
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
                     <NavBtn id="roles" icon={Users} label="Roles" currentView={currentView} navigate={navigate} />
-                    {isAdmin && <NavBtn id="changelog" icon={History} label="Changelog" currentView={currentView} navigate={navigate} />}
+                    
+                    {/* Changelog oculto para Editor Content */}
+                    {isAdmin && !isEditorContent && <NavBtn id="changelog" icon={History} label="Changelog" currentView={currentView} navigate={navigate} />}
                     
                     {isITAdmin && (
                         <>

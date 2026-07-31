@@ -6,12 +6,9 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
     const [isAdding, setIsAdding] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [newRole, setNewRole] = useState('EDITOR_CM');
-    // Estado local de carga para el efecto Skeleton (simulado para sincronizar con Firebase)
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Simulamos un pequeño delay para asegurar la transición suave del skeleton
-        // ya que onSnapshot a veces responde instantáneamente de la caché local.
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 600);
@@ -26,7 +23,6 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
         setIsAdding(false);
     };
 
-    // ALGORITMO DINÁMICO: Ancla a todos los Administradores IT al inicio de la lista
     const sortedUsers = [...appUsers].sort((a, b) => {
         const aIsAdminIT = a.role === 'ADMIN_IT';
         const bIsAdminIT = b.role === 'ADMIN_IT';
@@ -44,7 +40,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                         <div className="h-8 w-64 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
                         <div className="h-4 w-96 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
                     </div>
-                    {userRole === 'ADMIN_IT' && <div className="h-10 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>}
+                    {(userRole === 'ADMIN_IT' || userRole === 'ADMIN_CM') && <div className="h-10 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>}
                 </div>
 
                 <div className="h-24 bg-gray-200 dark:bg-gray-800 rounded-xl mb-6"></div>
@@ -88,7 +84,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                     </p>
                 </div>
 
-                {userRole === 'ADMIN_IT' && (
+                {(userRole === 'ADMIN_IT' || userRole === 'ADMIN_CM') && (
                     <button
                         onClick={() => setIsAdding(!isAdding)}
                         className="flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white font-bold text-sm rounded-lg hover:brightness-110 shadow-sm transition-all"
@@ -99,7 +95,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                 )}
             </div>
 
-            {isAdding && userRole === 'ADMIN_IT' && (
+            {isAdding && (userRole === 'ADMIN_IT' || userRole === 'ADMIN_CM') && (
                 <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm fade-in mb-6">
                     <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
                         <div className="w-full sm:flex-1 space-y-1">
@@ -109,6 +105,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                         <div className="w-full sm:w-64 space-y-1">
                             <label className="text-xs font-bold theme-text-muted">Asignar Rol</label>
                             <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]">
+                                <option value="EDITOR_CONTENT">Editor Content</option>
                                 <option value="EDITOR_CM">Editor CM</option>
                                 <option value="ADMIN_CM">Administrador CM</option>
                                 <option value="ADMIN_IT">Administrador IT</option>
@@ -129,7 +126,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                 </p>
             </div>
 
-            <div className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="theme-bg-container border theme-border rounded-2xl overflow-hidden shadow-sm mt-6">
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -142,9 +139,8 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                         </thead>
                         <tbody className="divide-y theme-border">
                             {sortedUsers.map((u: any) => {
-                                // 🛑 REGLA ABSOLUTA: Si el objetivo es ADMIN_IT, se considera intocable en el frontend
                                 const isSuperUser = u.role === 'ADMIN_IT';
-                                const canEdit = !isSuperUser; // Nadie puede editar a un ADMIN_IT desde la interfaz gráfica
+                                const canEdit = !isSuperUser;
 
                                 return (
                                     <tr key={u.email} className={`transition-colors hover:bg-black/5 dark:hover:bg-white/5 ${u.disabled ? 'opacity-50' : ''}`}>
@@ -177,6 +173,7 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                                 <option value="ADMIN_IT">Administrador IT</option>
                                                 <option value="ADMIN_CM">Administrador CM</option>
                                                 <option value="EDITOR_CM">Editor CM</option>
+                                                <option value="EDITOR_CONTENT">Editor Content</option>
                                             </select>
                                             {isSuperUser && (
                                                 <p className="text-[10px] text-[var(--primary)] font-bold mt-1 flex items-center gap-1">
@@ -193,7 +190,6 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
 
                                         <td className="p-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                {/* Botón de Estado */}
                                                 <button
                                                     onClick={() => toggleUserStatus(u.email, u.disabled)}
                                                     disabled={!canEdit}
@@ -203,7 +199,6 @@ export const UserManagementView = ({ appUsers, userRole, updateUserRole, toggleU
                                                     {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
                                                 </button>
 
-                                                {/* Botón de Eliminar */}
                                                 {userRole === 'ADMIN_IT' && (
                                                     <button
                                                         onClick={() => deleteUserRecord(u.email)}
