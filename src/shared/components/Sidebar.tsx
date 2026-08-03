@@ -104,7 +104,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         const view = currentView || localStorage.getItem('innova_current_view') || '';
         if (['protocolo', 'nuevo', 'checklist', 'historial', 'glosario'].includes(view)) return 'hackeos';
         if (['protocolo-rss', 'nuevo-rss', 'historial-rss'].includes(view)) return 'rss';
-        if (['nuevo-comentario', 'historial-comentario'].includes(view)) return 'comentarios';
+        if (['nuevo-comentario', 'historial-comentario', 'reportes'].includes(view)) return 'comentarios';
         if (['solicitud-tickets', 'gestion-tickets'].includes(view)) return 'tickets';
         return 'tickets';
     });
@@ -200,6 +200,11 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                             <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
                         )}
                         <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                        
+                        {/* 🔥 FIX: Reportes reubicado con permisos blindados para evitar accesos de Editor */}
+                        {isTrueAdmin && (
+                            <SubNavBtn id="reportes" icon={BarChart3} label="Reportes Analíticos" currentView={currentView} navigate={navigate} />
+                        )}
                     </DropdownGroup>
 
                     <DropdownGroup id="tickets" icon={Ticket} label="Emergentes" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView} badgeCount={newTicketsCount}>
@@ -208,9 +213,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     </DropdownGroup>
 
                     <div className="my-2 border-t theme-border opacity-50"></div>
-
-                    {/* 🔥 FIX: Visible solo para ADMIN_IT y ADMIN_CM */}
-                    {isTrueAdmin && <NavBtn id="reportes" icon={BarChart3} label="Reportes" currentView={currentView} navigate={navigate} />}
 
                     <NavBtn id="roles" icon={Users} label="Roles" currentView={currentView} navigate={navigate} />
 
