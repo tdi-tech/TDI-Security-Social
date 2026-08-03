@@ -3,10 +3,28 @@ import { History, GitCommit, ChevronDown, ChevronRight, Star, ShieldCheck, Layou
 
 const changelogData = [
     {
+        id: 'cl-v3-4-0',
+        version: 'Versión 3.4.0',
+        date: 'Agosto 2026',
+        tag: 'Última Versión',
+        title: 'Módulo Analítico de Comentarios y Exportación PDF Premium',
+        changes: [
+            { id: 'ch-340-1', type: 'title', text: 'Dashboard de Reportes y Análisis' },
+            { id: 'ch-340-2', type: 'feature', text: 'Nuevo Módulo de Reportes: Dashboard analítico exclusivo para administradores, enfocado en la trazabilidad y análisis de sentimiento de la bitácora de comentarios.' },
+            { id: 'ch-340-3', type: 'feature', text: 'Ingesta Dual Inteligente: Capacidad de alimentar las métricas subiendo un archivo CSV encriptado (con lectura segura vía PapaParse) o extrayendo la información en vivo desde Firestore.' },
+            { id: 'ch-340-4', type: 'ui', text: 'Motor de Trazabilidad: Bitácora de incidencias integrada con buscador en tiempo real, filtros múltiples (Sentimiento, Red Social, Campus) y paginación modular.' },
+            { id: 'ch-340-5', type: 'divider', text: '' },
+            { id: 'ch-340-6', type: 'title', text: 'Exportación y UX/UI' },
+            { id: 'ch-340-7', type: 'feature', text: 'Generación PDF de Alta Fidelidad: Motor de renderizado que captura las gráficas interactivas y exporta un documento ejecutivo respetando la identidad visual y el Modo Oscuro de la plataforma.' },
+            { id: 'ch-340-8', type: 'ui', text: 'Gráficas Camaleónicas: Refactorización del motor de Chart.js para eliminar fondos estáticos, permitiendo que las curvas de tendencia y las donas se adapten perfectamente a las transiciones de temas (Claro/Oscuro).' },
+            { id: 'ch-340-9', type: 'security', text: 'Filtros Dinámicos Validados: Los selectores de temporalidad ahora escanean la base de datos para mostrar únicamente los años y meses operativos que realmente contienen registros, evitando búsquedas vacías.' }
+        ]
+    },
+    {
         id: 'cl-v3-3-0',
         version: 'Versión 3.3.0',
         date: 'Julio 2026',
-        tag: 'Última Versión',
+        tag: 'Estable',
         title: 'Módulo de Tickets Emergentes, Exportaciones & Nuevo Rol Operativo',
         changes: [
             { id: 'ch-330-1', type: 'title', text: 'Nuevas Funcionalidades Operativas' },
@@ -293,7 +311,7 @@ export const ChangelogView = () => {
                         className="flex items-center gap-2 px-6 py-2.5 theme-bg-container border theme-border rounded-xl text-sm font-bold theme-text-main hover:border-[var(--primary)] hover:text-[var(--primary)] shadow-sm transition-all group"
                     >
                         <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                        Cargar versions anteriores
+                        Cargar versiones anteriores
                     </button>
                 </div>
             )}

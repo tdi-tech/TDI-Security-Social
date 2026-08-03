@@ -114,6 +114,9 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
     const isInternalUser = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM', 'EDITOR_CONTENT'].includes(userRole);
     const isEditorContent = userRole === 'EDITOR_CONTENT';
     const isITAdmin = userRole === 'ADMIN_IT';
+    
+    // 🔥 FIX: Permiso estricto solo para verdaderos administradores
+    const isTrueAdmin = ['ADMIN_IT', 'ADMIN_CM'].includes(userRole);
 
     useEffect(() => {
         if (!isInternalUser) {
@@ -165,7 +168,7 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     </div>
                     <div>
                         <h1 className="font-bold text-base theme-text-main leading-tight">Tierra de ideas</h1>
-                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.3.0</p>
+                        <p className="text-[10px] theme-text-muted font-medium tracking-wide uppercase mt-0.5">Innova Management v3.4.0</p>
                     </div>
                 </div>
 
@@ -192,7 +195,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                         </>
                     )}
 
-                    {/* 🔥 COMENTARIOS: Ahora visible para Editor Content (pero sin crear reporte) */}
                     <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
                         {!isEditorContent && (
                             <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
@@ -207,11 +209,11 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
 
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
-                    {isInternalUser && <NavBtn id="reportes" icon={BarChart3} label="Reportes" currentView={currentView} navigate={navigate} />}
+                    {/* 🔥 FIX: Visible solo para ADMIN_IT y ADMIN_CM */}
+                    {isTrueAdmin && <NavBtn id="reportes" icon={BarChart3} label="Reportes" currentView={currentView} navigate={navigate} />}
 
                     <NavBtn id="roles" icon={Users} label="Roles" currentView={currentView} navigate={navigate} />
 
-                    {/* Changelog oculto para Editor Content */}
                     {isAdmin && !isEditorContent && <NavBtn id="changelog" icon={History} label="Changelog" currentView={currentView} navigate={navigate} />}
 
                     {isITAdmin && (

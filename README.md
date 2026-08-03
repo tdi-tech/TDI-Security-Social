@@ -11,10 +11,12 @@ Innova Management es una herramienta interna tipo SaaS (Software as a Service) d
 Siga estos pasos para clonar, configurar y ejecutar el proyecto en su entorno de desarrollo local.
 
 ### 1. Instalar dependencias
-Asegúrese de contar con Node.js instalado en su sistema. Ejecute el siguiente comando en la terminal desde la raíz del proyecto para descargar los módulos necesarios:
+Asegúrese de contar con Node.js instalado en su sistema. Ejecute el siguiente comando en la terminal desde la raíz del proyecto para descargar los módulos base y las librerías analíticas necesarias:
 
 ```bash
 npm install
+npm install chart.js jspdf papaparse react-chartjs-2
+npm install @types/jspdf @types/papaparse --save-dev
 ```
 
 *(Nota de dependencias críticas: Asegúrese de instalar `crypto-js` y `dompurify` para el cifrado AES-256 de respaldos y la desinfección de código HTML enriquecido ejecutando `npm i crypto-js dompurify` y sus tipos con `npm i -D @types/crypto-js @types/dompurify`).*
@@ -62,10 +64,13 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 * **Consola Operativa de Gestión:** Panel interno de control que permite a los equipos documentar fechas reales de entrega, enlaces de arte final o carpetas de Drive y notas internas de avance. Cuenta con un sistema de eliminación por lotes interactivo (Selección Múltiple) exclusivo para la administración.
 * **Asignación Dinámica de Responsables:** Selector personalizado conectado a los perfiles de Google Workspace que muestra fotografía y rol de cada miembro, disparando notificaciones directas y alertas de asignación exclusivas al usuario seleccionado.
 
-### 3. Reputación, Crisis RRSS y Comentarios
+### 3. Reputación, Crisis RRSS y Reportes Analíticos de Comentarios
 * **Gestión de Contingencias:** Herramienta enfocada en la detección de picos inusuales de alertas en canales digitales oficiales.
 * **Reportes WYSIWYG Purificados:** Editor de texto enriquecido integrado, resguardado con la librería `DOMPurify` para prevenir vulnerabilidades de inyección de código (XSS) al momento de renderizar bitácoras oficiales.
 * **Trazabilidad de Quejas:** Registro de ataques focalizados organizados por campus y tipo de contenido (Orgánico/Pautado), evaluando la respuesta del equipo mediante análisis de sentimiento.
+* **Módulo Analítico Avanzado (Novedad):** Nuevo tablero de inteligencia de negocios exclusivo para el análisis profundo de Comentarios, impulsado por `Chart.js`.
+  * **Ingesta Dual Inteligente:** Motor robusto que permite alimentar las gráficas cargando archivos CSV encriptados a prueba de fallos mediante la librería `PapaParse`, o extrayendo la información en tiempo real directamente desde Firestore.
+  * **Radar de Autores y Filtros Dinámicos:** Gráficas camaleónicas que se adaptan al Dark Mode para mostrar la tendencia cronológica de negatividad, campus afectados y usuarios recurrentes, respaldados por una bitácora de trazabilidad con buscador interno y paginación modular.
 
 ---
 
@@ -77,9 +82,9 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 * **Control de Accesos Basado en Roles (RBAC):** Sistema dinámico sin credenciales expuestas. Maneja 5 niveles escalonados (Lector, Editor Content, Editor CM, Administrador CM y Administrador IT) con protección automática para superusuarios fundadores y un ecosistema de vistas castradas e independientes según el perfil operativo.
 * **Simetría Visual y Portales React:** Estandarización milimétrica en grillas de captura y renderizado de modales mediante `ReactDOM.createPortal` para un desenfoque de fondo que cubre el 100% de la pantalla sin bloquear notificaciones emergentes.
 * **Exportación Inteligente Universal:**
-  * **CSV Dinámico con Filtros Server-Side:** Descarga masiva optimizada para Excel que consulta directamente a la base de datos para ofrecer segmentación dinámica mediante años y meses reales que cuentan con registros. Incluye soporte para spinners de carga asíncrona.
+  * **CSV Dinámico con Filtros Server-Side:** Descarga masiva optimizada para Excel que consulta directamente a la base de datos para ofrecer segmentación dinámica mediante años y meses reales que cuentan con registros. Incluye soporte para spinners de carga asíncrona y procesamiento robusto con `PapaParse`.
   * **Documentos Word (.docx):** Generación nativa basada en XML para descargar reportes con texto enriquecido.
-  * **Reportes Ejecutivos PDF:** Sistema de impresión limpio y formateado directo desde el Dashboard.
+  * **Reportes Ejecutivos PDF Premium:** Sistema de impresión ejecutivo impulsado por `jsPDF` que renderiza documentos de alta fidelidad con gráficas interactivas incrustadas, respetando el Modo Oscuro de la plataforma y garantizando la entregabilidad de los datos visualizados en el tablero.
 
 ---
 
@@ -87,9 +92,10 @@ La plataforma ha sido estructurada visual y operativamente en bloques funcionale
 
 * **Core:** React 19 + TypeScript
 * **Build Tool:** Vite
+* **Gráficas y Exportación:** `Chart.js`, `jsPDF`, `PapaParse`
 * **Seguridad y Limpieza:** `crypto-js` (Cifrado AES-256) y `DOMPurify` (Prevención XSS)
 * **Estilos y UX/UI:** Tailwind CSS (Arquitectura corporativa Flat-Design y Dark/Light Mode nativo)
-* **Audio y Gráficos:** Web Audio API nativa + SVG escalable
+* **Audio y Media:** Web Audio API nativa + SVG escalable
 * **Backend y Base de Datos:** Google Firebase (Firestore DB, Security Rules y Workspace Authentication)
 
 ---

@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import type { ReportRow } from '../utils/csvExport';
 
-// Colores para sentimientos
 const SENTIMENT_COLORS: Record<string, string> = {
     'Negativo': '#e0485a',
     'Neutral': '#7c8db5',
@@ -10,31 +9,30 @@ const SENTIMENT_COLORS: Record<string, string> = {
 const FALLBACK_COLOR = '#5b8def';
 const RED_COLORS = ['#5b8def', '#e0485a', '#2fd9c4', '#f5a93f', '#4fd18b'];
 
-// Tipos de color como tuplas para spread seguro en jsPDF
+// 🔥 FIX PDF: Paleta de Colores 100% Dark Mode Premium
 type RGB = [number, number, number];
-const NAVY: RGB = [10, 17, 32];
-const TEXT_DARK: RGB = [26, 36, 58];
-const TEXT_GRAY: RGB = [110, 122, 150];
-const LINE: RGB = [225, 229, 238];
-const CARD_BG: RGB = [244, 247, 251];
-const AMBER_BG: RGB = [253, 244, 229];
-const AMBER_TEXT: RGB = [158, 108, 10];
+const NAVY: RGB = [10, 17, 32];        
+const CARD_BG: RGB = [16, 26, 46];     
+const TEXT_DARK: RGB = [232, 237, 247]; 
+const TEXT_GRAY: RGB = [147, 162, 192]; 
+const LINE: RGB = [34, 49, 77];        
+
+const AMBER_BG: RGB = [36, 26, 10];
+const AMBER_TEXT: RGB = [245, 169, 63];
 const COL = {
     critical: [224, 72, 90] as RGB,
-    verify: [38, 170, 153] as RGB,
-    alert: [201, 133, 25] as RGB,
+    verify: [47, 217, 196] as RGB,
+    alert: [245, 169, 63] as RGB,
     info: [91, 141, 239] as RGB
 };
 
 const sentimentColor = (s: string) => SENTIMENT_COLORS[s] || FALLBACK_COLOR;
 
-// Helper para convertir hex a RGB
 const hexToRgb = (hex: string): RGB => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [91, 141, 239];
 };
 
-// ---- Funciones de agregación (compartidas entre dashboard y PDF) ----
 export const countBy = (arr: any[], keyFn: (item: any) => string) => {
     const map: Record<string, number> = {};
     arr.forEach(item => { const k = keyFn(item); map[k] = (map[k] || 0) + 1; });
@@ -70,17 +68,35 @@ export const calcOrigen = (rows: ReportRow[]) => {
     return { labels, totals, negPct };
 };
 
+// 🔥 FIX UX PRO: Traductor de fechas largas a formato corto ("08 Jun - 14 Jun")
+const formatShortDate = (dstr: string) => {
+    if (!dstr) return '';
+    const parts = dstr.split('-');
+    if (parts.length !== 3) return dstr;
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return `${parts[2]} ${months[parseInt(parts[1], 10) - 1]}`;
+};
+
 export const calcTrend = (rows: ReportRow[]) => {
-    const groups: Record<string, { total: number; neg: number; sortKey: string }> = {};
+    const groups: Record<string, { total: number; neg: number; sortKey: string; label: string }> = {};
     rows.forEach(r => {
-        const k = (r.fechaInicio && r.fechaFin) ? `${r.fechaInicio} → ${r.fechaFin}` : 'Sin periodo';
-        if (!groups[k]) groups[k] = { total: 0, neg: 0, sortKey: r.fechaInicio };
-        groups[k].total++;
-        if (r.sentiment === 'Negativo') groups[k].neg++;
+        const sortKey = r.fechaInicio || '0000-00-00';
+        const rawKey = (r.fechaInicio && r.fechaFin) ? `${r.fechaInicio}|${r.fechaFin}` : 'Sin periodo';
+        
+        if (!groups[rawKey]) {
+            const label = (r.fechaInicio && r.fechaFin)
+                ? `${formatShortDate(r.fechaInicio)} - ${formatShortDate(r.fechaFin)}`
+                : 'Sin periodo';
+            groups[rawKey] = { total: 0, neg: 0, sortKey, label };
+        }
+        groups[rawKey].total++;
+        if (r.sentiment === 'Negativo') groups[rawKey].neg++;
     });
-    const labels = Object.keys(groups).sort((a, b) => (groups[a].sortKey || '').localeCompare(groups[b].sortKey || ''));
-    const totals = labels.map(l => groups[l].total);
-    const negPct = labels.map(l => groups[l].total ? Math.round(groups[l].neg / groups[l].total * 100) : 0);
+    
+    const sortedKeys = Object.keys(groups).sort((a, b) => groups[a].sortKey.localeCompare(groups[b].sortKey));
+    const labels = sortedKeys.map(k => groups[k].label);
+    const totals = sortedKeys.map(k => groups[k].total);
+    const negPct = sortedKeys.map(k => groups[k].total ? Math.round(groups[k].neg / groups[k].total * 100) : 0);
     return { labels, totals, negPct };
 };
 
@@ -139,7 +155,6 @@ const truncateToWidth = (doc: any, text: string, maxWidth: number) => {
     return lines[0].replace(/\s+\S*$/, '') + '…';
 };
 
-// ---- Renderiza un gráfico Chart.js fuera de pantalla y devuelve PNG base64 ----
 const renderOffscreenChart = async (chartModule: any, config: any, width: number, height: number): Promise<string | null> => {
     try {
         const Chart = chartModule.Chart || chartModule.default?.Chart || chartModule;
@@ -168,7 +183,6 @@ const renderOffscreenChart = async (chartModule: any, config: any, width: number
     }
 };
 
-// Interfaz de imágenes para el PDF
 export interface ChartImages {
     sentiment?: string | null;
     red?: string | null;
@@ -178,7 +192,6 @@ export interface ChartImages {
 
 export const useReportGenerator = () => {
 
-    // Genera el PDF del reporte con gráficas incrustadas
     const generatePDF = useCallback(async (rows: ReportRow[], sourceLabel: string, images?: ChartImages) => {
         if (!rows.length) return;
 
@@ -190,7 +203,6 @@ export const useReportGenerator = () => {
         const pageW = 210, pageH = 297, margin = 15;
         const contentW = pageW - margin * 2;
 
-        // ---- agregados ----
         const total = rows.length;
         const neg = rows.filter(r => r.sentiment === 'Negativo').length;
         const negPct = total ? Math.round(neg / total * 100) : 0;
@@ -201,7 +213,6 @@ export const useReportGenerator = () => {
         const period = computePeriod(rows);
         const periodText = period.start ? `${spanishDate(period.start)} – ${spanishDate(period.end)}` : 'No disponible';
 
-        // ---- generamos imágenes de gráficas si no vienen dadas ----
         let imgSentiment = images?.sentiment;
         let imgRed = images?.red;
         let imgOrigen = images?.origen;
@@ -215,14 +226,14 @@ export const useReportGenerator = () => {
 
             imgSentiment = imgSentiment || await renderOffscreenChart(chartModule, {
                 type: 'doughnut',
-                data: { labels: sentAgg.labels, datasets: [{ data: sentAgg.data, backgroundColor: sentAgg.colors, borderColor: '#ffffff', borderWidth: 3 }] },
-                options: { cutout: '62%', plugins: { legend: { position: 'bottom', labels: { color: '#3a4a68', font: { size: 13 }, boxWidth: 11, boxHeight: 11, padding: 12 } } } }
+                data: { labels: sentAgg.labels, datasets: [{ data: sentAgg.data, backgroundColor: sentAgg.colors, borderColor: '#101a2e', borderWidth: 2 }] },
+                options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: '#93a2c0', font: { size: 13 }, boxWidth: 11, boxHeight: 11, padding: 12 } } } }
             }, 480, 480);
 
             imgRed = imgRed || await renderOffscreenChart(chartModule, {
                 type: 'bar',
                 data: { labels: redAggData.labels, datasets: [{ data: redAggData.data, backgroundColor: redAggData.labels.map((_, i) => RED_COLORS[i % RED_COLORS.length]), borderRadius: 5 }] },
-                options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#e4e8f0' }, beginAtZero: true, ticks: { precision: 0 } } } }
+                options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#93a2c0' } }, y: { grid: { color: 'rgba(147, 162, 192, 0.1)' }, beginAtZero: true, ticks: { precision: 0, color: '#93a2c0' }, border: { display: false } } } }
             }, 560, 380);
 
             imgOrigen = imgOrigen || await renderOffscreenChart(chartModule, {
@@ -233,42 +244,79 @@ export const useReportGenerator = () => {
                     ]
                 },
                 options: {
-                    plugins: { legend: { position: 'bottom', labels: { color: '#3a4a68', font: { size: 11 } } } },
-                    scales: { x: { grid: { display: false } }, y: { position: 'left', grid: { color: '#e4e8f0' }, beginAtZero: true }, y1: { position: 'right', grid: { display: false }, beginAtZero: true, max: 100, ticks: { callback: (v: any) => v + '%' } } }
+                    plugins: { legend: { position: 'bottom', labels: { color: '#93a2c0', font: { size: 11 } } } },
+                    scales: { x: { grid: { display: false }, ticks: { color: '#93a2c0' } }, y: { position: 'left', grid: { color: 'rgba(147, 162, 192, 0.1)' }, beginAtZero: true, ticks: { color: '#93a2c0' }, border: { display: false } }, y1: { position: 'right', grid: { display: false }, border: { display: false }, beginAtZero: true, max: 100, ticks: { color: '#93a2c0', callback: (v: any) => v + '%' } } }
                 }
             }, 560, 380);
 
+            // 🔥 FIX PDF PRO: Fechas horizontales, padding perimetral, clip: false y punteros resaltados idénticos a la Web
             imgTrend = imgTrend || await renderOffscreenChart(chartModule, {
+                type: 'line',
                 data: {
                     labels: trendAgg.labels, datasets: [
-                        { type: 'bar', label: 'Comentarios', data: trendAgg.totals, backgroundColor: 'rgba(91,141,239,0.7)', borderRadius: 5, yAxisID: 'y' },
-                        { type: 'line', label: '% Negativo', data: trendAgg.negPct, borderColor: '#e0485a', backgroundColor: '#e0485a', tension: 0.3, pointRadius: 4, yAxisID: 'y1' }
+                        { 
+                            label: 'Comentarios Totales', 
+                            data: trendAgg.totals, 
+                            backgroundColor: 'rgba(91,141,239,0.2)', 
+                            borderColor: '#5b8def', 
+                            borderWidth: 3,
+                            fill: true, 
+                            tension: 0.4, 
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#5b8def',
+                            pointBorderColor: '#101a2e',
+                            pointBorderWidth: 2,
+                            clip: false,
+                            yAxisID: 'y' 
+                        }, 
+                        { 
+                            label: '% Negatividad', 
+                            data: trendAgg.negPct, 
+                            borderColor: '#e0485a', 
+                            backgroundColor: '#e0485a', 
+                            borderWidth: 3,
+                            tension: 0.4, 
+                            borderDash: [6, 4], 
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#e0485a',
+                            pointBorderColor: '#101a2e',
+                            pointBorderWidth: 2,
+                            clip: false,
+                            yAxisID: 'y1' 
+                        }
                     ]
                 },
                 options: {
-                    plugins: { legend: { position: 'bottom', labels: { color: '#3a4a68', font: { size: 11 } } } },
-                    scales: { x: { grid: { display: false } }, y: { position: 'left', grid: { color: '#e4e8f0' }, beginAtZero: true }, y1: { position: 'right', grid: { display: false }, beginAtZero: true, max: 100, ticks: { callback: (v: any) => v + '%' } } }
+                    plugins: { legend: { position: 'bottom', labels: { color: '#93a2c0', font: { size: 11 } } } },
+                    layout: { padding: { top: 25, right: 25, left: 15, bottom: 5 } },
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 12, color: '#93a2c0', font: { size: 10.5 }, padding: 10 } }, 
+                        y: { position: 'left', grid: { color: 'rgba(147, 162, 192, 0.1)' }, beginAtZero: true, ticks: { color: '#93a2c0' }, border: { display: false }, grace: '25%' }, 
+                        y1: { position: 'right', grid: { display: false }, border: { display: false }, beginAtZero: true, max: 100, ticks: { color: '#93a2c0', callback: (v: any) => v + '%' }, grace: '25%' } 
+                    }
                 }
             }, 900, 380);
         }
 
-        // ---- helpers de maquetación ----
         let page = 1;
         let y = 36;
         const drawHeader = () => {
-            doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]); doc.rect(0, 0, pageW, 26, 'F');
+            doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]); doc.rect(0, 0, pageW, pageH, 'F'); 
             doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
             doc.text('INNOVA MANAGEMENT', margin, 11);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-            doc.text('Reporte de monitoreo · Comentarios & incidencias', margin, 17.5);
+            doc.text('Reporte Analítico · Comentarios', margin, 17.5);
             doc.setFontSize(7.5);
             doc.text('Generado: ' + nowStamp(), pageW - margin, 10, { align: 'right' });
             doc.text('Fuente: ' + sourceLabel, pageW - margin, 15.5, { align: 'right' });
+            doc.setDrawColor(LINE[0], LINE[1], LINE[2]); doc.setLineWidth(0.5); doc.line(0, 26, pageW, 26);
         };
         const drawFooter = (pageNum: number) => {
             doc.setDrawColor(LINE[0], LINE[1], LINE[2]); doc.setLineWidth(0.2); doc.line(margin, pageH - 12, pageW - margin, pageH - 12);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]);
-            doc.text('Innova Management · Generado localmente en el navegador', margin, pageH - 8);
+            doc.text('Innova Management · Reporte Ejecutivo Estructurado', margin, pageH - 8);
             doc.text('Página ' + pageNum, pageW - margin, pageH - 8, { align: 'right' });
         };
         const checkPageBreak = (neededHeight: number, redrawFn?: () => void) => {
@@ -288,14 +336,13 @@ export const useReportGenerator = () => {
             y += 9;
         };
 
-        // ---- página 1: portada + KPIs ----
         drawHeader();
 
         doc.setTextColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]); doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
-        doc.text('Período analizado: ' + periodText, margin, y);
+        doc.text('Período Analizado: ' + periodText, margin, y);
         y += 6;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]);
-        doc.text(`${total} registros totales  ·  ${period.cycles} ciclo(s) de reporte`, margin, y);
+        doc.text(`${total} registros de comentarios  ·  ${period.cycles} ciclo(s) de reporte`, margin, y);
         y += 10;
 
         const kpiData = [
@@ -307,14 +354,14 @@ export const useReportGenerator = () => {
         const kpiGap = 4, kpiW = (contentW - kpiGap * 3) / 4, kpiH = 25;
         kpiData.forEach((k, i) => {
             const x = margin + i * (kpiW + kpiGap);
-            doc.setFillColor(CARD_BG[0], CARD_BG[1], CARD_BG[2]); doc.roundedRect(x, y, kpiW, kpiH, 1.5, 1.5, 'F');
-            doc.setFillColor(k.color[0], k.color[1], k.color[2]); doc.rect(x, y, 1.2, kpiH, 'F');
+            doc.setFillColor(CARD_BG[0], CARD_BG[1], CARD_BG[2]); doc.roundedRect(x, y, kpiW, kpiH, 2, 2, 'F');
+            doc.setFillColor(k.color[0], k.color[1], k.color[2]); doc.rect(x, y, 1.5, kpiH, 'F');
             doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]); doc.setFont('helvetica', 'bold'); doc.setFontSize(6.6);
-            doc.text(k.label, x + 4, y + 6, { maxWidth: kpiW - 6 });
+            doc.text(k.label, x + 5, y + 6, { maxWidth: kpiW - 6 });
             doc.setTextColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]); doc.setFontSize(16);
-            doc.text(k.value, x + 4, y + 15.5);
+            doc.text(k.value, x + 5, y + 15.5);
             doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8);
-            doc.text(truncateToWidth(doc, String(k.sub), kpiW - 7), x + 4, y + 21);
+            doc.text(truncateToWidth(doc, String(k.sub), kpiW - 7), x + 5, y + 21);
         });
         y += kpiH + 8;
 
@@ -323,9 +370,9 @@ export const useReportGenerator = () => {
             const uRed = calcRedSocial(unclassified);
             const boxH = 21;
             checkPageBreak(boxH + 4);
-            doc.setFillColor(AMBER_BG[0], AMBER_BG[1], AMBER_BG[2]); doc.roundedRect(margin, y, contentW, boxH, 1.5, 1.5, 'F');
+            doc.setFillColor(AMBER_BG[0], AMBER_BG[1], AMBER_BG[2]); doc.roundedRect(margin, y, contentW, boxH, 2, 2, 'F');
             doc.setTextColor(AMBER_TEXT[0], AMBER_TEXT[1], AMBER_TEXT[2]); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
-            doc.text(`${unclassified.length} registros (${Math.round(unclassified.length / total * 100)}%) no tienen campus especificado`, margin + 4, y + 6);
+            doc.text(`${unclassified.length} comentarios (${Math.round(unclassified.length / total * 100)}%) no tienen campus especificado`, margin + 4, y + 6);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(7.3); doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]);
             doc.text('Ya están incluidos en las métricas generales; requieren clasificación manual para asignarse a un plantel.', margin + 4, y + 11);
             doc.text('Sentimiento — ' + uSent.labels.map((l, i) => `${l}: ${uSent.data[i]}`).join('   ·   '), margin + 4, y + 16);
@@ -333,8 +380,7 @@ export const useReportGenerator = () => {
             y += boxH + 10;
         }
 
-        // ---- panorama general (gráficos) ----
-        sectionTitle('Panorama general');
+        sectionTitle('Panorama General de Monitoreo');
         checkPageBreak(62);
         const chartRowY = y;
         if (imgSentiment) {
@@ -347,8 +393,15 @@ export const useReportGenerator = () => {
             y = chartRowY + Math.max(donutH, smallH) + 10;
         }
 
-        // ---- campus ----
-        sectionTitle('Incidencias por campus');
+        sectionTitle('Tendencia Cronológica de Interacciones');
+        if (imgTrend) {
+            const trendDispW = contentW, trendDispH = trendDispW * (380 / 900);
+            checkPageBreak(trendDispH + 6);
+            doc.addImage(imgTrend, 'PNG', margin, y, trendDispW, trendDispH);
+            y += trendDispH + 10;
+        }
+
+        sectionTitle('Comentarios por Campus');
         const campusMax = campusRanking.length ? campusRanking[0][1] : 1;
         campusRanking.forEach(([name, count]) => {
             checkPageBreak(7);
@@ -358,7 +411,7 @@ export const useReportGenerator = () => {
             const barCol: RGB = isUnspecified ? COL.alert : COL.info;
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.3); doc.setTextColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
             doc.text(truncateToWidth(doc, name, 58), margin, y + 3.6);
-            doc.setFillColor(LINE[0], LINE[1], LINE[2]); doc.rect(margin + 62, y, barMaxW, 3, 'F');
+            doc.setFillColor(CARD_BG[0], CARD_BG[1], CARD_BG[2]); doc.rect(margin + 62, y, barMaxW, 3, 'F');
             doc.setFillColor(barCol[0], barCol[1], barCol[2]); doc.rect(margin + 62, y, barW, 3, 'F');
             doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
             doc.text(String(count), margin + 62 + barMaxW + 5, y + 3.4);
@@ -366,21 +419,11 @@ export const useReportGenerator = () => {
         });
         y += 5;
 
-        // ---- tendencia ----
-        sectionTitle('Tendencia por período');
-        if (imgTrend) {
-            const trendDispW = contentW, trendDispH = trendDispW * (380 / 900);
-            checkPageBreak(trendDispH + 6);
-            doc.addImage(imgTrend, 'PNG', margin, y, trendDispW, trendDispH);
-            y += trendDispH + 10;
-        }
-
-        // ---- usuarios recurrentes ----
-        sectionTitle('Usuarios más recurrentes');
+        sectionTitle('Radar de Autores Recurrentes');
         const topUsers = calcTopUsers(rows);
         if (!topUsers.length) {
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]);
-            doc.text('Ningún usuario tiene más de un comentario en este período.', margin, y);
+            doc.text('Ningún usuario tiene un comportamiento recurrente registrado.', margin, y);
             y += 8;
         } else {
             topUsers.forEach(u => {
@@ -397,19 +440,18 @@ export const useReportGenerator = () => {
         }
         y += 4;
 
-        // ---- bitácora completa ----
-        sectionTitle('Bitácora de incidencias — listado completo');
+        sectionTitle('Motor de Trazabilidad — Bitácora de Comentarios');
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(TEXT_GRAY[0], TEXT_GRAY[1], TEXT_GRAY[2]);
-        doc.text(`${rows.length} registros ordenados por fecha de inicio`, margin, y);
+        doc.text(`${rows.length} comentarios extraídos bajo los filtros seleccionados`, margin, y);
         y += 6;
 
         const cols = [
             { label: 'Fecha', width: 16 },
             { label: 'Campus', width: 28 },
             { label: 'Red', width: 18 },
-            { label: 'Sentimiento', width: 20 },
+            { label: 'Tono', width: 18 },
             { label: 'Usuario', width: 28 },
-            { label: 'Comentario', width: 70 }
+            { label: 'Comentario', width: 72 }
         ];
         const drawTableHeader = () => {
             doc.setFillColor(CARD_BG[0], CARD_BG[1], CARD_BG[2]); doc.rect(margin, y, contentW, 6, 'F');
@@ -444,7 +486,7 @@ export const useReportGenerator = () => {
         drawFooter(page);
 
         const fileDate = new Date().toISOString().slice(0, 10);
-        const filename = `Innova-Management-Reporte-${fileDate}.pdf`;
+        const filename = `Innova-Management-Reporte-Comentarios-${fileDate}.pdf`;
 
         const blob = doc.output('blob');
         const blobUrl = URL.createObjectURL(blob);

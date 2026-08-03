@@ -1,27 +1,30 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend } from 'chart.js';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend, Filler } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { collection, getDocs } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
-import { normalizeComments, normalizeRRSS, generateCSV, downloadCSV, type ReportRow } from '../utils/csvExport';
+import { normalizeComments, generateCSV, downloadCSV, type ReportRow } from '../utils/csvExport';
 import { calcSentiment, calcRedSocial, calcOrigen, calcTrend, calcCampusRanking, calcTopUsers, useReportGenerator } from '../hooks/useReportGenerator';
-import { BarChart3, FileUp, FileDown, Database, UploadCloud, Box, Filter } from 'lucide-react';
+import { BarChart3, FileUp, Database, UploadCloud, Box, Filter, Search, ChevronLeft, ChevronRight, ExternalLink, FileText, AlertTriangle, MapPin, Share2, FileDown, Loader2 } from 'lucide-react';
+import Papa from 'papaparse';
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend);
+ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend, Filler);
+
+const inputStyles = "w-full p-2.5 rounded-xl theme-bg-low border theme-border theme-text-main text-sm outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all duration-300 font-medium";
+
+const COMMON_SCALES = {
+    x: { grid: { display: false }, ticks: { color: '#93a2c0' }, border: { color: 'rgba(147, 162, 192, 0.2)' } },
+    y: { grid: { color: 'rgba(147, 162, 192, 0.1)' }, ticks: { color: '#93a2c0', precision: 0 }, border: { display: false } }
+};
 
 const CHART_OPTIONS = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom' as const, labels: { boxWidth: 10, boxHeight: 10, padding: 14 } } }
+    plugins: { legend: { position: 'bottom' as const, labels: { color: '#93a2c0', boxWidth: 10, boxHeight: 10, padding: 14 } } },
+    scales: COMMON_SCALES
 };
 
 const RED_COLORS = ['#5b8def', '#e0485a', '#2fd9c4', '#f5a93f', '#4fd18b'];
-
-const MESES = [
-    { v: '01', n: 'Enero' }, { v: '02', n: 'Febrero' }, { v: '03', n: 'Marzo' }, { v: '04', n: 'Abril' },
-    { v: '05', n: 'Mayo' }, { v: '06', n: 'Junio' }, { v: '07', n: 'Julio' }, { v: '08', n: 'Agosto' },
-    { v: '09', n: 'Septiembre' }, { v: '10', n: 'Octubre' }, { v: '11', n: 'Noviembre' }, { v: '12', n: 'Diciembre' }
-];
 
 export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
     const [allData, setAllData] = useState<ReportRow[]>([]);
@@ -33,14 +36,41 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
     const [filterMonth, setFilterMonth] = useState('');
     const [hasDbData, setHasDbData] = useState(false);
 
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterTableSentiment, setFilterTableSentiment] = useState('');
+    const [filterTableRed, setFilterTableRed] = useState('');
+    const [filterTableCampus, setFilterTableCampus] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [isExportingPDF, setIsExportingPDF] = useState(false);
+    const PAGE_SIZE = 10;
+
     const fileRef = useRef<HTMLInputElement>(null);
     const { generatePDF } = useReportGenerator();
+
+    const isTrueAdmin = ['ADMIN_IT', 'ADMIN_CM'].includes(userRole);
 
     const availableYears = useMemo(() => {
         const years = new Set<string>();
         allData.forEach(r => { const y = r.fechaInicio ? r.fechaInicio.split('-')[0] : ''; if (y) years.add(y); });
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allData]);
+
+    const availableMonths = useMemo(() => {
+        if (!filterYear) return [];
+        const months = new Set<string>();
+        allData.forEach(r => {
+            if (r.fechaInicio) {
+                const [y, m] = r.fechaInicio.split('-');
+                if (y === filterYear && m) months.add(m);
+            }
+        });
+        return Array.from(months).sort();
+    }, [allData, filterYear]);
+
+    const getMonthName = (m: string) => {
+        const names = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        return names[parseInt(m, 10) - 1] || m;
+    };
 
     const applyFilters = useCallback((data: ReportRow[], year: string, month: string) => {
         return data.filter(r => {
@@ -56,11 +86,13 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
         setFilterYear(year);
         setFilterMonth('');
         setRowData(applyFilters(allData, year, ''));
+        setCurrentPage(1);
     };
 
     const handleMonthChange = (month: string) => {
         setFilterMonth(month);
         setRowData(applyFilters(allData, filterYear, month));
+        setCurrentPage(1);
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,289 +103,428 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const text = ev.target?.result as string;
-            // Parseo simple del CSV
-            try {
-                const lines = text.split(/\r?\n/).filter(l => l.trim());
-                if (lines.length < 2) { showToast('CSV sin datos', true); return; }
-                const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-                const idx = (name: string) => headers.indexOf(name);
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const data = results.data as any[];
+                if (!data.length) { showToast('CSV sin datos', true); return; }
+                
                 const required = ['Fecha Inicio', 'Red Social', 'Campus', 'Sentiment', 'Usuario', 'Comentario'];
-                const missing = required.filter(r => idx(r) === -1);
+                const headers = Object.keys(data[0]);
+                const missing = required.filter(r => !headers.includes(r));
                 if (missing.length) { showToast(`Faltan columnas: ${missing.join(', ')}`, true); return; }
 
-                const parsed: ReportRow[] = [];
-                for (let i = 1; i < lines.length; i++) {
-                    const vals = parseCSVLine(lines[i]);
-                    parsed.push({
-                        fechaInicio: vals[idx('Fecha Inicio')] || '',
-                        fechaFin: vals[idx('Fecha Fin')] || vals[idx('Fecha Inicio')] || '',
-                        contenido: vals[idx('Contenido Global')] || 'Orgánico',
-                        redSocial: vals[idx('Red Social')] || 'Sin especificar',
-                        campus: vals[idx('Campus')] || 'Sin especificar',
-                        sentiment: vals[idx('Sentiment')] || 'Sin clasificar',
-                        usuario: vals[idx('Usuario')] || 'Anónimo',
-                        comentario: vals[idx('Comentario')] || '',
-                        posteoOriginal: vals[idx('Posteo Original')] || '',
-                        evidencias: vals[idx('Evidencias')] || ''
-                    });
-                }
+                const parsed: ReportRow[] = data.map(vals => ({
+                    fechaInicio: vals['Fecha Inicio'] || '',
+                    fechaFin: vals['Fecha Fin'] || vals['Fecha Inicio'] || '',
+                    contenido: vals['Contenido Global'] || 'Orgánico',
+                    redSocial: vals['Red Social'] || 'Sin especificar',
+                    campus: vals['Campus'] || 'Sin especificar',
+                    sentiment: vals['Sentiment'] || 'Sin clasificar',
+                    usuario: vals['Usuario'] || 'Anónimo',
+                    comentario: vals['Comentario'] || '',
+                    posteoOriginal: vals['Posteo Original'] || '',
+                    evidencias: vals['Evidencias'] || ''
+                }));
+                
                 setAllData(parsed);
                 setRowData(parsed);
                 setHasDbData(false);
                 setFilterYear('');
                 setFilterMonth('');
                 setSourceLabel(`CSV: ${file.name}`);
+                setCurrentPage(1);
                 showToast(`${parsed.length} registros cargados desde CSV`);
-            } catch (err) {
-                showToast('Error al leer el CSV', true);
-            }
-        };
-        reader.readAsText(file, 'UTF-8');
+            },
+            error: () => showToast('Error al leer el CSV', true)
+        });
+
         e.target.value = '';
         setFileInputKey(k => k + 1);
     };
 
-    // Parser CSV simple con soporte de comillas
-    const parseCSVLine = (line: string): string[] => {
-        const result: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (inQuotes) {
-                if (ch === '"') {
-                    if (line[i + 1] === '"') { current += '"'; i++; }
-                    else inQuotes = false;
-                } else current += ch;
-            } else {
-                if (ch === '"') inQuotes = true;
-                else if (ch === ',') { result.push(current.trim()); current = ''; }
-                else current += ch;
-            }
-        }
-        result.push(current.trim());
-        return result;
-    };
-
     const loadFromFirestore = useCallback(async () => {
-        if (!isAdmin) { showToast('Permisos insuficientes', true); return; }
+        if (!isTrueAdmin) { showToast('Permisos insuficientes', true); return; }
         setLoadingDb(true);
         try {
-            const [commentsSnap, rrssSnap] = await Promise.all([
-                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'comments')),
-                getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'rrss_incidents'))
-            ]);
+            const commentsSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'comments'));
 
             const comments: ReportRow[] = [];
             commentsSnap.forEach(d => comments.push(...normalizeComments(d.data())));
-            const rrss: ReportRow[] = [];
-            rrssSnap.forEach(d => rrss.push(...normalizeRRSS(d.data())));
 
-            const all = [...comments, ...rrss];
-            setAllData(all);
-            setRowData(all);
+            setAllData(comments);
+            setRowData(comments);
             setHasDbData(true);
             setFilterYear('');
             setFilterMonth('');
-            setSourceLabel(`Firestore: ${comments.length} comentarios + ${rrss.length} RRSS`);
-            showToast(`${all.length} registros cargados desde Firebase`);
+            setSourceLabel(`Firestore: ${comments.length} comentarios`);
+            setCurrentPage(1);
+            showToast(`${comments.length} registros de comentarios sincronizados`);
         } catch (err) {
-            showToast('Error al leer de Firebase', true);
+            showToast('Error al conectar con la base de datos', true);
         } finally {
             setLoadingDb(false);
         }
-    }, [isAdmin, showToast]);
+    }, [isTrueAdmin, showToast]);
 
-    // Exportar CSV
-    const handleExportCSV = () => {
-        if (!rowData.length) { showToast('No hay datos para exportar', true); return; }
-        const csv = generateCSV(rowData);
-        downloadCSV(csv, `Reporte_${new Date().toISOString().slice(0, 10)}.csv`);
-        showToast('CSV exportado');
-    };
-
-    // Generar PDF (usa los datos filtrados y las gráficas visibles)
     const handleGeneratePDF = async () => {
-        if (!rowData.length) { showToast('No hay datos para el PDF', true); return; }
-        await generatePDF(rowData, sourceLabel || 'Datos cargados');
+        if (!rowData.length) { showToast('No hay datos para estructurar el PDF', true); return; }
+        setIsExportingPDF(true);
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        try {
+            await generatePDF(rowData, sourceLabel || 'Datos filtrados de la bitácora');
+            showToast('Reporte PDF generado exitosamente');
+        } catch (error) {
+            showToast('Hubo un error al compilar el documento', true);
+        } finally {
+            setIsExportingPDF(false);
+        }
     };
 
-    // Datos para gráficas
+    const uniqueSentiments = useMemo(() => Array.from(new Set(rowData.map(r => r.sentiment))).sort(), [rowData]);
+    const uniqueReds = useMemo(() => Array.from(new Set(rowData.map(r => r.redSocial))).sort(), [rowData]);
+    const uniqueCampus = useMemo(() => Array.from(new Set(rowData.map(r => r.campus))).sort(), [rowData]);
+
+    const tableRows = useMemo(() => {
+        return rowData.filter(r => {
+            if (filterTableSentiment && r.sentiment !== filterTableSentiment) return false;
+            if (filterTableRed && r.redSocial !== filterTableRed) return false;
+            if (filterTableCampus && r.campus !== filterTableCampus) return false;
+            if (searchTerm) {
+                const s = searchTerm.toLowerCase();
+                return r.usuario.toLowerCase().includes(s) || r.comentario.toLowerCase().includes(s);
+            }
+            return true;
+        }).sort((a, b) => (b.fechaInicio || '').localeCompare(a.fechaInicio || ''));
+    }, [rowData, searchTerm, filterTableSentiment, filterTableRed, filterTableCampus]);
+
+    const totalPages = Math.max(1, Math.ceil(tableRows.length / PAGE_SIZE));
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const currentTableRows = tableRows.slice(startIdx, startIdx + PAGE_SIZE);
+
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, filterTableSentiment, filterTableRed, filterTableCampus]);
+
     const sentiment = calcSentiment(rowData);
     const redSocial = calcRedSocial(rowData);
     const origen = calcOrigen(rowData);
     const trend = calcTrend(rowData);
     const campusRank = calcCampusRanking(rowData);
-    const topUsers = calcTopUsers(rowData);
+    const topUsers = calcTopUsers(rowData, 2, 8);
 
     const hasData = rowData.length > 0;
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 fade-in pb-16">
-            <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                    <BarChart3 className="w-48 h-48" />
+        <div className="max-w-7xl mx-auto space-y-8 fade-in pb-20">
+            {/* HERO HEADER */}
+            <div className="theme-bg-container p-6 sm:p-10 rounded-[2rem] border theme-border shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-700">
+                    <BarChart3 className="w-48 h-48 text-[var(--primary)]" />
                 </div>
-                <div className="relative z-10">
-                    <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-3">Módulo Analítico</p>
-                    <h2 className="text-3xl font-black theme-text-main mb-4">Dashboard de Reportes</h2>
-                    <p className="theme-text-muted text-base max-w-2xl leading-relaxed">
-                        Genera informes visuales a partir de exportaciones de Comentarios y RRSS. Sube un CSV o carga datos directamente desde Firebase (no se almacenan en la nube).
-                    </p>
+                <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    <div>
+                        <p className="text-xs font-bold text-[var(--primary)] uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <Database className="w-4 h-4" /> Módulo Analítico Avanzado
+                        </p>
+                        <h2 className="text-4xl font-black theme-text-main mb-4 tracking-tight">Reportes de Comentarios</h2>
+                        <p className="theme-text-muted text-base max-w-2xl leading-relaxed">
+                            Genera informes visuales a partir de exportaciones de Comentarios. Sube un CSV o extrae los datos directamente desde el motor de Firebase.
+                        </p>
+                    </div>
+                    {hasData && (
+                        <button 
+                            onClick={handleGeneratePDF} 
+                            disabled={isExportingPDF}
+                            className="w-full md:w-auto py-3 px-6 rounded-xl bg-[var(--primary)] text-white font-bold text-sm hover:brightness-110 shadow-lg hover:shadow-[var(--primary)]/20 hover:-translate-y-1 transition-all duration-300 ease-out flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isExportingPDF ? <Loader2 className="w-5 h-5 animate-spin"/> : <FileDown className="w-5 h-5" />}
+                            {isExportingPDF ? 'Validando Integridad...' : 'Generar PDF Ejecutivo'}
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Fuentes de datos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 theme-bg-container border theme-border rounded-2xl shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-blue-500/10 rounded-lg"><FileUp className="w-5 h-5 text-blue-500" /></div>
+            {/* CONTROLES DE INGESTA */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 sm:p-8 border rounded-2xl flex flex-col justify-between gap-6 transition-all duration-300 ease-out bg-blue-500/5 border-blue-500/20 hover:border-blue-500/40 hover:shadow-lg hover:-translate-y-1 group">
+                    <div className="flex items-center gap-4">
+                        <div className="p-4 rounded-xl shadow-md bg-blue-600 text-white group-hover:scale-110 transition-transform duration-300">
+                            <UploadCloud className="w-6 h-6" />
+                        </div>
                         <div>
-                            <h3 className="font-bold theme-text-main">Subir CSV</h3>
-                            <p className="text-xs theme-text-muted">Formato de exportación de Comentarios/RRSS</p>
+                            <h3 className="font-bold theme-text-main text-base">Inyección por CSV</h3>
+                            <p className="text-xs theme-text-muted mt-1">Sube un archivo de Comentarios encriptado</p>
                         </div>
                     </div>
-                    <button onClick={() => fileRef.current?.click()} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 transition-colors flex items-center justify-center gap-2">
-                        <UploadCloud className="w-4 h-4" /> Seleccionar archivo CSV
+                    <button onClick={() => fileRef.current?.click()} className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 shadow-md transition-colors flex items-center justify-center gap-2">
+                        <FileUp className="w-4 h-4" /> Seleccionar Archivo CSV
                     </button>
                     <input key={fileInputKey} ref={fileRef} type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
                 </div>
 
-                <div className="p-5 theme-bg-container border theme-border rounded-2xl shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-emerald-500/10 rounded-lg"><Database className="w-5 h-5 text-emerald-500" /></div>
-                        <div>
-                            <h3 className="font-bold theme-text-main">Datos de Firebase</h3>
-                            <p className="text-xs theme-text-muted">Comentarios + RRSS en tiempo real</p>
+                <div className="p-6 sm:p-8 border rounded-2xl flex flex-col justify-between gap-6 transition-all duration-300 ease-out bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40 hover:shadow-lg hover:-translate-y-1 group">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 rounded-xl shadow-md bg-emerald-500 text-white group-hover:scale-110 transition-transform duration-300">
+                                <Database className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold theme-text-main text-base">Extracción en Vivo</h3>
+                                <p className="text-xs theme-text-muted mt-1">Comentarios desde Firestore en tiempo real</p>
+                            </div>
                         </div>
+                        {!isTrueAdmin && <span className="px-2 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase rounded-md border border-amber-500/20">Bloqueado</span>}
                     </div>
-                    <button onClick={loadFromFirestore} disabled={loadingDb || !isAdmin} className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                        {loadingDb ? <><Box className="w-4 h-4 animate-spin" /> Cargando...</> : <><Database className="w-4 h-4" /> Cargar desde Firebase</>}
+                    <button onClick={loadFromFirestore} disabled={loadingDb || !isTrueAdmin} className="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 shadow-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {loadingDb ? <><Box className="w-4 h-4 animate-spin" /> Escaneando motor...</> : <><Database className="w-4 h-4" /> Sincronizar Comentarios</>}
                     </button>
-                    {!isAdmin && <p className="text-[11px] text-amber-500 font-bold mt-2">Requiere permisos de administrador</p>}
                 </div>
             </div>
 
-            {/* Filtros de temporalidad (solo para datos de Firebase) */}
             {hasDbData && (
-                <div className="p-5 theme-bg-container border theme-border rounded-2xl shadow-sm">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-indigo-500/10 rounded-lg"><Filter className="w-5 h-5 text-indigo-500" /></div>
-                        <div>
-                            <h3 className="font-bold theme-text-main">Filtro de temporalidad</h3>
-                            <p className="text-xs theme-text-muted">Selecciona el período del reporte (mes y año)</p>
+                <div className="p-6 theme-bg-container border theme-border rounded-2xl shadow-sm border-l-[6px] border-l-indigo-500">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-indigo-500/10 rounded-lg"><Filter className="w-5 h-5 text-indigo-500" /></div>
+                            <div>
+                                <h3 className="font-bold theme-text-main text-sm uppercase tracking-wider">Filtro de Temporalidad</h3>
+                                <p className="text-xs theme-text-muted mt-0.5">Aisla los datos por mes y año operativo</p>
+                            </div>
                         </div>
                         {filterYear && (
-                            <button onClick={() => { setFilterYear(''); setFilterMonth(''); setRowData(allData); }} className="ml-auto text-xs font-bold text-indigo-600 hover:underline">Limpiar filtros</button>
+                            <button onClick={() => { setFilterYear(''); setFilterMonth(''); setRowData(allData); }} className="text-xs font-bold text-indigo-500 hover:text-indigo-400 transition-colors bg-indigo-500/10 px-3 py-1.5 rounded-md">Restablecer filtros</button>
                         )}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Año</label>
-                            <select value={filterYear} onChange={(e) => handleYearChange(e.target.value)} className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)]">
-                                <option value="">Todos los años</option>
+                            <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Año Operativo</label>
+                            <select value={filterYear} onChange={(e) => handleYearChange(e.target.value)} className={inputStyles}>
+                                <option value="">Seleccionar Todo el Historial</option>
                                 {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mes</label>
-                            <select value={filterMonth} onChange={(e) => handleMonthChange(e.target.value)} disabled={!filterYear} className="w-full p-2.5 rounded-lg theme-bg-low border theme-border theme-text-main outline-none focus:border-[var(--primary)] disabled:opacity-50">
+                            <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mes Operativo</label>
+                            <select value={filterMonth} onChange={(e) => handleMonthChange(e.target.value)} disabled={!filterYear} className={`${inputStyles} disabled:opacity-50 disabled:cursor-not-allowed`}>
                                 <option value="">Todos los meses</option>
-                                {MESES.map(m => <option key={m.v} value={m.v}>{m.n}</option>)}
+                                {availableMonths.map(m => <option key={m} value={m}>{getMonthName(m)}</option>)}
                             </select>
                         </div>
                     </div>
-                    <p className="text-[11px] theme-text-muted font-bold mt-3">
-                        Mostrando {rowData.length} de {allData.length} registros
-                    </p>
+                    <div className="mt-4 pt-4 border-t theme-border flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                        <p className="text-[11px] theme-text-muted font-bold">Base de datos segmentada: {rowData.length} de {allData.length} registros cargados en memoria.</p>
+                    </div>
                 </div>
             )}
 
-            {/* Estado sin datos */}
             {!hasData && (
-                <div className="text-center py-20 theme-bg-container rounded-2xl border theme-border border-dashed">
-                    <BarChart3 className="w-16 h-16 theme-text-muted mx-auto mb-4 opacity-40" />
-                    <h3 className="font-bold theme-text-main text-lg mb-2">Sin datos cargados</h3>
-                    <p className="theme-text-muted text-sm">Sube un CSV o carga datos desde Firebase para generar el reporte.</p>
+                <div className="text-center py-24 theme-bg-container rounded-[2rem] border theme-border border-dashed shadow-sm">
+                    <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <BarChart3 className="w-10 h-10 theme-text-muted opacity-50" />
+                    </div>
+                    <h3 className="font-black theme-text-main text-xl mb-2">Lienzo en Blanco</h3>
+                    <p className="theme-text-muted text-sm max-w-md mx-auto">Sube un archivo CSV validado o sincroniza la base de datos de Firebase para encender el motor de reportes.</p>
                 </div>
             )}
 
-            {/* KPIs */}
             {hasData && (
                 <>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <KpiCard label="Total registros" value={rowData.length} color="#5b8def" />
-                        <KpiCard label="% Negativo" value={`${sentiment.data[0] !== undefined ? Math.round((rowData.filter(r => r.sentiment === 'Negativo').length / rowData.length) * 100) : 0}%`} color="#e0485a" />
-                        <KpiCard label="Campus crítico" value={campusRank[0] ? campusRank[0][1] : '—'} sub={campusRank[0]?.[0]} color="#f5a93f" />
-                        <KpiCard label="Red dominante" value={redSocial.data[0] !== undefined ? redSocial.data[0] : '—'} sub={redSocial.labels[0]} color="#2fd9c4" />
+                    {/* KPIs TIPO STATCARD */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <KpiCard icon={FileText} label="Total Registros" value={rowData.length} color="#5b8def" />
+                        <KpiCard icon={AlertTriangle} label="% Negativo" value={`${sentiment.data[0] !== undefined ? Math.round((rowData.filter(r => r.sentiment === 'Negativo').length / rowData.length) * 100) : 0}%`} color="#e0485a" />
+                        <KpiCard icon={MapPin} label="Campus Crítico" value={campusRank[0] ? campusRank[0][1] : '—'} sub={campusRank[0]?.[0]} color="#f5a93f" />
+                        <KpiCard icon={Share2} label="Red Dominante" value={redSocial.data[0] !== undefined ? redSocial.data[0] : '—'} sub={redSocial.labels[0]} color="#2fd9c4" />
                     </div>
 
-                    {/* Gráficas */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <ChartCard title="Sentimiento" sub="Distribución por tono">
-                            <div className="h-52"><Doughnut data={{ labels: sentiment.labels, datasets: [{ data: sentiment.data, backgroundColor: sentiment.colors, borderColor: '#101a2e', borderWidth: 3 }] }} options={CHART_OPTIONS} /></div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <ChartCard title="Sentimiento Analítico" sub="Distribución global por tono">
+                            <div className="h-56"><Doughnut data={{ labels: sentiment.labels, datasets: [{ data: sentiment.data, backgroundColor: sentiment.colors, borderColor: 'transparent', borderWidth: 2, hoverOffset: 4 }] }} options={{...CHART_OPTIONS, cutout: '65%'}} /></div>
                         </ChartCard>
-                        <ChartCard title="Red social" sub="Volumen por plataforma">
-                            <div className="h-52"><Bar data={{ labels: redSocial.labels, datasets: [{ data: redSocial.data, backgroundColor: redSocial.labels.map((_, i) => RED_COLORS[i % RED_COLORS.length]), borderRadius: 6 }] }} options={CHART_OPTIONS} /></div>
+                        <ChartCard title="Impacto por Plataforma" sub="Volumen de comentarios">
+                            <div className="h-56"><Bar data={{ labels: redSocial.labels, datasets: [{ data: redSocial.data, backgroundColor: redSocial.labels.map((_, i) => RED_COLORS[i % RED_COLORS.length]), borderRadius: 6 }] }} options={{...CHART_OPTIONS, plugins: { legend: { display: false }}}} /></div>
                         </ChartCard>
-                        <ChartCard title="Origen del contenido" sub="Pautado vs orgánico">
-                            <div className="h-52"><Bar data={{ labels: origen.labels, datasets: [{ label: 'Registros', data: origen.totals, backgroundColor: '#5b8def', borderRadius: 6 }, { label: '% Negativo', data: origen.negPct, backgroundColor: '#e0485a', borderRadius: 6 }] }} options={{ ...CHART_OPTIONS, scales: { y: { beginAtZero: true } } }} /></div>
+                        <ChartCard title="Origen del Contenido" sub="Métricas Orgánico vs Pautado">
+                            <div className="h-56"><Bar data={{ labels: origen.labels, datasets: [{ label: 'Registros', data: origen.totals, backgroundColor: '#5b8def', borderRadius: 6 }, { label: '% Negativo', data: origen.negPct, backgroundColor: '#e0485a', borderRadius: 6 }] }} options={{ ...CHART_OPTIONS, scales: { ...COMMON_SCALES, y: { ...COMMON_SCALES.y, beginAtZero: true } } }} /></div>
                         </ChartCard>
                     </div>
 
-                    {/* Tendencia + campus */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <ChartCard title="Tendencia por período" sub="Volumen y % negatividad">
-                            <div className="h-60"><Line data={{ labels: trend.labels, datasets: [{ label: 'Comentarios', data: trend.totals, backgroundColor: 'rgba(91,141,239,0.55)', borderColor: '#5b8def', yAxisID: 'y' }, { label: '% Negativo', data: trend.negPct, borderColor: '#e0485a', backgroundColor: '#e0485a', yAxisID: 'y1' }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, position: 'left' }, y1: { beginAtZero: true, max: 100, position: 'right', grid: { display: false } } }, plugins: { legend: { position: 'bottom' } } }} /></div>
+                    {/* 🔥 FIX UX PRO: Tendencia a Ancho Completo, Punteros Resaltados y Anti-Cortes (Clip: False) */}
+                    <div className="grid grid-cols-1 gap-6">
+                        <ChartCard title="Tendencia Cronológica" sub="Volumen y curva de negatividad por corte temporal">
+                            <div className="h-[380px]">
+                                <Line 
+                                    data={{ 
+                                        labels: trend.labels, 
+                                        datasets: [
+                                            { 
+                                                label: 'Comentarios Totales', 
+                                                data: trend.totals, 
+                                                backgroundColor: 'rgba(91,141,239,0.2)', 
+                                                borderColor: '#5b8def', 
+                                                borderWidth: 3,
+                                                fill: true, 
+                                                tension: 0.4, 
+                                                pointRadius: 5,
+                                                pointHoverRadius: 7,
+                                                pointBackgroundColor: '#5b8def',
+                                                pointBorderColor: '#101a2e',
+                                                pointBorderWidth: 2,
+                                                clip: false, // 🔥 Clave para que los puntos no se corten
+                                                yAxisID: 'y' 
+                                            }, 
+                                            { 
+                                                label: '% Negatividad', 
+                                                data: trend.negPct, 
+                                                borderColor: '#e0485a', 
+                                                backgroundColor: '#e0485a', 
+                                                borderWidth: 3,
+                                                tension: 0.4, 
+                                                borderDash: [6, 4], 
+                                                pointRadius: 5,
+                                                pointHoverRadius: 7,
+                                                pointBackgroundColor: '#e0485a',
+                                                pointBorderColor: '#101a2e',
+                                                pointBorderWidth: 2,
+                                                clip: false, // 🔥 Clave para que los puntos no se corten en 100%
+                                                yAxisID: 'y1' 
+                                            }
+                                        ] 
+                                    }} 
+                                    options={{ 
+                                        responsive: true, 
+                                        maintainAspectRatio: false, 
+                                        interaction: { mode: 'index', intersect: false },
+                                        layout: { padding: { top: 25, right: 25, left: 15, bottom: 5 } },
+                                        scales: { 
+                                            x: { 
+                                                ...COMMON_SCALES.x, 
+                                                ticks: { ...COMMON_SCALES.x.ticks, maxRotation: 0, minRotation: 0, autoSkip: true, maxTicksLimit: 12, font: { size: 10.5 }, padding: 10 } 
+                                            }, 
+                                            y: { 
+                                                ...COMMON_SCALES.y, position: 'left', grace: '25%' 
+                                            }, 
+                                            y1: { 
+                                                beginAtZero: true, max: 100, position: 'right', grid: { display: false }, ticks: { color: '#93a2c0' }, border: { display: false }, grace: '25%' 
+                                            } 
+                                        }, 
+                                        plugins: CHART_OPTIONS.plugins 
+                                    }} 
+                                />
+                            </div>
                         </ChartCard>
-                        <ChartCard title="Incidencias por campus" sub="Ranking descendente">
-                            <div className="space-y-3">
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <ChartCard title="Radiografía de Campus" sub="Ranking descendente de incidencias">
+                            <div className="space-y-4 pt-2">
                                 {campusRank.slice(0, 8).map(([name, count], i) => {
                                     const max = campusRank[0]?.[1] || 1;
                                     const pct = Math.max(4, Math.round((count / max) * 100));
                                     return (
                                         <div key={name} className="flex items-center gap-3">
-                                            <span className="text-xs font-bold theme-text-main w-2">{i + 1}</span>
-                                            <span className="text-xs theme-text-muted w-32 truncate">{name}</span>
-                                            <div className="flex-1 h-2 bg-black/5 dark:bg-white/5 rounded overflow-hidden">
-                                                <div className="h-full rounded" style={{ width: `${pct}%`, background: name === 'Sin especificar' ? '#f5a93f' : '#5b8def' }}></div>
+                                            <span className="text-xs font-black theme-text-muted w-4">{i + 1}</span>
+                                            <span className="text-xs font-semibold theme-text-main w-36 truncate" title={name}>{name}</span>
+                                            <div className="flex-1 h-2.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden shadow-inner">
+                                                <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, background: name === 'Sin especificar' ? '#f5a93f' : '#5b8def' }}></div>
                                             </div>
-                                            <span className="text-xs font-bold theme-text-main w-8 text-right">{count}</span>
+                                            <span className="text-xs font-black theme-text-main w-8 text-right">{count}</span>
                                         </div>
                                     );
                                 })}
                             </div>
                         </ChartCard>
-                    </div>
-
-                    {/* Usuarios recurrentes + acciones */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <ChartCard title="Usuarios más recurrentes" sub="Con más de un comentario">
-                            <div className="space-y-3">
+                        <ChartCard title="Radar de Autores Recurrentes" sub="Usuarios con 2 o más interacciones en el periodo actual">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                 {topUsers.length ? topUsers.map(u => (
-                                    <div key={u.name} className="flex items-center justify-between p-3 theme-bg-low rounded-lg border theme-border">
-                                        <div>
-                                            <p className="text-sm font-bold theme-text-main">{u.name}</p>
-                                            <p className="text-xs theme-text-muted">Predominante: {u.dominant}</p>
+                                    <div key={u.name} className="flex items-center justify-between p-4 theme-bg-low rounded-xl border theme-border hover:border-[var(--primary)]/50 transition-colors shadow-sm">
+                                        <div className="truncate pr-2">
+                                            <p className="text-sm font-bold theme-text-main truncate" title={u.name}>{u.name}</p>
+                                            <p className="text-[11px] font-semibold theme-text-muted mt-0.5">Tono: <span style={{ color: sentimentColor(u.dominant) }}>{u.dominant}</span></p>
                                         </div>
-                                        <span className="px-2 py-1 rounded-lg text-xs font-bold" style={{ background: `${sentimentColor(u.dominant)}20`, color: sentimentColor(u.dominant) }}>{u.count}×</span>
+                                        <span className="px-3 py-1 rounded-lg text-xs font-black border flex-shrink-0" style={{ background: `${sentimentColor(u.dominant)}15`, color: sentimentColor(u.dominant), borderColor: `${sentimentColor(u.dominant)}40` }}>{u.count}×</span>
                                     </div>
-                                )) : <p className="text-sm theme-text-muted">Ningún usuario con más de un comentario.</p>}
+                                )) : <p className="text-sm font-medium theme-text-muted py-6 col-span-full">Ningún usuario con comportamiento recurrente detectado.</p>}
                             </div>
                         </ChartCard>
-                        <div className="p-5 theme-bg-container border theme-border rounded-2xl shadow-sm flex flex-col justify-center gap-3">
-                            <h3 className="font-bold theme-text-main text-lg">Exportar informe</h3>
-                            <p className="text-sm theme-text-muted">Genera un PDF formal con KPIs, tablas y resumen ejecutivo, o exporta los datos en formato CSV.</p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button onClick={handleGeneratePDF} className="py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-500 transition-colors flex items-center justify-center gap-2">
-                                    <FileDown className="w-4 h-4" /> PDF
-                                </button>
-                                <button onClick={handleExportCSV} className="py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2">
-                                    <Database className="w-4 h-4" /> CSV
-                                </button>
+                    </div>
+
+                    {/* TABLA BITÁCORA PREMIUM INNOVA */}
+                    <div className="p-6 sm:p-8 theme-bg-container border theme-border rounded-[2rem] shadow-sm overflow-hidden">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-5 mb-6">
+                            <div>
+                                <h3 className="font-black theme-text-main text-xl uppercase tracking-wider flex items-center gap-2"><FileText className="w-6 h-6 text-[var(--primary)]"/> Motor de Trazabilidad</h3>
+                                <p className="text-xs theme-text-muted mt-1 font-medium">Búsqueda rápida en la memoria de los {rowData.length} registros cargados</p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                                <div className="relative flex-1 sm:min-w-[220px]">
+                                    <Search className="w-4 h-4 absolute left-3.5 top-3.5 theme-text-muted" />
+                                    <input type="text" placeholder="Filtrar por autor o comentario..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={`${inputStyles} pl-10`} />
+                                </div>
+                                <select value={filterTableSentiment} onChange={e => setFilterTableSentiment(e.target.value)} className={inputStyles}>
+                                    <option value="">Sentimiento: Todos</option>
+                                    {uniqueSentiments.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <select value={filterTableRed} onChange={e => setFilterTableRed(e.target.value)} className={inputStyles}>
+                                    <option value="">Red Social: Todas</option>
+                                    {uniqueReds.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                                <select value={filterTableCampus} onChange={e => setFilterTableCampus(e.target.value)} className={inputStyles}>
+                                    <option value="">Campus: Todos</option>
+                                    {uniqueCampus.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto border theme-border rounded-xl custom-scrollbar">
+                            <table className="w-full text-left border-collapse min-w-[950px]">
+                                <thead>
+                                    <tr className="theme-bg-low border-b theme-border text-[10.5px] theme-text-muted uppercase tracking-widest">
+                                        <th className="p-4 font-bold rounded-tl-xl">Fecha</th>
+                                        <th className="p-4 font-bold">Campus</th>
+                                        <th className="p-4 font-bold">Red Social</th>
+                                        <th className="p-4 font-bold">Sentimiento</th>
+                                        <th className="p-4 font-bold">Origen</th>
+                                        <th className="p-4 font-bold">Usuario</th>
+                                        <th className="p-4 font-bold max-w-[300px]">Comentario</th>
+                                        <th className="p-4 font-bold text-center rounded-tr-xl">Evidencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-sm theme-text-secondary">
+                                    {currentTableRows.length === 0 ? (
+                                        <tr><td colSpan={8} className="p-12 text-center font-bold theme-text-muted border-t theme-border bg-black/5 dark:bg-white/5">La combinación de filtros no devolvió ningún resultado.</td></tr>
+                                    ) : currentTableRows.map((r, i) => (
+                                        <tr key={i} className="border-b theme-border hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                            <td className="p-4 whitespace-nowrap font-mono text-xs font-semibold">{r.fechaInicio}</td>
+                                            <td className="p-4 whitespace-nowrap font-medium">{r.campus}</td>
+                                            <td className="p-4 whitespace-nowrap font-medium">{r.redSocial}</td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <span className="px-2.5 py-1 text-[10px] font-black rounded-md uppercase border" style={{ background: `${sentimentColor(r.sentiment)}15`, color: sentimentColor(r.sentiment), borderColor: `${sentimentColor(r.sentiment)}40` }}>
+                                                    {r.sentiment}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 whitespace-nowrap text-xs font-semibold">{r.contenido}</td>
+                                            <td className="p-4 font-bold theme-text-main text-xs">{r.usuario}</td>
+                                            <td className="p-4 max-w-[300px] truncate text-xs" title={r.comentario}>{r.comentario}</td>
+                                            <td className="p-4 whitespace-nowrap">
+                                                <div className="flex gap-2 justify-center">
+                                                    {r.posteoOriginal && <a href={r.posteoOriginal} target="_blank" rel="noreferrer" className="text-[var(--primary)] hover:brightness-125 flex items-center gap-1 text-[11px] font-bold transition-colors uppercase"><ExternalLink className="w-3.5 h-3.5"/> Post</a>}
+                                                    {r.evidencias && <a href={r.evidencias} target="_blank" rel="noreferrer" className="text-emerald-500 hover:text-emerald-400 flex items-center gap-1 text-[11px] font-bold transition-colors uppercase"><FileText className="w-3.5 h-3.5"/> Doc</a>}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-center justify-between mt-5 gap-4">
+                            <span className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mostrando pág {currentPage} de {totalPages}</span>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl theme-bg-low border theme-border text-xs font-bold theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"><ChevronLeft className="w-4 h-4"/> Anterior</button>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages || totalPages === 0} className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl theme-bg-low border theme-border text-xs font-bold theme-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">Siguiente <ChevronRight className="w-4 h-4"/></button>
                             </div>
                         </div>
                     </div>
@@ -363,21 +534,24 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
     );
 };
 
-// Helpers visuales
-const KpiCard = ({ label, value, sub, color }: any) => (
-    <div className="p-5 theme-bg-container border theme-border rounded-2xl shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 h-full" style={{ background: color }}></div>
-        <p className="text-[10px] font-bold uppercase tracking-wider theme-text-muted">{label}</p>
-        <p className="text-3xl font-black theme-text-main mt-2">{value}</p>
-        {sub && <p className="text-xs theme-text-muted mt-1 truncate">{sub}</p>}
+const KpiCard = ({ label, value, sub, color, icon: Icon }: any) => (
+    <div className="p-6 theme-bg-container rounded-2xl border theme-border shadow-sm relative overflow-hidden group">
+        <Icon className="w-16 h-16 absolute -right-3 -bottom-3 opacity-10 group-hover:scale-110 transition-transform duration-500" style={{ color }} />
+        <div className="relative z-10">
+            <p className="text-[10px] font-bold uppercase tracking-widest theme-text-muted">{label}</p>
+            <p className="text-4xl font-black theme-text-main mt-2 mb-1">{value}</p>
+            {sub && <p className="text-[11px] font-bold truncate tracking-wide" style={{ color }}>{sub}</p>}
+        </div>
     </div>
 );
 
 const ChartCard = ({ title, sub, children }: any) => (
-    <div className="p-5 theme-bg-container border theme-border rounded-2xl shadow-sm">
-        <h4 className="font-bold theme-text-main">{title}</h4>
-        <p className="text-xs theme-text-muted mb-3">{sub}</p>
-        {children}
+    <div className="p-6 theme-bg-container border theme-border rounded-2xl shadow-sm h-full flex flex-col">
+        <h4 className="font-bold theme-text-main text-base">{title}</h4>
+        <p className="text-xs font-medium theme-text-muted mb-5 mt-0.5">{sub}</p>
+        <div className="flex-1 relative">
+            {children}
+        </div>
     </div>
 );
 

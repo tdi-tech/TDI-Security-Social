@@ -24,27 +24,38 @@ const helpTopics = [
         )
     },
     {
-        id: 'roles',
-        title: 'Roles y Permisos (RBAC)',
+        id: 'roles-admin',
+        title: 'Roles de Administración (RBAC)',
         icon: <Users className="w-6 h-6 text-purple-500" />,
-        badge: 'Administración',
+        badge: 'Directivo',
         badgeColor: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
         content: (
             <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto del sistema. Gestión de Backups cifrados, Auditoría SIEM forense, purga de rastros y administración total de usuarios y borrado de tickets por lotes.</p>
+                    <p><strong className="theme-text-main">ADMIN_IT:</strong> Control absoluto del sistema. Gestión de Backups cifrados, Auditoría SIEM forense, purga de rastros, administración total de usuarios y borrado de tickets por lotes.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo y gestión gerencial. Acceso total a incidentes y a la consola de Gestión de Tickets. Permite pre-registrar usuarios y reasignar responsabilidades.</p>
+                    <p><strong className="theme-text-main">ADMIN_CM:</strong> Control operativo y gerencial. Acceso total a incidentes y a la consola de Gestión de Tickets con privilegios directivos para pre-registrar usuarios, reasignar responsabilidades y ejecutar el borrado masivo de tickets por lotes.</p>
                 </li>
+            </ul>
+        )
+    },
+    {
+        id: 'roles-operativos',
+        title: 'Roles Operativos (RBAC)',
+        icon: <Users className="w-6 h-6 text-indigo-500" />,
+        badge: 'Ejecución',
+        badgeColor: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
+        content: (
+            <ul className="space-y-3 theme-text-main text-sm leading-relaxed">
                 <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
                     <p><strong className="theme-text-main">EDITOR_CM:</strong> Nivel operativo. Capacidad de crear y editar incidentes en Hackeos, RRSS y Comentarios, así como documentar avances en tickets asignados.</p>
                 </li>
                 <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
                     <p><strong className="theme-text-main">EDITOR_CONTENT:</strong> Perfil especializado en la consola de Tickets Emergentes. Gestiona estados y metadatos de tickets asignados. Además, posee acceso de solo lectura al historial de Comentarios para visualizar reportes y descargar la trazabilidad en CSV.</p>
                 </li>
                 <li className="flex items-start gap-2">
@@ -80,7 +91,7 @@ const helpTopics = [
                     <MessageSquareWarning className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5 group-hover/item:scale-110 transition-transform" />
                     <div>
                         <p className="font-bold text-xs uppercase tracking-wider mb-0.5 theme-text-main">Comentarios</p>
-                        <p className="theme-text-muted text-xs">Reportes unificados de interacción comunitaria y trazabilidad de quejas.</p>
+                        <p className="theme-text-muted text-xs">Reportes unificados de interacción comunitaria, trazabilidad de quejas y módulo analítico avanzado con exportación PDF.</p>
                     </div>
                 </div>
                 <div className="flex gap-3 items-start group/item pt-1 border-t theme-border/40">
