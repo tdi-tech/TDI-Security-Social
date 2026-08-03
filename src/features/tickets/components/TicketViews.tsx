@@ -307,28 +307,27 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
 
     const canManageAdmin = ['ADMIN_IT', 'ADMIN_CM'].includes(userRole);
 
-    // 🔥 VARIABLES DE ELIMINACIÓN MASIVA (MEJORA UX)
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     
-    // 🔥 EXPORTACIÓN CSV
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-    const [isExportingCSV, setIsExportingCSV] = useState(false);
+    
+    // 🔥 ESTADO VISUAL RESTAURADO: Maneja la animación del botón de forma local
+    const [isExportingCSV, setIsExportingCSV] = useState(false); 
+    
     const [csvFilter, setCsvFilter] = useState({ 
         tipo: 'Todo', 
         anio: '', 
         mes: '', 
-        semaforo: 'Todos' 
+        plataforma: 'Todas' 
     });
 
-    // 🔥 FIX DEL BUG DE BORRADO: Ahora sí pasamos openConfirmModal al hook
     const { deleteMultipleTickets, exportTicketsCSV } = useTickets(showToast, openConfirmModal);
 
     const activeTeamUsers = useMemo(() => {
         return (appUsers || []).filter((u: any) => !u.disabled);
     }, [appUsers]);
 
-    // 🔥 EXTRACCIÓN DINÁMICA DE FILTROS (Basado en la BD real)
     const availableYears = useMemo(() => {
         const years = new Set<string>();
         tickets.forEach(t => {
@@ -355,15 +354,15 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
         return arr;
     }, [tickets, csvFilter.anio, csvFilter.mes]);
 
-    const availablePriorities = useMemo(() => {
-        const prios = new Set<string>();
+    const availablePlatforms = useMemo(() => {
+        const plats = new Set<string>();
         tickets.forEach(t => {
-            if (t.prioridad) {
-                const match = t.prioridad.match(/([a-zA-ZáéíóúÁÉÍÓÚ]+)$/);
-                if (match) prios.add(match[1]);
+            if (t.plataforma) {
+                const pArray = Array.isArray(t.plataforma) ? t.plataforma : [t.plataforma];
+                pArray.forEach((p: string) => plats.add(p));
             }
         });
-        return Array.from(prios);
+        return Array.from(plats).sort();
     }, [tickets]);
 
     useEffect(() => {
@@ -454,8 +453,10 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
         });
     };
 
+    // 🔥 FIX DE UX: Restauramos la micro-pausa para que el botón alcance a girar visualmente
     const handleDownloadCSV = async () => {
         setIsExportingCSV(true);
+        await new Promise(resolve => setTimeout(resolve, 800)); // Magia de UX para que la pantalla pinte
         const success = await exportTicketsCSV(csvFilter);
         setIsExportingCSV(false);
         if (success) setIsCsvModalOpen(false);
@@ -482,7 +483,6 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                 <div><h2 className="text-2xl font-bold theme-text-main">Consola de Gestión de Tickets</h2><p className="theme-text-muted text-sm mt-1">Control de flujo, aprobación y tiempos de entrega para Innovaschools.</p></div>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                     
-                    {/* 🔥 MEJORA UX: Botón de Selección Múltiple (Solo Admins) */}
                     {canManageAdmin && tickets.length > 0 && (
                         <button 
                             onClick={() => {
@@ -531,7 +531,6 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                         const assignedObj = activeTeamUsers.find((u: any) => (u.displayName || u.email) === t.responsable);
                         const plats = Array.isArray(t.plataforma) ? t.plataforma : [t.plataforma];
                         
-                        // 🔥 LÓGICA VISUAL DEL MODO SELECCIÓN
                         const isSelected = selectedIds.includes(t.id);
                         
                         return (
@@ -604,7 +603,6 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                 document.body
             )}
 
-            {/* 🔥 MODAL DE EXPORTACIÓN CON Z-INDEX BAJADO (z-50) PARA QUE EL TOAST SALGA ARRIBA */}
             {isCsvModalOpen && ReactDOM.createPortal(
                 <div className="fixed inset-0 w-screen h-screen bg-black/70 backdrop-blur-md z-[50] flex items-center justify-center p-4 fade-in">
                     <div className="theme-bg-container rounded-2xl w-full max-w-md shadow-2xl border theme-border flex flex-col overflow-hidden">
@@ -628,7 +626,6 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                                         </select>
                                     </div>
                                     
-                                    {/* 🔥 FILTROS DINÁMICOS BASADOS EN DB REAL */}
                                     {csvFilter.tipo !== 'Todo' && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
@@ -648,10 +645,10 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                                         </div>
                                     )}
                                     <div className="space-y-1.5">
-                                        <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Semáforo de Prioridad</label>
-                                        <select disabled={isExportingCSV} value={csvFilter.semaforo} onChange={(e) => setCsvFilter({...csvFilter, semaforo: e.target.value})} className={inputStyles}>
-                                            <option value="Todos">Todas las prioridades</option>
-                                            {availablePriorities.map(p => <option key={p} value={p}>{p}</option>)}
+                                        <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Red Social / Plataforma</label>
+                                        <select disabled={isExportingCSV} value={csvFilter.plataforma} onChange={(e) => setCsvFilter({...csvFilter, plataforma: e.target.value})} className={inputStyles}>
+                                            <option value="Todas">Todas las plataformas</option>
+                                            {availablePlatforms.map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
                                 </>
@@ -675,7 +672,6 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                         <div className="p-5 border-b theme-border flex justify-between items-center bg-purple-500/5">
                             <div className="flex items-center gap-3"><div className="p-2 bg-purple-500/20 text-purple-500 rounded-lg"><Ticket className="w-5 h-5"/></div><div><h3 className="font-bold theme-text-main text-lg">{selectedTicket.tema}</h3><p className="text-xs theme-text-muted">Solicitado por Innovaschools</p></div></div>
                             <div className="flex items-center gap-2">
-                                {/* 🔥 CANDADO: EL BOTÓN ELIMINAR SOLO SE MUESTRA A ADMINS */}
                                 {canManageAdmin && <button onClick={() => handleDelete(selectedTicket.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg" title="Eliminar ticket"><Trash2 className="w-5 h-5"/></button>}
                                 <button onClick={() => setIsDetailOpen(false)} className="p-2 theme-text-muted hover:theme-text-main rounded-lg" title="Cerrar modal"><X className="w-5 h-5"/></button>
                             </div>

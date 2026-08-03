@@ -5,6 +5,10 @@ import { logAuditEvent, logSecurityBlock } from '../../../services/firebase/audi
 
 export const useTickets = (showToast: any, openConfirmModal: any, logAction?: any) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // 🔥 NUEVO ESTADO PARA LA ANIMACIÓN DEL BOTÓN CSV
+    const [isExportingCSV, setIsExportingCSV] = useState(false);
+    
     const lastSubmissionTime = useRef<number>(0);
 
     const [ticketRemainingAttempts, setTicketRemainingAttempts] = useState(5);
@@ -154,7 +158,27 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 updatePayload.readBy = arrayUnion(...idsToAdd);
             }
             
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', id), updatePayload);
+            const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', 'tickets', id);
+            const ticketSnap = await getDoc(ticketRef);
+            const ticketTema = ticketSnap.exists() ? ticketSnap.data().tema : 'Ticket seleccionado';
+
+            await updateDoc(ticketRef, updatePayload);
+
+            if (userToUse) {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
+                    userId: userToUse.uid || userToUse.email,
+                    userName: userToUse.displayName || userToUse.email || 'Miembro del equipo',
+                    userPhoto: userToUse.photoURL || '',
+                    action: `Actualizó el estatus a "${nuevoEstado}" en: ${ticketTema}`,
+                    module: 'Tickets',
+                    type: 'ticket_status',
+                    incidentId: id,
+                    timestamp: new Date().toISOString(),
+                    readBy: [],
+                    deletedBy: [] 
+                });
+            }
+
             showToast(`Estatus actualizado a: ${nuevoEstado}`);
         } catch (error: any) {
             if (error.code === 'permission-denied') {
@@ -275,8 +299,9 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
         }
     }, [openConfirmModal, showToast]);
 
-    // 🔥 EXTRACCIÓN AL BACKEND: Validación y generación segura del CSV desde Firestore
+    // 🔥 FILTRADO POR PLATAFORMA Y ANIMACIÓN DE CARGA
     const exportTicketsCSV = useCallback(async (csvFilter: any) => {
+        setIsExportingCSV(true);
         try {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'tickets'));
             const querySnapshot = await getDocs(q);
@@ -299,12 +324,20 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 });
             }
             
-            if (csvFilter.semaforo !== 'Todos') {
-                filtrados = filtrados.filter(t => t.prioridad && t.prioridad.includes(csvFilter.semaforo));
+            // 🔥 Buscamos coincidencias con la plataforma/red social en lugar del semáforo
+            if (csvFilter.plataforma && csvFilter.plataforma !== 'Todas') {
+                filtrados = filtrados.filter(t => {
+                    if (!t.plataforma) return false;
+                    if (Array.isArray(t.plataforma)) {
+                        return t.plataforma.includes(csvFilter.plataforma);
+                    }
+                    return t.plataforma === csvFilter.plataforma;
+                });
             }
 
             if (filtrados.length === 0) {
                 showToast('No hay tickets en la base de datos que coincidan con estos filtros.', true);
+                setIsExportingCSV(false);
                 return false;
             }
 
@@ -336,9 +369,11 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
             a.click();
             URL.revokeObjectURL(url);
             showToast('CSV Inteligente generado y validado con el servidor.');
+            setIsExportingCSV(false);
             return true;
         } catch (error) {
             showToast('Error de conexión al generar el reporte.', true);
+            setIsExportingCSV(false);
             return false;
         }
     }, [showToast]);
@@ -351,6 +386,7 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
         deleteTicket,
         deleteMultipleTickets,
         exportTicketsCSV,
+        isExportingCSV, // 🔥 Exportamos el estado para que el botón gire
         ticketRemainingAttempts,
         ticketLockoutUntil
     };

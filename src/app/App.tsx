@@ -54,9 +54,9 @@ const AppContent = () => {
             return navigate('gestion-tickets');
         }
 
-        // 🔥 BLINDAJE PARA EDITOR_CONTENT: TS Bypass (as string)
+        // 🔥 BLINDAJE PARA EDITOR_CONTENT: Ahora incluye 'historial-comentario'
         if ((userRole as string) === 'EDITOR_CONTENT') {
-            const allowedViews = ['dashboard', 'gestion-tickets', 'roles', 'ayuda', 'config'];
+            const allowedViews = ['dashboard', 'gestion-tickets', 'roles', 'ayuda', 'config', 'historial-comentario'];
             if (!allowedViews.includes(view)) {
                 showToast('Acceso denegado. Tu rol (Editor Content) no tiene permisos para esta área.', true);
                 return navigate('dashboard');
@@ -125,12 +125,17 @@ const AppContent = () => {
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    // 🔥 FILTRO DE NOTIFICACIONES PARA EDITOR_CONTENT: TS Bypass (as string)
+    // 🔥 FILTRO DE NOTIFICACIONES: Ahora permite el módulo de Comentarios para el Editor Content
     const validNotifications = notifications.filter((n: any) => {
         if (n.userId === user?.uid || (n.deletedBy && n.deletedBy.includes(user?.uid))) return false;
-        if ((userRole as string) === 'EDITOR_CONTENT' && n.type !== 'ticket_assign') return false;
+        
+        if ((userRole as string) === 'EDITOR_CONTENT') {
+            if (n.type !== 'ticket_assign' && n.type !== 'ticket_status' && n.module !== 'Comentarios') return false;
+        }
+        
         return true;
     });
+    
     const unreadNotifications = validNotifications.filter((n: any) => !(n.readBy && n.readBy.includes(user?.uid)));
     const readNotifications = validNotifications.filter((n: any) => (n.readBy && n.readBy.includes(user?.uid)));
 
@@ -151,7 +156,6 @@ const AppContent = () => {
         } catch(e) { showToast('Error al conectar con servidor', true); }
     };
 
-    // 🔥 ETIQUETA VISUAL: TS Bypass (as string)
     const displayRoleName = userRole === 'ADMIN_IT' ? 'Administrador IT' 
                           : userRole === 'ADMIN_CM' ? 'Administrador CM' 
                           : userRole === 'EDITOR_CM' ? 'Editor CM' 

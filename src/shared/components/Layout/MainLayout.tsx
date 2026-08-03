@@ -42,11 +42,14 @@ export const MainLayout = ({
         }
     };
 
+    // 🔥 Agregamos el rol a una constante para limpiar el código de abajo
+    const isInternalUser = isAdmin || userRole === 'EDITOR_CONTENT';
+
     return (
-        <div className={`h-screen print:h-auto print:block flex relative font-sans transition-colors duration-300 ${isAdmin ? 'is-admin' : ''}`}>
+        <div className={`h-screen print:h-auto flex relative font-sans transition-colors duration-300 ${isAdmin ? 'is-admin' : ''}`}>
             {((user && user.email) || isAdmin) && <Inactivity onLogout={logoutAdmin} />}
 
-            <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} currentView={currentView} navigate={navigate} isAdmin={isAdmin} cloudStatus={cloudStatus} userRole={userRole} />
+            <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} currentView={currentView} navigate={navigate} isAdmin={isAdmin} cloudStatus={cloudStatus} userRole={userRole} user={user} />
 
             <main className="flex-1 print:block flex flex-col h-full print:h-auto relative overflow-x-hidden print:overflow-visible w-full bg-[var(--surface)]">
                 <header className="h-16 border-b theme-border theme-bg-container flex items-center justify-between px-4 sm:px-6 no-print shadow-sm z-50 relative">
@@ -56,7 +59,8 @@ export const MainLayout = ({
                     </div>
                     
                     <div className="flex items-center gap-1 sm:gap-4">
-                        {isAdmin && (
+                        {/* 🔥 Usamos isInternalUser para que los Content también vean la campana */}
+                        {isInternalUser && (
                             <div className="relative notif-container">
                                 <button onClick={() => setNotifMenuOpen(!notifMenuOpen)} className="p-2 theme-text-muted hover:theme-text-main rounded-lg transition-colors relative" title="Notificaciones">
                                     <Bell className="w-5 h-5"/>
@@ -106,7 +110,8 @@ export const MainLayout = ({
                             {isDarkMode ? <Sun className="w-5 h-5"/> : <Moon className="w-5 h-5"/>}
                         </button>
                         
-                        {isAdmin ? (
+                        {/* 🔥 Usamos isInternalUser para mostrar el perfil */}
+                        {isInternalUser ? (
                             <div className="flex items-center gap-1.5 sm:gap-3 pl-1 relative profile-container">
                                 <div className="text-right hidden sm:block"><p className="text-sm font-bold theme-text-main leading-none">{user?.displayName}</p><p className="text-[10px] theme-text-muted uppercase font-bold mt-1 tracking-wider">{displayRoleName}</p></div>
                                 <div className="relative">

@@ -123,7 +123,12 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
                             return;
                         }
                         
-                        await setDoc(selfRef, { lastLogin: new Date().toISOString() }, { merge: true });
+                        // 🔥 SOLUCIÓN: Sobrescribimos el lastLogin Y también bajamos la foto/nombre más recientes de Google
+                        await setDoc(selfRef, { 
+                            lastLogin: new Date().toISOString(),
+                            photoURL: firebaseUser.photoURL || data.photoURL || null,
+                            displayName: firebaseUser.displayName || data.displayName
+                        }, { merge: true });
                         
                         const role = data.role as UserRole;
                         setUserRole(role || '');

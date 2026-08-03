@@ -109,12 +109,11 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
         if (['protocolo-rss', 'nuevo-rss', 'historial-rss'].includes(view)) return 'rss';
         if (['nuevo-comentario', 'historial-comentario'].includes(view)) return 'comentarios';
         if (['solicitud-tickets', 'gestion-tickets'].includes(view)) return 'tickets';
-        return 'tickets'; // Default general a tickets para que siempre abra
+        return 'tickets'; 
     });
 
     const [newTicketsCount, setNewTicketsCount] = useState(0);
 
-    // 🔥 CONSTANTES DE ROL PARA FILTRAR VISIBILIDAD
     const isInternalUser = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM', 'EDITOR_CONTENT'].includes(userRole);
     const isEditorContent = userRole === 'EDITOR_CONTENT';
     const isITAdmin = userRole === 'ADMIN_IT';
@@ -178,7 +177,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                     
                     <div className="my-2 border-t theme-border opacity-50"></div>
 
-                    {/* 🔥 OCULTAMOS TODO ESTO PARA EL EDITOR CONTENT */}
                     {!isEditorContent && (
                         <>
                             <DropdownGroup id="hackeos" icon={ShieldAlert} label="Hackeos" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
@@ -194,15 +192,17 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                                 <SubNavBtn id="nuevo-rss" icon={AlertTriangle} label="Crear incidente" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
                                 <SubNavBtn id="historial-rss" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
                             </DropdownGroup>
-
-                            <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
-                                <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
-                                <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
-                            </DropdownGroup>
                         </>
                     )}
 
-                    {/* 🔥 GESTIÓN DE TICKETS Y CONTADOR EN VIVO */}
+                    {/* 🔥 COMENTARIOS: Ahora visible para Editor Content (pero sin crear reporte) */}
+                    <DropdownGroup id="comentarios" icon={MessageSquareWarning} label="Comentarios" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView}>
+                        {!isEditorContent && (
+                            <SubNavBtn id="nuevo-comentario" icon={AlertTriangle} label="Crear reporte" requireAdmin={true} isAdmin={isAdmin} currentView={currentView} navigate={navigate} />
+                        )}
+                        <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
+                    </DropdownGroup>
+
                     <DropdownGroup id="tickets" icon={Ticket} label="Emergentes" openGroup={openGroup} toggleGroup={toggleGroup} currentView={currentView} badgeCount={newTicketsCount}>
                         {!isInternalUser && <SubNavBtn id="solicitud-tickets" icon={AlertTriangle} label="Solicitar Ticket" currentView={currentView} navigate={navigate} />}
                         {isInternalUser && <SubNavBtn id="gestion-tickets" icon={FileText} label="Gestionar Tickets" currentView={currentView} navigate={navigate} badgeCount={newTicketsCount} />}
@@ -212,7 +212,6 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
 
                     <NavBtn id="roles" icon={Users} label="Roles" currentView={currentView} navigate={navigate} />
                     
-                    {/* Changelog oculto para Editor Content */}
                     {isAdmin && !isEditorContent && <NavBtn id="changelog" icon={History} label="Changelog" currentView={currentView} navigate={navigate} />}
                     
                     {isITAdmin && (

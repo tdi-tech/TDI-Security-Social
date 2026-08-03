@@ -68,7 +68,6 @@ export const ConfigView = ({
     const cleanRole = userRole?.toUpperCase()?.trim() || '';
     const isITAdmin = cleanRole === 'ADMIN_IT';
     
-    // 🔥 CORRECCIÓN: Definimos claramente quién puede ver el panel de Notificaciones
     const canViewNotifications = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM', 'EDITOR_CONTENT'].includes(cleanRole);
 
     const fetchGlobalServerStats = useCallback(async () => {
@@ -178,7 +177,6 @@ export const ConfigView = ({
                         </div>
                     </div>
 
-                    {/* 🔥 CORRECCIÓN: Restablecido el permiso para que ADMIN_IT y el resto lo vean */}
                     {canViewNotifications && (
                         <div className="theme-bg-container border theme-border rounded-2xl p-6 shadow-sm">
                             <h3 className="text-sm font-bold theme-text-main mb-4 uppercase tracking-wider flex items-center gap-2">
@@ -194,15 +192,23 @@ export const ConfigView = ({
                                     </div>
                                     <ToggleSwitch checked={prefs.sound} onChange={() => handleTogglePref('sound')} />
                                 </div>
+                                
+                                {/* 🔥 VISIBILIDAD: Ocultamos Hackeos y RRSS para el Editor Content */}
+                                {cleanRole !== 'EDITOR_CONTENT' && (
+                                    <>
+                                        <div className="h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-3"><ShieldCheck className="w-4 h-4 text-red-500" /><div><p className="text-sm font-bold theme-text-main">Security Core</p><p className="text-xs theme-text-muted">Alertas de Hackeos</p></div></div>
+                                            <ToggleSwitch checked={prefs.security} onChange={() => handleTogglePref('security')} />
+                                        </div>
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-3"><Megaphone className="w-4 h-4 text-orange-500" /><div><p className="text-sm font-bold theme-text-main">Crisis RRSS</p><p className="text-xs theme-text-muted">Incidencias de Reputación</p></div></div>
+                                            <ToggleSwitch checked={prefs.rrss} onChange={() => handleTogglePref('rrss')} />
+                                        </div>
+                                    </>
+                                )}
+                                
                                 <div className="h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3"><ShieldCheck className="w-4 h-4 text-red-500" /><div><p className="text-sm font-bold theme-text-main">Security Core</p><p className="text-xs theme-text-muted">Alertas de Hackeos</p></div></div>
-                                    <ToggleSwitch checked={prefs.security} onChange={() => handleTogglePref('security')} />
-                                </div>
-                                <div className="flex items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3"><Megaphone className="w-4 h-4 text-orange-500" /><div><p className="text-sm font-bold theme-text-main">Crisis RRSS</p><p className="text-xs theme-text-muted">Incidencias de Reputación</p></div></div>
-                                    <ToggleSwitch checked={prefs.rrss} onChange={() => handleTogglePref('rrss')} />
-                                </div>
                                 <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-3"><MessageSquare className="w-4 h-4 text-blue-500" /><div><p className="text-sm font-bold theme-text-main">Comentarios</p><p className="text-xs theme-text-muted">Reportes de Trazabilidad</p></div></div>
                                     <ToggleSwitch checked={prefs.comments} onChange={() => handleTogglePref('comments')} />

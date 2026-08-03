@@ -45,7 +45,7 @@ const helpTopics = [
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>
-                    <p><strong className="theme-text-main">EDITOR_CONTENT:</strong> Perfil especializado exclusivo para la consola de Tickets Emergentes. Sin acceso a módulos de seguridad o crisis. Solo gestiona estados y metadatos de tickets asignados.</p>
+                    <p><strong className="theme-text-main">EDITOR_CONTENT:</strong> Perfil especializado en la consola de Tickets Emergentes. Gestiona estados y metadatos de tickets asignados. Además, posee acceso de solo lectura al historial de Comentarios para visualizar reportes y descargar la trazabilidad en CSV.</p>
                 </li>
                 <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-1.5 flex-shrink-0"></span>

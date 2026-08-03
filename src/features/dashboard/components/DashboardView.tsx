@@ -35,14 +35,16 @@ export const DashboardView = ({
         if (isEditorContent) setActiveTab('tickets');
     }, [isEditorContent]);
 
+    // 🔥 FIX DE UX: Agregamos `user` como dependencia para que el esqueleto reaccione al cerrar sesión
     useEffect(() => {
+        setIsLoading(true); // Encendemos el skeleton de carga
+        
         const u = auth.currentUser;
         if (u && !u.isAnonymous && u.email && !u.email.endsWith('@tierradeideas.mx')) {
             setIsLoading(false);
             return;
         }
 
-        setIsLoading(true);
         const unsub1 = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'incidents'), snap => {
             const arr: any[] = []; snap.forEach(d => arr.push({id: d.id, ...d.data()}));
             setIncidents(arr.sort((a,b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()));
@@ -65,7 +67,7 @@ export const DashboardView = ({
         
         const timer = setTimeout(() => setIsLoading(false), 800);
         return () => { unsub1(); unsub2(); unsub3(); unsub4(); clearTimeout(timer); };
-    }, []);
+    }, [user]); // <-- Aquí está la clave para que vuelva a cargar al cerrar/abrir sesión
 
     useEffect(() => {
         setMounted(false);
@@ -232,9 +234,9 @@ export const DashboardView = ({
                             <>
                                 <button type="button" onClick={() => setActiveTab('seguridad')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'seguridad' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><ShieldAlert className="w-4 h-4 text-red-500" /> Seguridad IT</button>
                                 <button type="button" onClick={() => setActiveTab('rrss')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'rrss' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Megaphone className="w-4 h-4 text-orange-500" /> Reputación RRSS</button>
-                                <button type="button" onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4 text-blue-500" /> Comentarios</button>
                             </>
                         )}
+                        <button type="button" onClick={() => setActiveTab('comentarios')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'comentarios' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><MessageSquare className="w-4 h-4 text-blue-500" /> Comentarios</button>
                         <button type="button" onClick={() => setActiveTab('tickets')} className={`w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'tickets' ? 'bg-[var(--surface)] shadow-md theme-text-main scale-100' : 'theme-text-muted hover:theme-text-main scale-95'}`}><Ticket className="w-4 h-4 text-purple-500" /> Tickets</button>
                     </div>
                     <button type="button" onClick={handleDownloadReport} disabled={isExportingPDF} className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-[var(--primary)] text-white hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
@@ -381,7 +383,7 @@ export const DashboardView = ({
                     )}
 
                     {/* TRACTO: COMENTARIOS */}
-                    {activeTab === 'comentarios' && !isEditorContent && (
+                    {activeTab === 'comentarios' && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 <StatCard title="Reportes Creados" value={commentsStats.totalReportes} color="purple" icon={<FileText className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
