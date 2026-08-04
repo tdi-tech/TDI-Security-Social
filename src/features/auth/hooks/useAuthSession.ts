@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db, appId, getNetworkContext } from '../../../services/firebase/config';
 import { loginWithGoogleDomain, logoutUser, subscribeToAuthChanges } from '../../../services/firebase/auth.service';
+
+// 🔥 FIX: Importación estática de auditoría
+import { logAuditEvent } from '../../../services/firebase/audit.service';
+
 import type { User } from 'firebase/auth';
 import type { UserRole, UserSession } from '../../../shared/types/models';
 
@@ -11,14 +15,12 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
     const [userRole, setUserRole] = useState<UserRole>('');
     const [cloudStatus, setCloudStatus] = useState('Conectando...');
     
-    // 🔥 ESTADOS DEL FIREWALL BACKEND PARA INICIOS DE SESIÓN
     const [loginRemainingAttempts, setLoginRemainingAttempts] = useState(5);
     const [isLoginLocked, setIsLoginLocked] = useState(false);
 
     const [userPrefs, setUserPrefs] = useState<any>(null);
     const prefsRef = useRef<any>(null);
 
-    // 🔥 ESCUDO EN TIEMPO REAL: Escucha los bloqueos de la IP en Firestore al instante en todas las pestañas
     useEffect(() => {
         let unsub: (() => void) | undefined;
         getNetworkContext().then((net) => {
@@ -49,7 +51,6 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
     useEffect(() => {
         const unsubscribe = subscribeToAuthChanges(async (firebaseUser: User | null) => {
             if (firebaseUser) {
-                // 🔥 FIREWALL DE DOMINIO BLINDADO: Primero auditamos y contamos el fallo en el servidor, DESPUÉS cerramos sesión
                 if (!firebaseUser.email?.endsWith('@tierradeideas.mx')) {
                     try {
                         const net = await getNetworkContext().catch(() => ({ ip: "unknown_client" }));
@@ -73,13 +74,11 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
                         }
                         await setDoc(lockRef, updatePayload, { merge: true });
                         
-                        // Disparamos auditoría MIENTRAS el token sigue activo para que Firestore Rules permita guardar
-                        const { logAuditEvent } = await import('../../../services/firebase/audit.service');
+                        // 🔥 FIX: Llamada directa a logAuditEvent
                         await logAuditEvent(`Alerta RBAC/Firewall: Intento de login ajeno al dominio por ${firebaseUser.email}`);
                     } catch (err) {
                         console.error("Error registrando bloqueo en firewall:", err);
                     } finally {
-                        // Expulsamos al usuario una vez que el backend ya registró el ataque
                         await logoutUser();
                         setUser(null);
                         setIsAdmin(false);
@@ -89,7 +88,6 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
                     return;
                 }
 
-                // SI EL CORREO ES CORRECTO Y AUTORIZADO:
                 const session: UserSession = {
                     uid: firebaseUser.uid,
                     email: firebaseUser.email,
@@ -123,7 +121,6 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
                             return;
                         }
                         
-                        // 🔥 SOLUCIÓN: Sobrescribimos el lastLogin Y también bajamos la foto/nombre más recientes de Google
                         await setDoc(selfRef, { 
                             lastLogin: new Date().toISOString(),
                             photoURL: firebaseUser.photoURL || data.photoURL || null,
@@ -139,7 +136,6 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
                         prefsRef.current = loadedPrefs;
                     }
                     
-                    // Al iniciar sesión exitosamente, limpiamos su registro de fallos en la nube
                     const net = await getNetworkContext().catch(() => ({ ip: "unknown" }));
                     const lockId = `login_${net.ip ? net.ip.replace(/\./g, '_') : "anon"}`;
                     setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'firewall_locks', lockId), { failedAttempts: 0, lockoutUntil: null }, { merge: true }).catch(() => {});
@@ -169,13 +165,11 @@ export const useAuthSession = (showToast: any, setLoginModalOpen: any) => {
         }
         try {
             await loginWithGoogleDomain();
-            // 🔥 FIX: Eliminamos el toast prematuro. La bienvenida la da App.tsx cuando el correo se aprueba.
         } catch (error: any) {
             if (error.code === 'auth/too-many-requests') {
                 showToast('🚨 Demasiados intentos fallidos. Tu acceso fue bloqueado temporalmente por Google Security.', true);
-                import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
-                    logAuditEvent('Alerta DDoS: Google cortó tráfico por exceso de peticiones de Login (too-many-requests)');
-                }).catch(() => {});
+                // 🔥 FIX: Llamada directa
+                logAuditEvent('Alerta DDoS: Google cortó tráfico por exceso de peticiones de Login (too-many-requests)').catch(() => {});
             } else {
                 showToast(error.message || 'Error al iniciar sesión', true);
             }

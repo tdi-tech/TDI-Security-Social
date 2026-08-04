@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import type { ReportRow } from '../utils/csvExport';
 
+// 🔥 FIX: Importaciones estáticas para jsPDF y Chart.js
+import { jsPDF as JsPDFClass } from 'jspdf';
+import * as chartModule from 'chart.js';
+
 const SENTIMENT_COLORS: Record<string, string> = {
     'Negativo': '#e0485a',
     'Neutral': '#7c8db5',
@@ -9,7 +13,6 @@ const SENTIMENT_COLORS: Record<string, string> = {
 const FALLBACK_COLOR = '#5b8def';
 const RED_COLORS = ['#5b8def', '#e0485a', '#2fd9c4', '#f5a93f', '#4fd18b'];
 
-// 🔥 FIX PDF: Paleta de Colores 100% Dark Mode Premium
 type RGB = [number, number, number];
 const NAVY: RGB = [10, 17, 32];        
 const CARD_BG: RGB = [16, 26, 46];     
@@ -68,7 +71,6 @@ export const calcOrigen = (rows: ReportRow[]) => {
     return { labels, totals, negPct };
 };
 
-// 🔥 FIX UX PRO: Traductor de fechas largas a formato corto ("08 Jun - 14 Jun")
 const formatShortDate = (dstr: string) => {
     if (!dstr) return '';
     const parts = dstr.split('-');
@@ -155,9 +157,9 @@ const truncateToWidth = (doc: any, text: string, maxWidth: number) => {
     return lines[0].replace(/\s+\S*$/, '') + '…';
 };
 
-const renderOffscreenChart = async (chartModule: any, config: any, width: number, height: number): Promise<string | null> => {
+const renderOffscreenChart = async (chartModuleRef: any, config: any, width: number, height: number): Promise<string | null> => {
     try {
-        const Chart = chartModule.Chart || chartModule.default?.Chart || chartModule;
+        const Chart = chartModuleRef.Chart || (chartModuleRef as any).default?.Chart || chartModuleRef;
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -195,10 +197,7 @@ export const useReportGenerator = () => {
     const generatePDF = useCallback(async (rows: ReportRow[], sourceLabel: string, images?: ChartImages) => {
         if (!rows.length) return;
 
-        const [{ jsPDF: JsPDFClass }, chartModule] = await Promise.all([
-            import('jspdf'),
-            import('chart.js')
-        ]);
+        // 🔥 FIX: Eliminado el Promise.all de la importación dinámica
         const doc = new JsPDFClass({ unit: 'mm', format: 'a4' });
         const pageW = 210, pageH = 297, margin = 15;
         const contentW = pageW - margin * 2;
@@ -249,7 +248,6 @@ export const useReportGenerator = () => {
                 }
             }, 560, 380);
 
-            // 🔥 FIX PDF PRO: Fechas horizontales, padding perimetral, clip: false y punteros resaltados idénticos a la Web
             imgTrend = imgTrend || await renderOffscreenChart(chartModule, {
                 type: 'line',
                 data: {

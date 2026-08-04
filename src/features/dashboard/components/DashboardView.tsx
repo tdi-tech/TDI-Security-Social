@@ -35,9 +35,8 @@ export const DashboardView = ({
         if (isEditorContent) setActiveTab('tickets');
     }, [isEditorContent]);
 
-    // 🔥 FIX DE UX: Agregamos `user` como dependencia para que el esqueleto reaccione al cerrar sesión
     useEffect(() => {
-        setIsLoading(true); // Encendemos el skeleton de carga
+        setIsLoading(true); 
         
         const u = auth.currentUser;
         if (u && !u.isAnonymous && u.email && !u.email.endsWith('@tierradeideas.mx')) {
@@ -67,7 +66,7 @@ export const DashboardView = ({
         
         const timer = setTimeout(() => setIsLoading(false), 800);
         return () => { unsub1(); unsub2(); unsub3(); unsub4(); clearTimeout(timer); };
-    }, [user]); // <-- Aquí está la clave para que vuelva a cargar al cerrar/abrir sesión
+    }, [user]); 
 
     useEffect(() => {
         setMounted(false);
@@ -96,21 +95,30 @@ export const DashboardView = ({
         return { total: incidents.length, open, resolved, critical, topVectors, topPlatform };
     }, [incidents]);
 
+    // 🔥 FIX LÓGICO RRSS: Eliminamos métricas irrelevantes y calculamos métricas 100% medibles desde el formulario
     const rrssStats = useMemo(() => {
-        let open = 0, resolved = 0, highRisk = 0;
+        let totalIncidenciasSum = 0, criticalRisk = 0;
         const networkCounts: Record<string, number> = {};
+        const uniqueCampus = new Set<string>();
 
         rrssIncidents.forEach((inc: any) => {
-            if (inc.estado !== 'Resuelto') open++;
-            if (inc.estado === 'Resuelto') resolved++;
-            if (inc.riesgo === 'Alto' || inc.riesgo === 'Critico') highRisk++;
+            totalIncidenciasSum += (Number(inc.totalIncidencias) || 0);
+            if (inc.riesgo === 'Critico' || inc.riesgo === 'Crítico') criticalRisk++;
             if (inc.medio) networkCounts[inc.medio] = (networkCounts[inc.medio] || 0) + 1;
+            if (inc.campus && inc.campus !== 'Sin especificar') uniqueCampus.add(inc.campus);
         });
 
         const topNetwork = Object.keys(networkCounts).sort((a,b) => networkCounts[b] - networkCounts[a])[0] || 'N/A';
-        const resolutionRate = rrssIncidents.length > 0 ? Math.round((resolved / rrssIncidents.length) * 100) : 0;
+        const criticidadRate = rrssIncidents.length > 0 ? Math.round((criticalRisk / rrssIncidents.length) * 100) : 0;
 
-        return { total: rrssIncidents.length, open, resolved, highRisk, topNetwork, resolutionRate };
+        return { 
+            totalReportes: rrssIncidents.length, 
+            totalIncidencias: totalIncidenciasSum, 
+            campusAfectados: uniqueCampus.size, 
+            criticalRisk, 
+            topNetwork, 
+            criticidadRate 
+        };
     }, [rrssIncidents]);
 
     const commentsStats = useMemo(() => {
@@ -171,7 +179,7 @@ export const DashboardView = ({
 
     const handleDownloadReport = () => {
         if (activeTab === 'seguridad' && hackStats.total === 0) return showToast("No hay datos de Seguridad.", true);
-        if (activeTab === 'rrss' && rrssStats.total === 0) return showToast("No hay datos de Reputación RRSS.", true);
+        if (activeTab === 'rrss' && rrssStats.totalReportes === 0) return showToast("No hay datos de Reputación RRSS.", true);
         if (activeTab === 'comentarios' && commentsStats.totalReportes === 0) return showToast("No hay datos de Comentarios.", true);
         if (activeTab === 'tickets' && ticketStats.total === 0) return showToast("No hay datos de Tickets.", true);
         
@@ -250,10 +258,10 @@ export const DashboardView = ({
                     {activeTab === 'seguridad' && !isEditorContent && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <StatCard title="Total Registros" value={hackStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                <StatCard title="Abiertos" value={hackStats.open} color="orange" icon={<AlertTriangle className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                <StatCard title="Resueltos" value={hackStats.resolved} color="emerald" icon={<CheckCircle2 className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                <StatCard title="Impacto Alto" value={hackStats.critical} color="red" icon={<ShieldAlert className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Total Incidentes" value={hackStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Activos (En Proceso)" value={hackStats.open} color="orange" icon={<AlertTriangle className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Mitigados (Cerrados)" value={hackStats.resolved} color="emerald" icon={<CheckCircle2 className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Riesgo Alto / Crítico" value={hackStats.critical} color="red" icon={<ShieldAlert className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -322,10 +330,10 @@ export const DashboardView = ({
                     {activeTab === 'rrss' && !isEditorContent && (
                         <div className="fade-in space-y-6">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                                <StatCard title="Crisis Registradas" value={rrssStats.total} color="blue" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                <StatCard title="En Proceso" value={rrssStats.open} color="orange" icon={<Clock className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                <StatCard title="Controladas" value={rrssStats.resolved} color="emerald" icon={<CheckCircle2 className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
-                                <StatCard title="Riesgo Alto" value={rrssStats.highRisk} color="red" icon={<AlertTriangle className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Reportes Creados" value={rrssStats.totalReportes} color="blue" icon={<FileText className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Total Incidencias" value={rrssStats.totalIncidencias} color="orange" icon={<Activity className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Campus Afectados" value={rrssStats.campusAfectados} color="purple" icon={<MapPin className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
+                                <StatCard title="Crítico (Peligro Inminente)" value={rrssStats.criticalRisk} color="red" icon={<AlertTriangle className="w-12 h-12 opacity-10 absolute -right-2 -bottom-2"/>}/>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -333,13 +341,13 @@ export const DashboardView = ({
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="p-5 theme-bg-container border theme-border rounded-xl shadow-sm flex items-center justify-between gap-4">
                                             <div>
-                                                <p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">Índice de Resolución</p>
-                                                <div className="flex items-end gap-2"><span className="text-3xl font-black text-emerald-500">{rrssStats.resolutionRate}%</span><span className="text-xs font-medium theme-text-muted mb-1.5">casos cerrados</span></div>
+                                                <p className="text-xs font-bold theme-text-muted uppercase tracking-wider mb-1">Índice de Criticidad</p>
+                                                <div className="flex items-end gap-2"><span className="text-3xl font-black text-red-500">{rrssStats.criticidadRate}%</span><span className="text-xs font-medium theme-text-muted mb-1.5">nivel crítico</span></div>
                                             </div>
                                             <div className="relative w-20 h-20 flex-shrink-0">
                                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                                                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" className="text-gray-200 dark:text-gray-800" />
-                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" strokeLinecap="round" className="text-emerald-500 transition-all duration-1000 ease-out" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={mounted ? (2 * Math.PI * 40) * (1 - rrssStats.resolutionRate / 100) : 2 * Math.PI * 40} />
+                                                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="12" strokeLinecap="round" className="text-red-500 transition-all duration-1000 ease-out" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={mounted ? (2 * Math.PI * 40) * (1 - rrssStats.criticidadRate / 100) : 2 * Math.PI * 40} />
                                                 </svg>
                                             </div>
                                         </div>
@@ -368,9 +376,9 @@ export const DashboardView = ({
                                                     <button type="button" key={inc.id} onClick={() => setPreviewModal({isOpen: true, type: 'rrss', data: inc})} className="w-full text-left p-3 theme-bg-low rounded-xl hover:border-orange-500 border border-transparent transition-colors cursor-pointer group">
                                                         <div className="flex justify-between items-start mb-1">
                                                             <p className="text-sm font-bold theme-text-main truncate group-hover:text-orange-500 transition-colors">{inc.redSocial}</p>
-                                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${inc.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{inc.estado}</span>
+                                                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${inc.riesgo === 'Crítico' || inc.riesgo === 'Critico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>{inc.riesgo}</span>
                                                         </div>
-                                                        <p className="text-xs theme-text-muted truncate">Riesgo {inc.riesgo} • {new Date(inc.fecha).toLocaleDateString()}</p>
+                                                        <p className="text-xs theme-text-muted truncate">{inc.totalIncidencias} Incidencias • {new Date(inc.fecha).toLocaleDateString()}</p>
                                                     </button>
                                                 ))}
                                                 <button type="button" onClick={() => navigate('historial-rss')} className="w-full mt-2 py-2 text-xs font-bold text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors">Ver historial completo</button>
@@ -540,11 +548,11 @@ export const DashboardView = ({
                                     <>
                                         <div className="flex justify-between items-start">
                                             <div><p className="text-xs theme-text-muted font-bold mb-1">Medio Afectado</p><p className="text-lg font-bold theme-text-main text-orange-500">{previewModal.data.medio}</p></div>
-                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-md uppercase ${previewModal.data.estado === 'Resuelto' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>{previewModal.data.estado}</span>
+                                            <span className={`px-2 py-1 text-[10px] font-bold rounded-md uppercase ${previewModal.data.riesgo === 'Crítico' || previewModal.data.riesgo === 'Critico' ? 'bg-red-500/10 text-red-500' : 'bg-orange-500/10 text-orange-500'}`}>{previewModal.data.riesgo}</span>
                                         </div>
                                         <div className="p-3 theme-bg-low rounded-xl border theme-border"><p className="text-sm theme-text-main font-medium"><span className="font-bold">{previewModal.data.usuario}:</span> {previewModal.data.descripcion}</p></div>
                                         <div className="grid grid-cols-2 gap-4 text-sm">
-                                            <div><span className="text-xs theme-text-muted block mb-0.5">Riesgo</span><span className="font-bold theme-text-main">{previewModal.data.riesgo}</span></div>
+                                            <div><span className="text-xs theme-text-muted block mb-0.5">Total Incidencias</span><span className="font-bold theme-text-main">{previewModal.data.totalIncidencias}</span></div>
                                             <div><span className="text-xs theme-text-muted block mb-0.5">Campus</span><span className="font-bold theme-text-main">{previewModal.data.campus}</span></div>
                                         </div>
                                     </>
@@ -590,10 +598,10 @@ export const DashboardView = ({
                 {activeTab === 'seguridad' && (
                     <div>
                         <div className="grid grid-cols-4 gap-4 mb-8">
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Registros</p><p className="text-2xl font-black text-gray-900">{hackStats.total}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Abiertos</p><p className="text-2xl font-black text-gray-900">{hackStats.open}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Resueltos</p><p className="text-2xl font-black text-gray-900">{hackStats.resolved}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Impacto Alto</p><p className="text-2xl font-black text-gray-900">{hackStats.critical}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Incidentes</p><p className="text-2xl font-black text-gray-900">{hackStats.total}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Activos (En Proceso)</p><p className="text-2xl font-black text-gray-900">{hackStats.open}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Mitigados (Cerrados)</p><p className="text-2xl font-black text-gray-900">{hackStats.resolved}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Riesgo Alto / Crítico</p><p className="text-2xl font-black text-gray-900">{hackStats.critical}</p></div>
                         </div>
                         <div className="grid grid-cols-2 gap-8">
                             <div className="border border-gray-300 p-6 rounded-lg">
@@ -610,13 +618,13 @@ export const DashboardView = ({
                 {activeTab === 'rrss' && (
                     <div>
                         <div className="grid grid-cols-4 gap-4 mb-8">
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Crisis Totales</p><p className="text-2xl font-black text-gray-900">{rrssStats.total}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">En Proceso</p><p className="text-2xl font-black text-gray-900">{rrssStats.open}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Controladas</p><p className="text-2xl font-black text-gray-900">{rrssStats.resolved}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Riesgo Alto</p><p className="text-2xl font-black text-gray-900">{rrssStats.highRisk}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Reportes Creados</p><p className="text-2xl font-black text-gray-900">{rrssStats.totalReportes}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Incidencias</p><p className="text-2xl font-black text-gray-900">{rrssStats.totalIncidencias}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Campus Afectados</p><p className="text-2xl font-black text-gray-900">{rrssStats.campusAfectados}</p></div>
+                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Peligro Inminente</p><p className="text-2xl font-black text-gray-900">{rrssStats.criticalRisk}</p></div>
                         </div>
                         <div className="grid grid-cols-2 gap-8">
-                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Índice de Resolución Global</h3><p className="text-4xl font-black text-gray-900">{rrssStats.resolutionRate}%</p></div>
+                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Índice de Criticidad</h3><p className="text-4xl font-black text-red-600">{rrssStats.criticidadRate}%</p></div>
                             <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Canal más Crítico</h3><p className="text-2xl font-black text-gray-900">{rrssStats.topNetwork}</p></div>
                         </div>
                     </div>

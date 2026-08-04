@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getDoc, doc } from 'firebase/firestore';
 import { db, appId, auth } from '../services/firebase/config';
 
+// 🔥 FIX: Importación estática de auditoría
+import { logAuditEvent } from '../services/firebase/audit.service'; 
+
 import { useTheme } from './providers/ThemeProvider';
 import { useToast } from './providers/ToastProvider';
 import { useModals } from './providers/ModalProvider';
@@ -54,7 +57,6 @@ const AppContent = () => {
             return navigate('gestion-tickets');
         }
 
-        // 🔥 BLINDAJE PARA EDITOR_CONTENT: Ahora incluye 'historial-comentario'
         if ((userRole as string) === 'EDITOR_CONTENT') {
             const allowedViews = ['dashboard', 'gestion-tickets', 'roles', 'ayuda', 'config', 'historial-comentario'];
             if (!allowedViews.includes(view)) {
@@ -64,7 +66,6 @@ const AppContent = () => {
         }
 
         if (access === 'ADMIN_IT' && userRole !== 'ADMIN_IT') {
-            const { logAuditEvent } = await import('../services/firebase/audit.service');
             await logAuditEvent(`Violación RBAC: Acceso restringido (/${view})`);
             return showToast('Acceso denegado. Exclusivo para Administrador de IT.', true);
         }
@@ -125,7 +126,6 @@ const AppContent = () => {
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    // 🔥 FILTRO DE NOTIFICACIONES: Ahora permite el módulo de Comentarios para el Editor Content
     const validNotifications = notifications.filter((n: any) => {
         if (n.userId === user?.uid || (n.deletedBy && n.deletedBy.includes(user?.uid))) return false;
         

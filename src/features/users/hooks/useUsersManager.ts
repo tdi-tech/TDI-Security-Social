@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
 
+// 🔥 FIX: Importación estática de auditoría
+import { logAuditEvent } from '../../../services/firebase/audit.service';
+
 export const useUsersManager = (user: any, userRole: any, showToast: any, openConfirmModal?: any) => {
     const [appUsers, setAppUsers] = useState<any[]>([]);
     const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
     useEffect(() => {
-        // 🔥 ESCUDO ANTI-F5 PARA LECTORES: Si estás desconectado, no consultamos Firestore y no sale error en pantalla
         if (!user || !user.uid) {
             setAppUsers([]);
             setIsLoadingUsers(false);
@@ -23,7 +25,6 @@ export const useUsersManager = (user: any, userRole: any, showToast: any, openCo
             setAppUsers(usersList);
             setIsLoadingUsers(false);
         }, (error) => {
-            // Si el backend rechaza por regla 403 al recargar, lo ignoramos en silencio sin alarmar al usuario
             if (error.code !== 'permission-denied') {
                 showToast('Error al cargar la lista de usuarios', true);
             }
@@ -68,9 +69,9 @@ export const useUsersManager = (user: any, userRole: any, showToast: any, openCo
         } catch (error: any) {
             if (error.code === 'permission-denied') {
                 showToast('Acceso bloqueado: No tienes permisos.', true);
-                import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
-                    logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de modificar rol al usuario ${email}`);
-                }).catch(err => console.error("Error al disparar auditoría:", err));
+                // 🔥 FIX: Llamada directa a logAuditEvent
+                logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de modificar rol al usuario ${email}`)
+                    .catch(err => console.error("Error al disparar auditoría:", err));
             } else {
                 showToast('Error al actualizar el rol del usuario', true);
             }
@@ -86,9 +87,9 @@ export const useUsersManager = (user: any, userRole: any, showToast: any, openCo
         } catch (error: any) {
             if (error.code === 'permission-denied') {
                 showToast('Acceso bloqueado: No tienes permisos.', true);
-                import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
-                    logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de cambiar estado al usuario ${email}`);
-                }).catch(err => console.error("Error al disparar auditoría:", err));
+                // 🔥 FIX: Llamada directa a logAuditEvent
+                logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de cambiar estado al usuario ${email}`)
+                    .catch(err => console.error("Error al disparar auditoría:", err));
             } else {
                 showToast('Error al cambiar el estado del usuario', true);
             }
@@ -104,9 +105,9 @@ export const useUsersManager = (user: any, userRole: any, showToast: any, openCo
             } catch (error: any) {
                 if (error.code === 'permission-denied') {
                     showToast('Acceso bloqueado: No tienes permisos.', true);
-                    import('../../../services/firebase/audit.service').then(({ logAuditEvent }) => {
-                        logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de eliminar al usuario ${email}`);
-                    }).catch(err => console.error("Error al disparar auditoría:", err));
+                    // 🔥 FIX: Llamada directa a logAuditEvent
+                    logAuditEvent(`Alerta RBAC/DOM: Intento ilegal de eliminar al usuario ${email}`)
+                        .catch(err => console.error("Error al disparar auditoría:", err));
                 } else {
                     showToast('No tienes permisos para eliminar este usuario', true);
                 }
