@@ -33,11 +33,12 @@ const EditorToolbar = ({ onCommand }: { onCommand: (cmd: string, val?: string) =
 };
 
 export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
+    // 🔥 FIX: Añadida la variable "descripcion" al estado inicial
     const [formData, setFormData] = useState<{
-        prioridad: string, tema: string, mensaje: string, plataforma: string[],
+        prioridad: string, tema: string, descripcion: string, mensaje: string, plataforma: string[],
         objetivo: string, fechaLimite: string, pin: string, formato: string
     }>({
-        prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: ['Instagram'],
+        prioridad: '🟢 Baja', tema: '', descripcion: '', mensaje: '', plataforma: ['Instagram'],
         objetivo: '', fechaLimite: '', pin: '', formato: ''
     });
     const [showPin, setShowPin] = useState(false);
@@ -63,7 +64,7 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
         const cleanHTML = DOMPurify.sanitize(editorRef.current ? editorRef.current.innerHTML : formData.formato);
         const success = await createTicket({ ...formData, formato: cleanHTML });
         if (success) {
-            setFormData({ prioridad: '🟢 Baja', tema: '', mensaje: '', plataforma: ['Instagram'], objetivo: '', fechaLimite: '', pin: '', formato: '' });
+            setFormData({ prioridad: '🟢 Baja', tema: '', descripcion: '', mensaje: '', plataforma: ['Instagram'], objetivo: '', fechaLimite: '', pin: '', formato: '' });
             if (editorRef.current) editorRef.current.innerHTML = '';
         }
     };
@@ -191,7 +192,17 @@ export const SolicitudTicketsView = ({ showToast, navigate }: any) => {
                             <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Objetivo del contenido</label><input disabled={isLocked} type="text" required placeholder="Ej: Tráfico a landing page, captación de leads..." value={formData.objetivo} onChange={(e) => setFormData({...formData, objetivo: e.target.value})} className={inputStyles} /></div>
                         </div>
 
-                        <div className="space-y-1.5"><label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mensaje o Copy Sugerido</label><textarea disabled={isLocked} rows={3} required placeholder="Redacta el mensaje principal que se debe comunicar..." value={formData.mensaje} onChange={(e) => setFormData({...formData, mensaje: e.target.value})} className={`${inputStyles} resize-none leading-relaxed`}></textarea></div>
+                        {/* 🔥 FIX UX: Descripción y Copy agrupados en 2 columnas */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Descripción del post</label>
+                                <textarea disabled={isLocked} rows={3} required placeholder="Describe el contexto, el estilo visual o la idea del post..." value={formData.descripcion} onChange={(e) => setFormData({...formData, descripcion: e.target.value})} className={`${inputStyles} resize-none leading-relaxed`}></textarea>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold theme-text-muted uppercase tracking-wider">Mensaje o Copy Sugerido</label>
+                                <textarea disabled={isLocked} rows={3} required placeholder="Redacta el mensaje principal que se debe comunicar..." value={formData.mensaje} onChange={(e) => setFormData({...formData, mensaje: e.target.value})} className={`${inputStyles} resize-none leading-relaxed`}></textarea>
+                            </div>
+                        </div>
 
                         <div className="space-y-1.5 pt-2">
                             <label className="text-xs font-bold theme-text-muted uppercase tracking-wider flex justify-between items-center">Formato Especificado (Editor Visual)<span className="font-normal text-purple-500">Requerimientos visuales o de guion</span></label>
@@ -312,7 +323,6 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
     
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
     
-    // 🔥 ESTADO VISUAL RESTAURADO: Maneja la animación del botón de forma local
     const [isExportingCSV, setIsExportingCSV] = useState(false); 
     
     const [csvFilter, setCsvFilter] = useState({ 
@@ -453,10 +463,9 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
         });
     };
 
-    // 🔥 FIX DE UX: Restauramos la micro-pausa para que el botón alcance a girar visualmente
     const handleDownloadCSV = async () => {
         setIsExportingCSV(true);
-        await new Promise(resolve => setTimeout(resolve, 800)); // Magia de UX para que la pantalla pinte
+        await new Promise(resolve => setTimeout(resolve, 800)); 
         const success = await exportTicketsCSV(csvFilter);
         setIsExportingCSV(false);
         if (success) setIsCsvModalOpen(false);
@@ -701,8 +710,18 @@ export const GestionTicketsView = ({ showToast, userRole, appUsers, user, update
                                 </div>
                             </div>
 
+                            {/* 🔥 FIX UX: Modal actualizado para mostrar Descripción del post */}
                             <div className="space-y-4">
-                                <div><p className="text-xs font-bold theme-text-muted uppercase mb-1">Mensaje o Copy Solicitado</p><div className="p-4 theme-bg-low rounded-xl border theme-border text-sm whitespace-pre-wrap">{selectedTicket.mensaje}</div></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs font-bold theme-text-muted uppercase mb-1">Descripción del Post</p>
+                                        <div className="p-4 theme-bg-low rounded-xl border theme-border text-sm whitespace-pre-wrap">{selectedTicket.descripcion || 'Sin descripción asignada.'}</div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold theme-text-muted uppercase mb-1">Mensaje o Copy Solicitado</p>
+                                        <div className="p-4 theme-bg-low rounded-xl border theme-border text-sm whitespace-pre-wrap">{selectedTicket.mensaje}</div>
+                                    </div>
+                                </div>
                                 <div><p className="text-xs font-bold theme-text-muted uppercase mb-1">Objetivo del Contenido</p><p className="p-3 theme-bg-low rounded-xl border theme-border text-sm font-medium">{selectedTicket.objetivo}</p></div>
                                 <div><p className="text-xs font-bold theme-text-muted uppercase mb-1">Formato Especificado</p><div className="p-4 theme-bg-low rounded-xl border theme-border text-sm wysiwyg-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedTicket.formato || '<p>Sin formato visual adjunto.</p>') }}></div></div>
                             </div>

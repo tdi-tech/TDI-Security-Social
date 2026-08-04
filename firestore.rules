@@ -131,7 +131,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
         'userId', 'userName', 'userPhoto', 'action', 'module', 'type', 
-        'incidentId', 'timestamp', 'readBy', 'deletedBy'
+        'incidentId', 'timestamp', 'readBy', 'deletedBy', 'targetUserEmail'
       ])
       && data.keys().hasAll([
         'userId', 'userName', 'action', 'module', 'type', 'timestamp', 'readBy', 'deletedBy'
@@ -145,7 +145,8 @@ service cloud.firestore {
       && data.readBy is list
       && data.deletedBy is list
       && (!('userPhoto' in data) || data.userPhoto is string)
-      && (!('incidentId' in data) || data.incidentId is string);
+      && (!('incidentId' in data) || data.incidentId is string)
+      && (!('targetUserEmail' in data) || data.targetUserEmail is string);
     }
 
     match /artifacts/{appId}/public/data {
@@ -157,14 +158,15 @@ service cloud.firestore {
       match /tickets/{ticketId} {
         allow read: if true; 
         
+        // 🔥 FIX: 'descripcion' agregada al hasOnly y hasAll para permitir la solicitud del PIN
         allow create: if request.resource.data.keys().hasOnly([
-          'prioridad', 'tema', 'mensaje', 'plataforma', 'formato', 
+          'prioridad', 'tema', 'descripcion', 'mensaje', 'plataforma', 'formato', 
           'objetivo', 'fechaLimite', 'pin', 'estado', 'timestamp',
           'autor', 'fechaEntregaReal', 'linkArte', 'notasInternas',
           'responsable', 'readBy'
         ])
         && request.resource.data.keys().hasAll([
-          'prioridad', 'tema', 'mensaje', 'plataforma', 'formato', 
+          'prioridad', 'tema', 'descripcion', 'mensaje', 'plataforma', 'formato', 
           'objetivo', 'fechaLimite', 'pin', 'estado', 'timestamp', 'readBy'
         ])
         && request.resource.data.pin == 'INNOVA-2026'

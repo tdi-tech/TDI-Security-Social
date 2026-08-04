@@ -5,12 +5,8 @@ import { logAuditEvent, logSecurityBlock } from '../../../services/firebase/audi
 
 export const useTickets = (showToast: any, openConfirmModal: any, logAction?: any) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    // 🔥 NUEVO ESTADO PARA LA ANIMACIÓN DEL BOTÓN CSV
     const [isExportingCSV, setIsExportingCSV] = useState(false);
-    
     const lastSubmissionTime = useRef<number>(0);
-
     const [ticketRemainingAttempts, setTicketRemainingAttempts] = useState(5);
     const [ticketLockoutUntil, setTicketLockoutUntil] = useState<number | null>(null);
 
@@ -104,7 +100,10 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
             setTicketRemainingAttempts(5);
             setTicketLockoutUntil(null);
             showToast('¡Ticket creado y enviado a la central con éxito!');
+            
+            // Esta notificación global es correcta: Queremos que todos sepan que hay trabajo nuevo
             if (logAction) await logAction(`Creó un nuevo ticket de soporte`, 'Tickets', 'create');
+            
             setIsSubmitting(false);
             return true;
         } catch (error: any) {
@@ -165,6 +164,7 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
             await updateDoc(ticketRef, updatePayload);
 
             if (userToUse) {
+                // Esta notificación global es correcta: Todos deben saber que un estatus cambió
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
                     userId: userToUse.uid || userToUse.email,
                     userName: userToUse.displayName || userToUse.email || 'Miembro del equipo',
@@ -216,15 +216,7 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 const assignedUserObj = appUsers.find(u => (u.displayName || u.email) === ticketData.responsable);
                 
                 if (assignedUserObj && assignedUserObj.email !== userToUse.email) {
-                    const otherUsersIdentifiers: string[] = [];
-                    appUsers.forEach((u: any) => {
-                        if (u.email !== assignedUserObj.email) {
-                            if (u.uid) otherUsersIdentifiers.push(u.uid);
-                            if (u.email) otherUsersIdentifiers.push(u.email);
-                            if (u.displayName) otherUsersIdentifiers.push(u.displayName);
-                        }
-                    });
-
+                    // 🎯 NUEVO: Arquitectura de Francotirador usando targetUserEmail en lugar de deletedBy masivo
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
                         userId: userToUse.uid || userToUse.email,
                         userName: userToUse.displayName || userToUse.email || 'Miembro del equipo',
@@ -235,7 +227,8 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                         incidentId: ticketId,
                         timestamp: new Date().toISOString(),
                         readBy: [],
-                        deletedBy: otherUsersIdentifiers
+                        deletedBy: [],
+                        targetUserEmail: assignedUserObj.email // 🔥 El único que verá esta alerta
                     });
                 }
             }
@@ -260,9 +253,30 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 "Esta acción purgará el ticket emergente y sus adjuntos permanentemente. ¿Deseas continuar?",
                 async () => {
                     try {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', id));
+                        const ticketRef = doc(db, 'artifacts', appId, 'public', 'data', 'tickets', id);
+                        const ticketSnap = await getDoc(ticketRef);
+                        const ticketTema = ticketSnap.exists() ? ticketSnap.data().tema : `ID: ${id}`;
+                        
+                        await deleteDoc(ticketRef);
                         showToast('Ticket purgado del sistema');
                         if (onSuccess) onSuccess();
+
+                        // 🎯 NUEVO: Trazabilidad de Borrado para el equipo
+                        const userToUse = auth.currentUser;
+                        if (userToUse) {
+                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
+                                userId: userToUse.uid || userToUse.email,
+                                userName: userToUse.displayName || userToUse.email || 'Miembro del equipo',
+                                userPhoto: userToUse.photoURL || '',
+                                action: `Eliminó el ticket permanentemente: "${ticketTema}"`,
+                                module: 'Tickets',
+                                type: 'ticket_delete',
+                                incidentId: id,
+                                timestamp: new Date().toISOString(),
+                                readBy: [],
+                                deletedBy: []
+                            });
+                        }
                     } catch (error: any) {
                         if (error.code === 'permission-denied') {
                             showToast('Sin permisos para eliminar', true);
@@ -286,6 +300,23 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                         await Promise.all(ids.map(id => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tickets', id))));
                         showToast(`${ids.length} tickets eliminados del sistema`);
                         if (onSuccess) onSuccess();
+
+                        // 🎯 NUEVO: Trazabilidad de Borrado Masivo para el equipo
+                        const userToUse = auth.currentUser;
+                        if (userToUse) {
+                            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'notifications'), {
+                                userId: userToUse.uid || userToUse.email,
+                                userName: userToUse.displayName || userToUse.email || 'Miembro del equipo',
+                                userPhoto: userToUse.photoURL || '',
+                                action: `Eliminó ${ids.length} tickets de producción permanentemente mediante selección múltiple.`,
+                                module: 'Tickets',
+                                type: 'ticket_batch_delete',
+                                incidentId: 'batch',
+                                timestamp: new Date().toISOString(),
+                                readBy: [],
+                                deletedBy: []
+                            });
+                        }
                     } catch (error: any) {
                         if (error.code === 'permission-denied') {
                             showToast('Sin permisos para eliminar algunos tickets', true);
@@ -299,7 +330,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
         }
     }, [openConfirmModal, showToast]);
 
-    // 🔥 FILTRADO POR PLATAFORMA Y ANIMACIÓN DE CARGA
     const exportTicketsCSV = useCallback(async (csvFilter: any) => {
         setIsExportingCSV(true);
         try {
@@ -324,7 +354,6 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
                 });
             }
             
-            // 🔥 Buscamos coincidencias con la plataforma/red social en lugar del semáforo
             if (csvFilter.plataforma && csvFilter.plataforma !== 'Todas') {
                 filtrados = filtrados.filter(t => {
                     if (!t.plataforma) return false;
@@ -386,7 +415,7 @@ export const useTickets = (showToast: any, openConfirmModal: any, logAction?: an
         deleteTicket,
         deleteMultipleTickets,
         exportTicketsCSV,
-        isExportingCSV, // 🔥 Exportamos el estado para que el botón gire
+        isExportingCSV,
         ticketRemainingAttempts,
         ticketLockoutUntil
     };

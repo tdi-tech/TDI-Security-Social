@@ -3,7 +3,6 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../../../services/firebase/config';
 import { pushNotification, markNotificationRead, deleteDocument } from '../../../services/firebase/core.service';
 
-// FIX REACT DOCTOR: Movida afuera del scope del hook para evitar recreaciones
 const playNotificationSound = () => {
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -44,20 +43,31 @@ export const useGlobalEvents = (user: any, prefsRef: any, showToast: any) => {
         const notifRef = collection(db, 'artifacts', appId, 'public', 'data', 'notifications');
         const unsubNotif = onSnapshot(notifRef, (snapshot) => {
             const data: any[] = [];
-            snapshot.forEach((doc) => data.push({ id: doc.id, ...doc.data() }));
+            
+            snapshot.forEach((doc) => {
+                const notif = doc.data();
+                // 🎯 LÓGICA DE FRANCOTIRADOR: Si la alerta es para alguien específico y no soy yo, el sistema finge que no existe.
+                if (notif.targetUserEmail && user.email && notif.targetUserEmail !== user.email) return;
+                
+                data.push({ id: doc.id, ...notif });
+            });
+            
             data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setNotifications(data);
 
             snapshot.docChanges().forEach((change) => {
                 if (change.type === 'added') {
                     const notif = change.doc.data();
+                    
+                    // 🎯 LÓGICA DE FRANCOTIRADOR (Campanita): Evitamos que le suene el audio a quien no debe
+                    if (notif.targetUserEmail && user.email && notif.targetUserEmail !== user.email) return;
+
                     const isRecent = (new Date().getTime() - new Date(notif.timestamp).getTime()) < 10000;
                     if (isRecent && notif.userId !== user.uid) {
                         let moduleKey: 'security' | 'rrss' | 'comments' = 'security';
                         if (notif.module === 'Incidencia RRSS') moduleKey = 'rrss';
                         if (notif.module === 'Comentarios') moduleKey = 'comments';
                         
-                        // FIX REACT DOCTOR: Leemos del ref actualizado en lugar de depender del render
                         const currentPrefs = prefsRef.current || { sound: true, security: true, rrss: true, comments: true };
                         if (moduleKey === 'security' && !currentPrefs.security) return;
                         if (moduleKey === 'rrss' && !currentPrefs.rrss) return;
@@ -69,7 +79,7 @@ export const useGlobalEvents = (user: any, prefsRef: any, showToast: any) => {
         }, () => {});
 
         return () => { unsubChecklist(); unsubNotif(); };
-    }, [user, prefsRef]); // FIX REACT DOCTOR: Agregada dependencia faltante
+    }, [user, prefsRef]);
 
     const logAction = useCallback(async (actionText: string, moduleName: string, actionType: 'create' | 'edit' | 'delete', incidentId: string = '') => {
         if (!user || user.isAnonymous) return;
