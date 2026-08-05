@@ -115,8 +115,11 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
     const isEditorContent = userRole === 'EDITOR_CONTENT';
     const isITAdmin = userRole === 'ADMIN_IT';
     
-    // 🔥 FIX: Permiso estricto solo para verdaderos administradores
+    // Permiso estricto solo para verdaderos administradores
     const isTrueAdmin = ['ADMIN_IT', 'ADMIN_CM'].includes(userRole);
+
+    // 🔥 FIX REPORTES: Permiso específico para que el Editor CM también pueda ver el botón en el menú
+    const canViewReports = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM'].includes(userRole);
 
     useEffect(() => {
         if (!isInternalUser) {
@@ -201,8 +204,8 @@ export const Sidebar = ({ sidebarOpen, setSidebarOpen, currentView, navigate, is
                         )}
                         <SubNavBtn id="historial-comentario" icon={FileText} label="Historial" currentView={currentView} navigate={navigate} />
                         
-                        {/* 🔥 FIX: Reportes reubicado con permisos blindados para evitar accesos de Editor */}
-                        {isTrueAdmin && (
+                        {/* 🔥 FIX: Ahora el Editor CM tiene acceso visual a los Reportes Analíticos */}
+                        {canViewReports && (
                             <SubNavBtn id="reportes" icon={BarChart3} label="Reportes Analíticos" currentView={currentView} navigate={navigate} />
                         )}
                     </DropdownGroup>

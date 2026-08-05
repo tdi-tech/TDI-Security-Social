@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getDoc, doc } from 'firebase/firestore';
 import { db, appId, auth } from '../services/firebase/config';
 
-// 🔥 FIX: Importación estática de auditoría
 import { logAuditEvent } from '../services/firebase/audit.service'; 
 
 import { useTheme } from './providers/ThemeProvider';
@@ -72,6 +71,9 @@ const AppContent = () => {
         if (access === 'ADMIN_CM_IT' && userRole !== 'ADMIN_IT' && userRole !== 'ADMIN_CM') {
             return showToast('Acceso denegado. Tu rol no tiene permisos para esta área.', true);
         }
+        if (access === 'ADMIN_CM_IT_EDITOR' && !['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM'].includes(userRole as string)) {
+            return showToast('Acceso denegado. Tu rol no tiene permisos para esta área.', true);
+        }
 
         setCurrentView(view); 
         localStorage.setItem('innova_current_view', view); 
@@ -105,17 +107,34 @@ const AppContent = () => {
         onNavigateRef.current = navigate; 
     }, [navigate, onNavigateRef]);
 
+    // 🔥 FIX SHIELD: Reemplazamos la validación débil por validación absoluta al recargar (F5)
     useEffect(() => {
         if (cloudStatus === 'Conectando...') return;
-        if (!user && !isAdmin && ROUTES[currentView]?.access !== 'PUBLIC' && ROUTES[currentView]?.access !== 'GUEST_ONLY') {
-            setCurrentView('dashboard');
-            localStorage.setItem('innova_current_view', 'dashboard');
+        
+        const route = ROUTES[currentView] || ROUTES['dashboard'];
+        const access = route.access;
+        let finalView = currentView;
+
+        if (access !== 'PUBLIC' && access !== 'GUEST_ONLY' && !user) {
+            finalView = 'dashboard';
+        } else if (access === 'GUEST_ONLY' && user) {
+            finalView = 'gestion-tickets';
+        } else if ((userRole as string) === 'EDITOR_CONTENT') {
+            const allowedViews = ['dashboard', 'gestion-tickets', 'roles', 'ayuda', 'config', 'historial-comentario'];
+            if (!allowedViews.includes(currentView)) finalView = 'dashboard';
+        } else if (access === 'ADMIN_IT' && userRole !== 'ADMIN_IT') {
+            finalView = 'dashboard';
+        } else if (access === 'ADMIN_CM_IT' && !['ADMIN_IT', 'ADMIN_CM'].includes(userRole as string)) {
+            finalView = 'dashboard';
+        } else if (access === 'ADMIN_CM_IT_EDITOR' && !['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM'].includes(userRole as string)) {
+            finalView = 'dashboard';
         }
-        if (user && ROUTES[currentView]?.access === 'GUEST_ONLY') {
-            setCurrentView('gestion-tickets');
-            localStorage.setItem('innova_current_view', 'gestion-tickets');
+
+        if (finalView !== currentView) {
+            setCurrentView(finalView);
+            localStorage.setItem('innova_current_view', finalView);
         }
-    }, [user, isAdmin, currentView, cloudStatus]);
+    }, [user, isAdmin, userRole, currentView, cloudStatus]);
 
     useEffect(() => {
         const handleClickOutside = (e: any) => {

@@ -197,7 +197,6 @@ export const useReportGenerator = () => {
     const generatePDF = useCallback(async (rows: ReportRow[], sourceLabel: string, images?: ChartImages) => {
         if (!rows.length) return;
 
-        // 🔥 FIX: Eliminado el Promise.all de la importación dinámica
         const doc = new JsPDFClass({ unit: 'mm', format: 'a4' });
         const pageW = 210, pageH = 297, margin = 15;
         const contentW = pageW - margin * 2;
@@ -218,21 +217,56 @@ export const useReportGenerator = () => {
         let imgTrend = images?.trend;
 
         if (!imgSentiment || !imgRed || !imgOrigen || !imgTrend) {
-            const sentAgg = calcSentiment(rows);
-            const redAggData = calcRedSocial(rows);
+            
             const origenAgg = calcOrigen(rows);
             const trendAgg = calcTrend(rows);
 
+            // Dona Analítica con cálculo de porcentajes en las etiquetas
+            const sentAgg = calcSentiment(rows);
+            const totalSent = sentAgg.data.reduce((a, b) => a + b, 0) || 1;
+            const sentLabels = sentAgg.labels.map((l, i) => `${l}: ${Math.round((sentAgg.data[i] / totalSent) * 100)}%`);
+
             imgSentiment = imgSentiment || await renderOffscreenChart(chartModule, {
                 type: 'doughnut',
-                data: { labels: sentAgg.labels, datasets: [{ data: sentAgg.data, backgroundColor: sentAgg.colors, borderColor: '#101a2e', borderWidth: 2 }] },
+                data: { labels: sentLabels, datasets: [{ data: sentAgg.data, backgroundColor: sentAgg.colors, borderColor: '#101a2e', borderWidth: 2 }] },
                 options: { cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: '#93a2c0', font: { size: 13 }, boxWidth: 11, boxHeight: 11, padding: 12 } } } }
             }, 480, 480);
 
+            // Barras Agrupadas por Plataforma (Sin Positivos, solo Negativo y Neutral, topado a 100%)
+            const uniqueReds = Array.from(new Set(rows.map(r => r.redSocial))).sort();
+            const neuData: number[] = [];
+            const negData: number[] = [];
+
+            uniqueReds.forEach(network => {
+                const networkRows = rows.filter(r => r.redSocial === network);
+                const nTotal = networkRows.length;
+                if (nTotal === 0) {
+                    neuData.push(0); negData.push(0);
+                    return;
+                }
+                const neu = networkRows.filter(r => r.sentiment === 'Neutral').length;
+                const rNeg = networkRows.filter(r => r.sentiment === 'Negativo').length;
+                
+                neuData.push(Math.round((neu / nTotal) * 100));
+                negData.push(Math.round((rNeg / nTotal) * 100));
+            });
+
             imgRed = imgRed || await renderOffscreenChart(chartModule, {
                 type: 'bar',
-                data: { labels: redAggData.labels, datasets: [{ data: redAggData.data, backgroundColor: redAggData.labels.map((_, i) => RED_COLORS[i % RED_COLORS.length]), borderRadius: 5 }] },
-                options: { plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#93a2c0' } }, y: { grid: { color: 'rgba(147, 162, 192, 0.1)' }, beginAtZero: true, ticks: { precision: 0, color: '#93a2c0' }, border: { display: false } } } }
+                data: { 
+                    labels: uniqueReds, 
+                    datasets: [
+                        { label: 'Negativo', data: negData, backgroundColor: '#e0485a', borderRadius: 4 },
+                        { label: 'Neutral', data: neuData, backgroundColor: '#7c8db5', borderRadius: 4 }
+                    ] 
+                },
+                options: { 
+                    plugins: { legend: { display: true, position: 'bottom', labels: { color: '#93a2c0', font: { size: 11 }, boxWidth: 10, boxHeight: 10, padding: 10 } } }, 
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { color: '#93a2c0' } }, 
+                        y: { max: 100, grid: { color: 'rgba(147, 162, 192, 0.1)' }, beginAtZero: true, ticks: { precision: 0, color: '#93a2c0', callback: (v: any) => v + '%' }, border: { display: false } } 
+                    } 
+                }
             }, 560, 380);
 
             imgOrigen = imgOrigen || await renderOffscreenChart(chartModule, {
@@ -378,17 +412,32 @@ export const useReportGenerator = () => {
             y += boxH + 10;
         }
 
+        // 🔥 FIX UI PDF: Rediseño de Layout para que las gráficas se aprecien en tamaño decente (2 Filas)
         sectionTitle('Panorama General de Monitoreo');
-        checkPageBreak(62);
-        const chartRowY = y;
+        checkPageBreak(120); // Reservamos espacio amplio para evitar cortes
+        
         if (imgSentiment) {
-            const donutW = 52, donutH = 52 * (480 / 480);
-            doc.addImage(imgSentiment, 'PNG', margin, chartRowY, donutW, donutH);
-            const smallW = (contentW - donutW - 8) / 2;
-            const smallH = smallW * (380 / 560);
-            if (imgRed) doc.addImage(imgRed, 'PNG', margin + donutW + 8, chartRowY, smallW, smallH);
-            if (imgOrigen) doc.addImage(imgOrigen, 'PNG', margin + donutW + 8 + smallW + 6, chartRowY, smallW, smallH);
-            y = chartRowY + Math.max(donutH, smallH) + 10;
+            // Fila 1: Dona a la izquierda, Barras a la derecha
+            const donutW = 65, donutH = 65; 
+            doc.addImage(imgSentiment, 'PNG', margin, y, donutW, donutH);
+            
+            const redW = contentW - donutW - 10; // ~105mm para las barras (gran legibilidad)
+            const redH = redW * (380 / 560);
+            const redY = y + (donutH > redH ? (donutH - redH) / 2 : 0); // Centrado vertical relativo a la dona
+            
+            if (imgRed) doc.addImage(imgRed, 'PNG', margin + donutW + 10, redY, redW, redH);
+            
+            y += Math.max(donutH, redH) + 12; // Brinco a la siguiente fila
+            
+            // Fila 2: Origen del contenido (centrado y ancho)
+            if (imgOrigen) {
+                checkPageBreak(70);
+                const origenW = 130; 
+                const origenH = origenW * (380 / 560);
+                const centerOffsetX = margin + (contentW - origenW) / 2;
+                doc.addImage(imgOrigen, 'PNG', centerOffsetX, y, origenW, origenH);
+                y += origenH + 10;
+            }
         }
 
         sectionTitle('Tendencia Cronológica de Interacciones');

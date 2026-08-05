@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { 
     ShieldAlert, ListChecks, BookOpen, Users, Clock, Activity, 
     AlertTriangle, CheckCircle2, Lock, Megaphone, MessageSquare, 
@@ -95,7 +96,6 @@ export const DashboardView = ({
         return { total: incidents.length, open, resolved, critical, topVectors, topPlatform };
     }, [incidents]);
 
-    // 🔥 FIX LÓGICO RRSS: Eliminamos métricas irrelevantes y calculamos métricas 100% medibles desde el formulario
     const rrssStats = useMemo(() => {
         let totalIncidenciasSum = 0, criticalRisk = 0;
         const networkCounts: Record<string, number> = {};
@@ -230,8 +230,35 @@ export const DashboardView = ({
 
     return (
         <>
-            <style type="text/css" media="print">
-                {` body { background-color: white !important; } .print-report-container { display: block !important; color: black !important; } .dashboard-interactive-view { display: none !important; } `}
+            {/* 🔥 FIX PDF PRO: Usamos React Portals para sacar el PDF del MainLayout y evitar que el Sidebar aplaste el contenido. */}
+            <style type="text/css">
+                {`
+                .print-portal-root { display: none; }
+                @media print {
+                    /* Ocultamos el root de la app completa */
+                    #root { display: none !important; }
+                    
+                    /* Mostramos el portal flotante al 100% de ancho */
+                    .print-portal-root { 
+                        display: block !important; 
+                        width: 100% !important; 
+                        max-width: 100% !important;
+                        color: black !important;
+                    }
+                    @page { size: A4 portrait; margin: 1cm; }
+                    body { 
+                        background-color: white !important; 
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    .print-break-avoid {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+                }
+                `}
             </style>
 
             <div className="fade-in pb-20 relative dashboard-interactive-view">
@@ -588,87 +615,93 @@ export const DashboardView = ({
                 )}
             </div>
 
-            <div className="hidden print-report-container p-8 max-w-4xl mx-auto">
-                <div className="border-b-2 border-gray-800 pb-4 mb-8">
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">INNOVA MANAGEMENT</h1>
-                    <h2 className="text-xl font-bold text-gray-600 mt-1 uppercase">Reporte Ejecutivo - {activeTab === 'seguridad' ? 'Seguridad y Accesos' : activeTab === 'rrss' ? 'Reputación RRSS' : activeTab === 'tickets' ? 'Solicitudes Emergentes (Tickets)' : 'Comentarios'}</h2>
-                    <p className="text-sm text-gray-500 mt-2 font-medium">Generado el: {new Date().toLocaleDateString()} a las {new Date().toLocaleTimeString()}</p>
-                </div>
+            {/* 🔥 FIX PDF PRO: El reporte se dibuja directo en el body al dar clic en Exportar */}
+            {isExportingPDF && ReactDOM.createPortal(
+                <div className="print-portal-root">
+                    <div className="p-8 w-full max-w-5xl mx-auto text-black">
+                        <div className="border-b-2 border-gray-800 pb-4 mb-8">
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">INNOVA MANAGEMENT</h1>
+                            <h2 className="text-xl font-bold text-gray-600 mt-1 uppercase">Reporte Ejecutivo - {activeTab === 'seguridad' ? 'Seguridad y Accesos' : activeTab === 'rrss' ? 'Reputación RRSS' : activeTab === 'tickets' ? 'Solicitudes Emergentes (Tickets)' : 'Comentarios'}</h2>
+                            <p className="text-sm text-gray-500 mt-2 font-medium">Generado el: {new Date().toLocaleDateString()} a las {new Date().toLocaleTimeString()}</p>
+                        </div>
 
-                {activeTab === 'seguridad' && (
-                    <div>
-                        <div className="grid grid-cols-4 gap-4 mb-8">
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Incidentes</p><p className="text-2xl font-black text-gray-900">{hackStats.total}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Activos (En Proceso)</p><p className="text-2xl font-black text-gray-900">{hackStats.open}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Mitigados (Cerrados)</p><p className="text-2xl font-black text-gray-900">{hackStats.resolved}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Riesgo Alto / Crítico</p><p className="text-2xl font-black text-gray-900">{hackStats.critical}</p></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="border border-gray-300 p-6 rounded-lg">
-                                <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Top 3 Vectores de Ataque</h3>
-                                {hackStats.topVectors.map((v, i) => (<div key={i} className="flex justify-between items-center mb-3 text-sm"><span className="font-bold text-gray-700">{v.name}</span><span className="text-gray-500 font-medium">{v.percent}% ({v.count} casos)</span></div>))}
+                        {activeTab === 'seguridad' && (
+                            <div>
+                                <div className="grid grid-cols-4 gap-4 mb-8">
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Incidentes</p><p className="text-2xl font-black text-gray-900">{hackStats.total}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Activos (En Proceso)</p><p className="text-2xl font-black text-gray-900">{hackStats.open}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Mitigados (Cerrados)</p><p className="text-2xl font-black text-gray-900">{hackStats.resolved}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Riesgo Alto / Crítico</p><p className="text-2xl font-black text-gray-900">{hackStats.critical}</p></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="border border-gray-300 p-6 rounded-lg print-break-avoid">
+                                        <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Top 3 Vectores de Ataque</h3>
+                                        {hackStats.topVectors.map((v, i) => (<div key={i} className="flex justify-between items-center mb-3 text-sm"><span className="font-bold text-gray-700">{v.name}</span><span className="text-gray-500 font-medium">{v.percent}% ({v.count} casos)</span></div>))}
+                                    </div>
+                                    <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center print-break-avoid">
+                                        <h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Plataforma más Vulnerable</h3><p className="text-2xl font-black text-gray-900">{hackStats.topPlatform}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center">
-                                <h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Plataforma más Vulnerable</h3><p className="text-2xl font-black text-gray-900">{hackStats.topPlatform}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                        )}
 
-                {activeTab === 'rrss' && (
-                    <div>
-                        <div className="grid grid-cols-4 gap-4 mb-8">
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Reportes Creados</p><p className="text-2xl font-black text-gray-900">{rrssStats.totalReportes}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Incidencias</p><p className="text-2xl font-black text-gray-900">{rrssStats.totalIncidencias}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Campus Afectados</p><p className="text-2xl font-black text-gray-900">{rrssStats.campusAfectados}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Peligro Inminente</p><p className="text-2xl font-black text-gray-900">{rrssStats.criticalRisk}</p></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Índice de Criticidad</h3><p className="text-4xl font-black text-red-600">{rrssStats.criticidadRate}%</p></div>
-                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Canal más Crítico</h3><p className="text-2xl font-black text-gray-900">{rrssStats.topNetwork}</p></div>
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'comentarios' && (
-                    <div>
-                        <div className="grid grid-cols-4 gap-4 mb-8">
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Reportes</p><p className="text-2xl font-black text-gray-900">{commentsStats.totalReportes}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Comentarios Indv.</p><p className="text-2xl font-black text-gray-900">{commentsStats.totalIndividuales}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Orgánico</p><p className="text-2xl font-black text-gray-900">{commentsStats.organic}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Pautado</p><p className="text-2xl font-black text-gray-900">{commentsStats.paid}</p></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="border border-gray-300 p-6 rounded-lg">
-                                <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Análisis de Sentimiento</h3>
-                                <div className="flex justify-between items-center text-sm"><span className="font-bold text-gray-700">Comentarios Negativos</span><span className="text-gray-900 font-black text-lg">{commentsStats.negativo}</span></div>
-                                <div className="flex justify-between items-center mt-2 text-sm"><span className="font-bold text-gray-700">Comentarios Neutrales</span><span className="text-gray-900 font-black text-lg">{commentsStats.neutral}</span></div>
+                        {activeTab === 'rrss' && (
+                            <div>
+                                <div className="grid grid-cols-4 gap-4 mb-8">
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Reportes Creados</p><p className="text-2xl font-black text-gray-900">{rrssStats.totalReportes}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Incidencias</p><p className="text-2xl font-black text-gray-900">{rrssStats.totalIncidencias}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Campus Afectados</p><p className="text-2xl font-black text-gray-900">{rrssStats.campusAfectados}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Peligro Inminente</p><p className="text-2xl font-black text-gray-900">{rrssStats.criticalRisk}</p></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center print-break-avoid"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Índice de Criticidad</h3><p className="text-4xl font-black text-red-600">{rrssStats.criticidadRate}%</p></div>
+                                    <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center print-break-avoid"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Canal más Crítico</h3><p className="text-2xl font-black text-gray-900">{rrssStats.topNetwork}</p></div>
+                                </div>
                             </div>
-                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Campus con más Alertas</h3><p className="text-2xl font-black text-gray-900">{commentsStats.topCampus}</p></div>
-                        </div>
-                    </div>
-                )}
+                        )}
 
-                {activeTab === 'tickets' && (
-                    <div>
-                        <div className="grid grid-cols-4 gap-4 mb-8">
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Solicitudes</p><p className="text-2xl font-black text-gray-900">{ticketStats.total}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Pendientes</p><p className="text-2xl font-black text-gray-900">{ticketStats.pendientes}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">En Producción</p><p className="text-2xl font-black text-gray-900">{ticketStats.enProduccion}</p></div>
-                            <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center"><p className="text-[10px] font-bold text-gray-500 uppercase">Resueltos</p><p className="text-2xl font-black text-gray-900">{ticketStats.resueltos}</p></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                            <div className="border border-gray-300 p-6 rounded-lg">
-                                <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Semáforo de Prioridades</h3>
-                                {Object.entries(ticketStats.prioridadCounts).map(([name, count], i) => (<div key={i} className="flex justify-between items-center mb-3 text-sm"><span className="font-bold text-gray-700">{name}</span><span className="text-gray-500 font-medium">{count} solicitudes ({ticketStats.total ? Math.round((count / ticketStats.total) * 100) : 0}%)</span></div>))}
+                        {activeTab === 'comentarios' && (
+                            <div>
+                                <div className="grid grid-cols-4 gap-4 mb-8">
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Reportes</p><p className="text-2xl font-black text-gray-900">{commentsStats.totalReportes}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Comentarios Indv.</p><p className="text-2xl font-black text-gray-900">{commentsStats.totalIndividuales}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Orgánico</p><p className="text-2xl font-black text-gray-900">{commentsStats.organic}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Pautado</p><p className="text-2xl font-black text-gray-900">{commentsStats.paid}</p></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="border border-gray-300 p-6 rounded-lg print-break-avoid">
+                                        <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Análisis de Sentimiento</h3>
+                                        <div className="flex justify-between items-center text-sm"><span className="font-bold text-gray-700">Comentarios Negativos</span><span className="text-gray-900 font-black text-lg">{commentsStats.negativo}</span></div>
+                                        <div className="flex justify-between items-center mt-2 text-sm"><span className="font-bold text-gray-700">Comentarios Neutrales</span><span className="text-gray-900 font-black text-lg">{commentsStats.neutral}</span></div>
+                                    </div>
+                                    <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center print-break-avoid"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Campus con más Alertas</h3><p className="text-2xl font-black text-gray-900">{commentsStats.topCampus}</p></div>
+                                </div>
                             </div>
-                            <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Canal más Solicitado</h3><p className="text-2xl font-black text-gray-900">{ticketStats.topPlataforma}</p></div>
-                        </div>
+                        )}
+
+                        {activeTab === 'tickets' && (
+                            <div>
+                                <div className="grid grid-cols-4 gap-4 mb-8">
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Total Solicitudes</p><p className="text-2xl font-black text-gray-900">{ticketStats.total}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Pendientes</p><p className="text-2xl font-black text-gray-900">{ticketStats.pendientes}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">En Producción</p><p className="text-2xl font-black text-gray-900">{ticketStats.enProduccion}</p></div>
+                                    <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-center print-break-avoid"><p className="text-[10px] font-bold text-gray-500 uppercase">Resueltos</p><p className="text-2xl font-black text-gray-900">{ticketStats.resueltos}</p></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="border border-gray-300 p-6 rounded-lg print-break-avoid">
+                                        <h3 className="text-sm font-bold text-gray-800 uppercase border-b border-gray-200 pb-2 mb-4">Semáforo de Prioridades</h3>
+                                        {Object.entries(ticketStats.prioridadCounts).map(([name, count], i) => (<div key={i} className="flex justify-between items-center mb-3 text-sm"><span className="font-bold text-gray-700">{name}</span><span className="text-gray-500 font-medium">{count} solicitudes ({ticketStats.total ? Math.round((count / ticketStats.total) * 100) : 0}%)</span></div>))}
+                                    </div>
+                                    <div className="border border-gray-300 p-6 rounded-lg text-center flex flex-col justify-center print-break-avoid"><h3 className="text-sm font-bold text-gray-800 uppercase mb-2">Canal más Solicitado</h3><p className="text-2xl font-black text-gray-900">{ticketStats.topPlataforma}</p></div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        <div className="mt-12 text-center text-[10px] text-gray-400 font-medium">DOCUMENTO DE USO INTERNO - CONFIDENCIAL</div>
                     </div>
-                )}
-                
-                <div className="mt-12 text-center text-[10px] text-gray-400 font-medium">DOCUMENTO DE USO INTERNO - CONFIDENCIAL</div>
-            </div>
+                </div>,
+                document.body
+            )}
         </>
     );
 };

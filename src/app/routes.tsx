@@ -13,8 +13,8 @@ import { AuditViews } from '../features/audit/components/AuditViews';
 import { SolicitudTicketsView, GestionTicketsView } from '../features/tickets/components/TicketViews';
 import { ReportDashboard } from '../features/reports/components/ReportDashboard';
 
-// 🔥 CREAMOS EL NIVEL GUEST_ONLY EXCLUSIVO PARA CLIENTES EXTERNOS / ANÓNIMOS
-type AccessLevel = 'PUBLIC' | 'LOGGED_IN' | 'ADMIN_IT' | 'ADMIN_CM_IT' | 'GUEST_ONLY';
+// 🔥 NUEVO NIVEL: 'ADMIN_CM_IT_EDITOR' para blindar el acceso estricto a Reportes
+type AccessLevel = 'PUBLIC' | 'LOGGED_IN' | 'ADMIN_IT' | 'ADMIN_CM_IT' | 'ADMIN_CM_IT_EDITOR' | 'GUEST_ONLY';
 
 interface RouteConfig {
     component: React.FC<any>;
@@ -43,9 +43,10 @@ export const ROUTES: Record<string, RouteConfig> = {
 
     'backups': { component: BackupView, access: 'ADMIN_IT' },
     'auditoria': { component: AuditViews, access: 'ADMIN_IT' },
-    'reportes': { component: ReportDashboard, access: 'LOGGED_IN' },
+    
+    // 🔥 ASIGNADO A NUEVO NIVEL: Ahora administradores y Editor CM tienen acceso
+    'reportes': { component: ReportDashboard, access: 'ADMIN_CM_IT_EDITOR' },
 
-    // 🔥 ASIGNAMOS GUEST_ONLY: Si tienes sesión, tienes prohibido entrar aquí
     'solicitud-tickets': { component: SolicitudTicketsView, access: 'GUEST_ONLY' },
     'gestion-tickets': { component: GestionTicketsView, access: 'LOGGED_IN' },
 };
@@ -53,8 +54,6 @@ export const ROUTES: Record<string, RouteConfig> = {
 export const AppRouter = ({ currentView, props }: { currentView: string, props: any }) => {
     const route = ROUTES[currentView] || ROUTES['dashboard'];
 
-    // 🔥 ESCUDO ANTI-INSPECCIÓN: Usamos props.user porque la sesión en memoria es instantánea.
-    // Si alguien con sesión activa edita el localStorage para forzar "solicitud-tickets", lo reubicamos en silencio.
     if (route.access === 'GUEST_ONLY' && props.user) {
         setTimeout(() => {
             if (props.navigate) props.navigate('gestion-tickets');

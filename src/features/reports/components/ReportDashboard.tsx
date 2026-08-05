@@ -47,7 +47,7 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
     const fileRef = useRef<HTMLInputElement>(null);
     const { generatePDF } = useReportGenerator();
 
-    const isTrueAdmin = ['ADMIN_IT', 'ADMIN_CM'].includes(userRole);
+    const isTrueAdmin = ['ADMIN_IT', 'ADMIN_CM', 'EDITOR_CM'].includes(userRole);
 
     const availableYears = useMemo(() => {
         const years = new Set<string>();
@@ -188,6 +188,29 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
     const uniqueReds = useMemo(() => Array.from(new Set(rowData.map(r => r.redSocial))).sort(), [rowData]);
     const uniqueCampus = useMemo(() => Array.from(new Set(rowData.map(r => r.campus))).sort(), [rowData]);
 
+    // 🔥 FIX DATA: Motor para la gráfica Agrupada (Side-by-Side) sin "Positivo"
+    const groupedSentiment = useMemo(() => {
+        const labels = uniqueReds;
+        const neuData: number[] = [];
+        const negData: number[] = [];
+
+        labels.forEach(network => {
+            const networkRows = rowData.filter(r => r.redSocial === network);
+            const total = networkRows.length;
+            if (total === 0) {
+                neuData.push(0); negData.push(0);
+                return;
+            }
+            const neu = networkRows.filter(r => r.sentiment === 'Neutral').length;
+            const neg = networkRows.filter(r => r.sentiment === 'Negativo').length;
+            
+            neuData.push(Math.round((neu / total) * 100));
+            negData.push(Math.round((neg / total) * 100));
+        });
+
+        return { labels, neuData, negData };
+    }, [rowData, uniqueReds]);
+
     const tableRows = useMemo(() => {
         return rowData.filter(r => {
             if (filterTableSentiment && r.sentiment !== filterTableSentiment) return false;
@@ -215,6 +238,25 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
     const topUsers = calcTopUsers(rowData, 2, 8);
 
     const hasData = rowData.length > 0;
+
+    // 🔥 FIX UI: Dona con Porcentajes calculados para coincidir con tu captura
+    const doughnutData = useMemo(() => {
+        const total = sentiment.data.reduce((a, b) => a + b, 0) || 1;
+        const labelsWithPct = sentiment.labels.map((l, i) => {
+            const pct = Math.round((sentiment.data[i] / total) * 100);
+            return `${l}: ${pct}%`;
+        });
+        return {
+            labels: labelsWithPct,
+            datasets: [{ 
+                data: sentiment.data, 
+                backgroundColor: sentiment.colors, 
+                borderColor: 'transparent', 
+                borderWidth: 2, 
+                hoverOffset: 4 
+            }]
+        };
+    }, [sentiment]);
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 fade-in pb-20">
@@ -341,18 +383,38 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <ChartCard title="Sentimiento Analítico" sub="Distribución global por tono">
-                            <div className="h-56"><Doughnut data={{ labels: sentiment.labels, datasets: [{ data: sentiment.data, backgroundColor: sentiment.colors, borderColor: 'transparent', borderWidth: 2, hoverOffset: 4 }] }} options={{...CHART_OPTIONS, cutout: '65%'}} /></div>
+                        <ChartCard title="Sentimiento Analítico" sub="Distribución global por tono (%)">
+                            <div className="h-56"><Doughnut data={doughnutData} options={{...CHART_OPTIONS, cutout: '65%'}} /></div>
                         </ChartCard>
-                        <ChartCard title="Impacto por Plataforma" sub="Volumen de comentarios">
-                            <div className="h-56"><Bar data={{ labels: redSocial.labels, datasets: [{ data: redSocial.data, backgroundColor: redSocial.labels.map((_, i) => RED_COLORS[i % RED_COLORS.length]), borderRadius: 6 }] }} options={{...CHART_OPTIONS, plugins: { legend: { display: false }}}} /></div>
+                        
+                        {/* 🔥 FIX UI: Gráfica de Barras Agrupadas sin Positivo, idéntica a tu captura */}
+                        <ChartCard title="Sentimiento x Plataforma" sub="Porcentaje de cada tono relativo al total de cada plataforma">
+                            <div className="h-56">
+                                <Bar 
+                                    data={{ 
+                                        labels: groupedSentiment.labels, 
+                                        datasets: [
+                                            { label: 'Negativo', data: groupedSentiment.negData, backgroundColor: '#e0485a', borderRadius: 4 },
+                                            { label: 'Neutral', data: groupedSentiment.neuData, backgroundColor: '#7c8db5', borderRadius: 4 }
+                                        ] 
+                                    }} 
+                                    options={{
+                                        ...CHART_OPTIONS, 
+                                        plugins: { legend: { display: true, position: 'bottom', labels: { color: '#93a2c0', boxWidth: 10, boxHeight: 10, padding: 10 } } },
+                                        scales: {
+                                            x: { ...COMMON_SCALES.x },
+                                            y: { ...COMMON_SCALES.y, max: 100, ticks: { ...COMMON_SCALES.y.ticks, callback: (v: any) => v + '%' } }
+                                        }
+                                    }} 
+                                />
+                            </div>
                         </ChartCard>
+
                         <ChartCard title="Origen del Contenido" sub="Métricas Orgánico vs Pautado">
                             <div className="h-56"><Bar data={{ labels: origen.labels, datasets: [{ label: 'Registros', data: origen.totals, backgroundColor: '#5b8def', borderRadius: 6 }, { label: '% Negativo', data: origen.negPct, backgroundColor: '#e0485a', borderRadius: 6 }] }} options={{ ...CHART_OPTIONS, scales: { ...COMMON_SCALES, y: { ...COMMON_SCALES.y, beginAtZero: true } } }} /></div>
                         </ChartCard>
                     </div>
 
-                    {/* 🔥 FIX UX PRO: Tendencia a Ancho Completo, Punteros Resaltados y Anti-Cortes (Clip: False) */}
                     <div className="grid grid-cols-1 gap-6">
                         <ChartCard title="Tendencia Cronológica" sub="Volumen y curva de negatividad por corte temporal">
                             <div className="h-[380px]">
@@ -373,7 +435,7 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
                                                 pointBackgroundColor: '#5b8def',
                                                 pointBorderColor: '#101a2e',
                                                 pointBorderWidth: 2,
-                                                clip: false, // 🔥 Clave para que los puntos no se corten
+                                                clip: false, 
                                                 yAxisID: 'y' 
                                             }, 
                                             { 
@@ -389,7 +451,7 @@ export const ReportDashboard = ({ showToast, isAdmin, userRole }: any) => {
                                                 pointBackgroundColor: '#e0485a',
                                                 pointBorderColor: '#101a2e',
                                                 pointBorderWidth: 2,
-                                                clip: false, // 🔥 Clave para que los puntos no se corten en 100%
+                                                clip: false, 
                                                 yAxisID: 'y1' 
                                             }
                                         ] 
